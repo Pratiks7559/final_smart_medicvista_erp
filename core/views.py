@@ -1002,6 +1002,7 @@ def edit_invoice(request, pk):
                                 product_MRP=float(product_data.get('mrp', 0)),
                                 product_purchase_rate=float(product_data.get('purchase_rate', 0)),
                                 product_quantity=float(product_data.get('quantity', 0)),
+                                product_free_qty=float(product_data.get('free_qty', 0)),
                                 product_scheme=float(product_data.get('scheme', 0)),
                                 product_discount_got=float(product_data.get('discount', 0)),
                                 CGST=float(product_data.get('cgst', 0)),
@@ -11801,3 +11802,5 @@ def export_receipts_excel(request):
         ])
     
     return response
+
+

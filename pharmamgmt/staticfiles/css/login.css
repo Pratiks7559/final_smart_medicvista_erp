@@ -6,32 +6,39 @@
 
 body {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fcd34d 100%);
+    background-attachment: fixed;
     min-height: 100vh;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    overflow: hidden;
+    flex-direction: column;
 }
 
 .login-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 1rem 2rem;
+    width: 100%;
+    min-height: calc(100vh - 60px - 350px);
+}
+
+.login-box {
+    background: rgba(229, 216, 216, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 2rem 1.5rem;
+    box-shadow: 0 10px 40px rgba(245, 158, 11, 0.2);
     width: 100%;
     max-width: 380px;
     animation: fadeIn 0.6s ease;
+    border: 1px solid rgba(245, 158, 11, 0.1);
+    margin-top: 20px;
 }
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
-}
-
-.login-box {
-    background: rgba(255, 255, 255, 0.98);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 2rem 1.5rem;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 .logo-section {
@@ -40,28 +47,26 @@ body {
 }
 
 .logo-circle {
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 0.8rem;
-    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
 }
 
-.logo-circle img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    padding: 8px;
+.logo-circle i {
+    font-size: 2.5rem;
+    color: white;
 }
 
 .logo-section h1 {
     font-size: 24px;
     font-weight: 700;
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #f59e0b, #d97706);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -120,12 +125,12 @@ body {
 
 .input-wrap input:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
 }
 
 .input-wrap input:focus + i {
-    color: #667eea;
+    color: #f59e0b;
 }
 
 .err {
@@ -137,7 +142,7 @@ body {
 }
 
 .btn-login {
-    background: linear-gradient(135deg, #667eea, #764ba2);
+    background: linear-gradient(135deg, #f59e0b, #d97706);
     color: white;
     border: none;
     padding: 14px;
@@ -156,11 +161,30 @@ body {
 
 .btn-login:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
 }
 
 .btn-login:active {
     transform: translateY(0);
+}
+
+.contact-text {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    margin-top: 1.5rem;
+}
+
+.contact-text a {
+    color: #f59e0b;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s;
+}
+
+.contact-text a:hover {
+    color: #d97706;
+    text-decoration: underline;
 }
 
 .footer-text {
@@ -168,6 +192,81 @@ body {
     color: #999;
     font-size: 13px;
     margin-top: 1.5rem;
+}
+
+/* Login page specific footer styles */
+body .footer {
+    padding: 2rem 2rem 1rem;
+}
+
+body .footer-container {
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+body .footer-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+body .footer-section p,
+body .footer-section a {
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+}
+
+body .social-links a {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body .social-links a i {
+    font-size: 14px;
+    margin: 0;
+    padding: 0;
+    line-height: 1;
+}
+
+body .footer-bottom {
+    padding-top: 1rem;
+}
+
+body .footer-bottom p {
+    font-size: 0.8rem;
+}
+
+/* Login page specific navbar styles */
+body .navbar {
+    padding: 0.5rem 0;
+}
+
+body .nav-container {
+    padding: 0 1.5rem;
+}
+
+body .nav-logo {
+    width: 35px;
+    height: 35px;
+}
+
+body .nav-title {
+    font-size: 1.2rem;
+}
+
+body .nav-links {
+    gap: 1.5rem;
+}
+
+body .nav-links a {
+    font-size: 0.9rem;
+}
+
+body .login-btn {
+    padding: 0.5rem 1.2rem;
+    font-size: 0.9rem;
 }
 
 /* Mobile Responsive */

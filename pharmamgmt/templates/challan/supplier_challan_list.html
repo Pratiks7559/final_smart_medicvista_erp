@@ -100,7 +100,7 @@
                         <td>{{ challan.challan_no }}</td>
                         <td>{{ challan.supplier.supplier_name }}</td>
                         <td>{{ challan.challan_date|date:"d M, Y" }}</td>
-                        <td>₹{{ challan.challan_total|floatformat:2 }}</td>
+                        <td>₹{{ challan.challan_total|floatformat:0 }}</td>
                         <td>
                             {% if challan.challan_paid >= challan.challan_total %}
                                 <span class="badge badge-success">Paid</span>

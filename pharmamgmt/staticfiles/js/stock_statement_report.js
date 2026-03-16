@@ -26,16 +26,13 @@ function initializeStockReport() {
 function initializeSearch() {
     const searchInput = document.getElementById('search');
     if (searchInput) {
-        let searchTimeout;
-        
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                // Auto-submit form after 500ms of no typing
-                if (this.value.length >= 3 || this.value.length === 0) {
-                    document.getElementById('filtersForm').submit();
-                }
-            }, 500);
+        // Prevent auto-submit on input - user must click Apply Filters button
+        // This prevents page reload while typing
+        searchInput.addEventListener('keydown', function(e) {
+            // Prevent Enter key from submitting form
+            if (e.key === 'Enter') {
+                e.preventDefault();
+            }
         });
     }
 }
@@ -203,39 +200,28 @@ function exportReport(format) {
 }
 
 function printReport() {
-    // Add print-specific styles
-    const printStyles = `
-        <style>
-            @media print {
-                body * { visibility: hidden; }
-                .stock-statement-container, 
-                .stock-statement-container * { visibility: visible; }
-                .stock-statement-container { 
-                    position: absolute; 
-                    left: 0; 
-                    top: 0; 
-                    width: 100%; 
-                }
-                .header-actions,
-                .filters-section,
-                .pagination-container,
-                .col-actions { display: none !important; }
-            }
-        </style>
+    // Add print footer with timestamp
+    const printFooter = document.createElement('div');
+    printFooter.className = 'print-footer';
+    printFooter.innerHTML = `
+        <strong>Report Generated:</strong> ${new Date().toLocaleString('en-IN', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        })} | 
+        <strong>System:</strong> Pharma Management System
     `;
     
-    // Add styles to head temporarily
-    const styleElement = document.createElement('style');
-    styleElement.innerHTML = printStyles;
-    document.head.appendChild(styleElement);
+    document.querySelector('.stock-statement-container').appendChild(printFooter);
     
     // Print
-    window.print();
-    
-    // Remove styles after printing
     setTimeout(() => {
-        document.head.removeChild(styleElement);
-    }, 1000);
+        window.print();
+        // Remove footer after print
+        setTimeout(() => printFooter.remove(), 500);
+    }, 100);
 }
 
 function viewBatchDetails(productId) {

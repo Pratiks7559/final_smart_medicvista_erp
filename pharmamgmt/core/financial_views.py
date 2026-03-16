@@ -356,9 +356,9 @@ def export_financial_pdf(request):
         purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
         quantity = float(sale.sale_quantity)
         sale_rate = float(sale.sale_rate)
+        sales_value = sale_rate * quantity
         gst_amount = sales_value * (float(sale.sale_cgst) + float(sale.sale_sgst)) / 100
         purchase_cost = purchase_rate * quantity
-        sales_value = sale_rate * quantity
         profit = sales_value - purchase_cost
         all_txns.append({
             'date': sale.sale_entry_date, 'type': 'Sale', 'invoice': sale.sales_invoice_no.sales_invoice_no,
@@ -371,9 +371,9 @@ def export_financial_pdf(request):
         purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
         quantity = float(challan.sale_quantity)
         sale_rate = float(challan.sale_rate)
+        sales_value = sale_rate * quantity
         gst_amount = sales_value * (float(challan.sale_cgst) + float(challan.sale_sgst)) / 100
         purchase_cost = purchase_rate * quantity
-        sales_value = sale_rate * quantity
         profit = sales_value - purchase_cost
         all_txns.append({
             'date': challan.sales_entry_date, 'type': 'C.Challan', 'invoice': challan.customer_challan_no,
@@ -384,8 +384,8 @@ def export_financial_pdf(request):
     for challan in supplier_challan_query:
         quantity = float(challan.product_quantity)
         purchase_rate = float(challan.product_purchase_rate)
-        gst_amount = purchase_cost * (float(challan.cgst) + float(challan.sgst)) / 100
         purchase_cost = purchase_rate * quantity
+        gst_amount = purchase_cost * (float(challan.cgst) + float(challan.sgst)) / 100
         profit = -purchase_cost
         all_txns.append({
             'date': challan.challan_entry_date, 'type': 'S.Challan', 'invoice': challan.product_challan_no,
@@ -506,9 +506,9 @@ def export_financial_excel(request):
         purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
         quantity = float(sale.sale_quantity)
         sale_rate = float(sale.sale_rate)
+        sales_value = sale_rate * quantity
         gst_amount = sales_value * (float(sale.sale_cgst) + float(sale.sale_sgst)) / 100
         purchase_cost = purchase_rate * quantity
-        sales_value = sale_rate * quantity
         profit = sales_value - purchase_cost
         profit_pct = (profit / sales_value * 100) if sales_value > 0 else 0
         
@@ -538,9 +538,9 @@ def export_financial_excel(request):
         purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
         quantity = float(challan.sale_quantity)
         sale_rate = float(challan.sale_rate)
+        sales_value = sale_rate * quantity
         gst_amount = sales_value * (float(challan.sale_cgst) + float(challan.sale_sgst)) / 100
         purchase_cost = purchase_rate * quantity
-        sales_value = sale_rate * quantity
         profit = sales_value - purchase_cost
         profit_pct = (profit / sales_value * 100) if sales_value > 0 else 0
         
@@ -568,8 +568,8 @@ def export_financial_excel(request):
     for challan in supplier_challan_query:
         quantity = float(challan.product_quantity)
         purchase_rate = float(challan.product_purchase_rate)
-        gst_amount = purchase_cost * (float(challan.cgst) + float(challan.sgst)) / 100
         purchase_cost = purchase_rate * quantity
+        gst_amount = purchase_cost * (float(challan.cgst) + float(challan.sgst)) / 100
         profit = -purchase_cost
         
         row_data = [

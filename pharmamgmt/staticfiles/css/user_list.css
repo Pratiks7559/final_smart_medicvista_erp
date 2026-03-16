@@ -332,15 +332,15 @@
     padding: 8px 16px;
     background: #ef4444;
     color: white;
-    text-decoration: none;
+    border: none;
     border-radius: 6px;
     font-weight: 500;
+    cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .user-modal-confirm:hover {
     background: #dc2626;
-    text-decoration: none;
     color: white;
 }
 

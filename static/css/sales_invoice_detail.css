@@ -815,11 +815,17 @@
 .rate-type-header,
 .rate-header,
 .quantity-header,
+.free-qty-header,
 .discount-header,
+.cgst-header,
+.sgst-header,
 .gst-header,
 .total-header,
 .actions-header {
     white-space: nowrap;
+    min-width: 80px !important;
+    display: table-cell !important;
+    visibility: visible !important;
 }
 
 .products-table-body .product-row td {
@@ -855,11 +861,17 @@
 .rate-type-cell,
 .rate-cell,
 .quantity-cell,
+.free-qty-cell,
 .discount-cell,
+.cgst-cell,
+.sgst-cell,
 .gst-cell,
 .total-cell {
     white-space: nowrap;
     text-align: center;
+    min-width: 80px !important;
+    display: table-cell !important;
+    visibility: visible !important;
 }
 
 .actions-cell {

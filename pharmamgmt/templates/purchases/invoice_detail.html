@@ -4,6 +4,8 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/invoice_detail.css' %}">
+
+{% include 'components/add_product_dialog.html' %}
 {% endblock %}
 
 {% block page_actions %}
@@ -64,7 +66,8 @@
                     </div>
                     <div class="invoice-detail-info-item">
                         <span class="invoice-detail-info-label">Invoice Total:</span>
-                        <span class="invoice-detail-info-value">{{ invoice.invoice_total|currency }}</span>
+                        <span class="invoice-detail-info-value">₹<span id="invoiceTotalDisplay">{{ invoice.invoice_total|floatformat:0 }}</span></span>
+                        <small style="color: #6c757d; font-size: 0.85em;">(Actual: ₹{{ invoice.invoice_total|floatformat:2 }})</small>
                     </div>
                 </div>
             </div>
@@ -74,7 +77,8 @@
                 <div class="invoice-detail-summary-grid">
                     <div class="invoice-detail-summary-item">
                         <div class="invoice-detail-summary-label">Total Amount</div>
-                        <div class="invoice-detail-summary-value">{{ invoice.invoice_total|currency }}</div>
+                        <div class="invoice-detail-summary-value">₹{{ invoice.invoice_total|floatformat:0 }}</div>
+                        <small style="color: #6c757d; font-size: 0.8em;">(₹{{ invoice.invoice_total|floatformat:2 }})</small>
                     </div>
                     <div class="invoice-detail-summary-item">
                         <div class="invoice-detail-summary-label">Amount Paid</div>
@@ -82,7 +86,7 @@
                     </div>
                     <div class="invoice-detail-summary-item">
                         <div class="invoice-detail-summary-label">Balance Due</div>
-                        <div class="invoice-detail-summary-value balance-due-{% if invoice.balance_due > 0 %}pending{% else %}paid{% endif %}">{{ invoice.balance_due|currency }}</div>
+                        <div class="invoice-detail-summary-value balance-due-{% if invoice.balance_due > 0 %}pending{% else %}paid{% endif %}">₹{{ invoice.balance_due|floatformat:0 }}</div>
                     </div>
                 </div>
                 <div class="payment-progress-container">
@@ -145,6 +149,9 @@
             <div class="invoice-detail-products-section">
                 <div class="invoice-detail-products-header">
                     <h6><i class="fas fa-boxes"></i> Invoice Products</h6>
+                    <button type="button" onclick="openProductDialog()" class="invoice-detail-btn invoice-detail-btn-primary">
+                        <i class="fas fa-plus"></i> Add New Product
+                    </button>
                 </div>
                 <table class="invoice-detail-table">
                     <thead>
@@ -155,6 +162,7 @@
                             <th>MRP</th>
                             <th>Rate</th>
                             <th>Qty</th>
+                            <th>Free Qty</th>
                             <th>Discount</th>
                             <th>CGST %</th>
                             <th>SGST %</th>
@@ -179,6 +187,7 @@
                             <td>{{ purchase.product_MRP|currency }}</td>
                             <td>{{ purchase.product_purchase_rate|currency }}</td>
                             <td>{{ purchase.product_quantity }}</td>
+                            <td>{{ purchase.product_free_qty|default:0 }}</td>
                             <td>
                                 {% if purchase.purchase_calculation_mode == 'flat' %}
                                     {{ purchase.product_discount_got|currency }}
@@ -202,26 +211,30 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="13" class="no-data">No products added to this invoice</td>
+                            <td colspan="14" class="no-data">No products added to this invoice</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot class="table-footer">
                         <tr>
-                            <td colspan="10" style="font-weight: 600;"><strong>Sum of Products:</strong></td>
+                            <td colspan="11" style="font-weight: 600;"><strong>Sum of Products:</strong></td>
                             <td style="font-weight: 600;">{{ purchases_total|currency }}</td>
                         </tr>
                         <tr>
-                            <td colspan="10" style="font-weight: 600;"><strong>Transport Charges:</strong></td>
+                            <td colspan="11" style="font-weight: 600;"><strong>Transport Charges:</strong></td>
                             <td style="font-weight: 600;">{{ invoice.transport_charges|currency }}</td>
                         </tr>
                         <tr class="grand-total-row">
-                            <td colspan="10" style="font-weight: 700; color: #2c3e50;"><strong>Invoice Total:</strong></td>
-                            <td style="font-weight: 700; color: #2c3e50;">{{ invoice.invoice_total|currency }}</td>
+                            <td colspan="11" style="font-weight: 700; color: #2c3e50;"><strong>Invoice Total:</strong></td>
+                            <td style="font-weight: 700; color: #2c3e50;">₹{{ invoice.invoice_total|floatformat:0 }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="11" style="text-align: right; color: #6c757d; font-size: 0.9em;">Actual Amount:</td>
+                            <td style="color: #6c757d; font-size: 0.9em;">₹{{ invoice.invoice_total|floatformat:2 }}</td>
                         </tr>
                         {% if has_pending_entries %}
                         <tr class="pending-entries-row">
-                            <td colspan="10">
+                            <td colspan="11">
                                 <strong>Pending Entries:</strong>
                                 <div style="font-size: 0.8rem; color: #e74c3c;">
                                     {% if invoice_pending > 0 %}
@@ -339,6 +352,35 @@ function openEditInvoiceModal() {
 
 function closeEditInvoiceModal() {
     document.getElementById('editInvoiceModal').style.display = 'none';
+}
+
+function loadExistingProducts() {
+    const container = document.getElementById('productsContainer');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    {% for purchase in purchases %}
+    addProductRow({
+        productid: {{ purchase.productid.productid }},
+        product_name: '{{ purchase.product_name|escapejs }}',
+        product_batch_no: '{{ purchase.product_batch_no|escapejs }}',
+        product_expiry: formatExpiryToMMYYYY('{{ purchase.product_expiry }}'),
+        product_MRP: {{ purchase.product_MRP }},
+        product_purchase_rate: {{ purchase.product_purchase_rate }},
+        product_quantity: {{ purchase.product_quantity }},
+        product_free_qty: {{ purchase.product_free_qty|default:0 }},
+        product_discount_got: {{ purchase.product_discount_got }},
+        purchase_calculation_mode: '{{ purchase.purchase_calculation_mode }}',
+        CGST: {{ purchase.CGST }},
+        SGST: {{ purchase.SGST }},
+        rate_A: {{ purchase.rate_a|default:0 }},
+        rate_B: {{ purchase.rate_b|default:0 }},
+        rate_C: {{ purchase.rate_c|default:0 }}
+    });
+    {% endfor %}
+    
+    updateInvoiceTotal();
 }
 </script>
 <style>
@@ -588,8 +630,38 @@ function closeEditInvoiceModal() {
 <script>
 let productCounter = 0;
 
+// Global product cache for search
+window.productCache = [];
+
+// Function to refresh product cache when new product is added
+window.refreshProductCache = function(newProduct) {
+    console.log('Refreshing product cache with new product:', newProduct);
+    
+    if (newProduct && newProduct.id) {
+        window.productCache.push({
+            id: newProduct.id,
+            name: newProduct.name,
+            company: newProduct.company
+        });
+        console.log('✓ Product added to cache. Total products:', window.productCache.length);
+    }
+};
+
+// Initialize product cache on page load
+window.initializeProductCache = function() {
+    window.productCache = [{% for product in products %}{
+        id: {{ product.productid }},
+        name: '{{ product.product_name|escapejs }}',
+        company: '{{ product.product_company|escapejs }}'
+    },{% endfor %}];
+    console.log('Product cache initialized with', window.productCache.length, 'products');
+};
+
 // Handle form submission
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize product cache
+    window.initializeProductCache();
+    
     const editForm = document.getElementById('editInvoiceForm');
     if (editForm) {
         editForm.addEventListener('submit', function(e) {
@@ -608,6 +680,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const mrpInput = row.querySelector('input[name*="[mrp]"]');
                 const rateInput = row.querySelector('input[name*="[purchase_rate]"]');
                 const qtyInput = row.querySelector('input[name*="[quantity]"]');
+                const freeQtyInput = row.querySelector('input[name*="[free_qty]"]');
                 const discountInput = row.querySelector('input[name*="[discount]"]');
                 const cgstInput = row.querySelector('input[name*="[cgst]"]');
                 const sgstInput = row.querySelector('input[name*="[sgst]"]');
@@ -623,6 +696,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         mrp: mrpInput ? parseFloat(mrpInput.value) || 0 : 0,
                         purchase_rate: rateInput ? parseFloat(rateInput.value) || 0 : 0,
                         quantity: qtyInput ? parseFloat(qtyInput.value) || 0 : 0,
+                        free_qty: freeQtyInput ? parseFloat(freeQtyInput.value) || 0 : 0,
                         discount: discountInput ? parseFloat(discountInput.value) || 0 : 0,
                         cgst: cgstInput ? parseFloat(cgstInput.value) || 0 : 0,
                         sgst: sgstInput ? parseFloat(sgstInput.value) || 0 : 0,
@@ -698,6 +772,7 @@ function loadExistingProducts() {
         product_MRP: {{ purchase.product_MRP }},
         product_purchase_rate: {{ purchase.product_purchase_rate }},
         product_quantity: {{ purchase.product_quantity }},
+        product_free_qty: {{ purchase.product_free_qty|default:0 }},
         product_discount_got: {{ purchase.product_discount_got }},
         purchase_calculation_mode: '{{ purchase.purchase_calculation_mode }}',
         CGST: {{ purchase.CGST }},
@@ -739,12 +814,22 @@ function updateInvoiceTotal() {
     });
     
     const transportCharges = parseFloat(document.getElementById('transport_charges')?.value) || 0;
-    const invoiceTotal = productsTotal + transportCharges;
+    const rawTotal = productsTotal + transportCharges;
+    const roundedTotal = Math.round(rawTotal);
+    const roundoffAmount = roundedTotal - rawTotal;
     
-    // Show exact amounts without rounding to fix the 2.00 vs 2.10 issue
+    // Display rounded total with actual amount in parentheses
     document.getElementById('productsTotal').textContent = '₹' + productsTotal.toFixed(2);
     document.getElementById('transportChargesDisplay').textContent = '₹' + transportCharges.toFixed(2);
-    document.getElementById('invoiceTotal').textContent = '₹' + invoiceTotal.toFixed(2);
+    
+    // Show rounded total prominently with actual amount
+    const invoiceTotalElement = document.getElementById('invoiceTotal');
+    if (Math.abs(roundoffAmount) > 0.001) {
+        const sign = roundoffAmount > 0 ? '+' : '-';
+        invoiceTotalElement.innerHTML = `₹${roundedTotal} <small style="color: #6c757d; font-size: 0.85em;">(₹${rawTotal.toFixed(2)} ${sign} ${Math.abs(roundoffAmount).toFixed(2)})</small>`;
+    } else {
+        invoiceTotalElement.innerHTML = `₹${roundedTotal} <small style="color: #6c757d; font-size: 0.85em;">(₹${rawTotal.toFixed(2)})</small>`;
+    }
 }
 
 function addNewProduct() {
@@ -791,6 +876,10 @@ function addProductRow(data = {}) {
             <div class="form-group">
                 <label>Quantity:</label>
                 <input type="number" name="products[${productId}][quantity]" value="${data.product_quantity || ''}" step="0.01">
+            </div>
+            <div class="form-group">
+                <label>Free Qty:</label>
+                <input type="number" name="products[${productId}][free_qty]" value="${data.product_free_qty || '0'}" step="0.01">
             </div>
             <div class="form-group">
                 <label>Discount:</label>
@@ -981,7 +1070,8 @@ function quickSearchProducts(event) {
     },{% endfor %}];
     
     // Filter products that START with the search term (first 2+ letters)
-    const filtered = products.filter(p => {
+    // Use cached products or fallback to template data
+    const filtered = (window.productCache.length > 0 ? window.productCache : products).filter(p => {
         // Primary filter: starts with search term (case-sensitive first, then case-insensitive)
         const exactStartsName = p.name.startsWith(originalSearchTerm);
         const exactStartsCompany = p.company.startsWith(originalSearchTerm);
@@ -1937,3 +2027,5 @@ window.addEventListener('load', function() {
     </div> -->
 </div>
 {% endblock %}
+
+

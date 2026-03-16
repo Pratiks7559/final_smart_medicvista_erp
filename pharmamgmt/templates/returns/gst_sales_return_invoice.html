@@ -317,7 +317,11 @@
                 </tr>
                 <tr class="grand-total">
                     <td class="text-left">GRAND TOTAL:</td>
-                    <td class="text-right">₹{{ grand_total|floatformat:2 }}</td>
+                    <td class="text-right">₹<span class="rounded-amount" data-actual="{{ grand_total }}">{{ grand_total|floatformat:0 }}</span></td>
+                </tr>
+                <tr>
+                    <td class="text-left" style="font-size: 7px; color: #666;">Actual Amount:</td>
+                    <td class="text-right" style="font-size: 7px; color: #666;">₹{{ grand_total|floatformat:2 }}</td>
                 </tr>
             </table>
         </div>
@@ -357,4 +361,14 @@
         </div>
     </div>
 </body>
+<script>
+// Apply round-off on page load - 10.50 → 11, 10.49 → 10 (UI only, DB saves actual)
+window.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.rounded-amount').forEach(function(element) {
+        var actualAmount = parseFloat(element.getAttribute('data-actual')) || 0;
+        var roundedAmount = Math.round(actualAmount);
+        element.textContent = roundedAmount;
+    });
+});
+</script>
 </html>

@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{{ title }}
+{% include 'components/add_product_dialog.html' %}
+{% endblock %}
 
  {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales_return_form.css' %}">
@@ -84,6 +86,7 @@
                                         <th class="mrp-col">MRP</th>
                                         <th class="rate-col">Rate</th>
                                         <th class="qty-col">Qty</th>
+                                        <th class="qty-col">Free Qty</th>
                                         <th class="discount-col">Discount</th>
                                         <th class="gst-col">CGST%</th>
                                         <th class="gst-col">SGST%</th>
@@ -144,6 +147,43 @@ let productRowCount = 0;
 let products = [];
 let selectedCustomerRateType = 'A'; // Default rate type
 
+// Global product cache for search
+window.productCache = [];
+
+// Function to refresh product cache when new product is added
+window.refreshProductCache = function(newProduct) {
+    console.log('Refreshing product cache with new product:', newProduct);
+    
+    // Add to cache
+    if (newProduct && newProduct.id) {
+        window.productCache.push({
+            id: newProduct.id,
+            name: newProduct.name,
+            company: newProduct.company
+        });
+        console.log('✅ Product added to cache. Total products:', window.productCache.length);
+        
+        // Also add to product select dropdowns
+        const productSelects = document.querySelectorAll('.product-select');
+        productSelects.forEach(select => {
+            const newOption = document.createElement('option');
+            newOption.value = newProduct.id;
+            newOption.textContent = `${newProduct.name} - ${newProduct.company}`;
+            select.appendChild(newOption);
+        });
+    }
+};
+
+// Initialize product cache on page load
+window.initializeProductCache = function() {
+    window.productCache = [{% for product in products %}{
+        id: {{ product.productid }},
+        name: '{{ product.product_name|escapejs }}',
+        company: '{{ product.product_company|escapejs }}'
+    },{% endfor %}];
+    console.log('Product cache initialized with', window.productCache.length, 'products');
+};
+
 // Add product row
 function addProductRow() {
     const tbody = document.getElementById('productsTableBody');
@@ -158,12 +198,16 @@ function addProductRow() {
                 <option value="{{ product.productid }}">{{ product.product_name }} - {{ product.product_company }}</option>
                 {% endfor %}
             </select>
+<button type="button" class="btn btn-sm btn-outline-success" onclick="openProductDialog()" style="margin-left: 5px;" title="Add New Product">
+                                <i class="fas fa-plus"></i> Add Product
+                            </button>
         </td>
         <td class="batch-cell"><input type="text" class="batch-no" placeholder="Enter Batch Number" onchange="onBatchChange(this, ${productRowCount})" required></td>
         <td class="expiry-cell"><input type="text" class="expiry" placeholder="MM-YYYY" title="Expiry in MM-YYYY format" required></td>
         <td class="mrp-cell"><input type="number" class="mrp" step="0.01" placeholder="0.00" min="0" required></td>
         <td class="rate-cell"><input type="number" class="return-rate" step="0.01" placeholder="0.00" min="0" onchange="calculateRowTotal(${productRowCount})" required></td>
         <td class="qty-cell"><input type="number" class="return-quantity" step="0.01" placeholder="0" min="0.01" onchange="calculateRowTotal(${productRowCount})" required></td>
+        <td class="qty-cell"><input type="number" class="return-free-qty" step="0.01" placeholder="0" min="0" value="0"></td>
         <td class="discount-cell"><input type="number" class="discount" step="0.01" placeholder="0.00" min="0" onchange="calculateRowTotal(${productRowCount})" value="0"></td>
         <td class="gst-cell"><input type="number" class="cgst" step="0.01" placeholder="CGST%" min="0" max="100" onchange="calculateRowTotal(${productRowCount})" value="2.5"></td>
         <td class="gst-cell"><input type="number" class="sgst" step="0.01" placeholder="SGST%" min="0" max="100" onchange="calculateRowTotal(${productRowCount})" value="2.5"></td>
@@ -233,7 +277,7 @@ function calculateRowTotal(index) {
     }, 200);
 }
 
-// Calculate grand total
+// Calculate grand total with round off
 function calculateGrandTotal() {
     let productsTotal = 0;
     document.querySelectorAll('.row-total').forEach(span => {
@@ -244,13 +288,24 @@ function calculateGrandTotal() {
     // Get additional charges and transport charges
     const additionalCharges = parseFloat(document.getElementById('additionalCharges').value) || 0;
     const transportCharges = parseFloat(document.getElementById('transportCharges').value) || 0;
-    const finalTotal = productsTotal + additionalCharges + transportCharges;
+    const rawTotal = productsTotal + additionalCharges + transportCharges;
+    
+    // Round off: 10.50 → 11, 10.49 → 10
+    const roundedTotal = Math.round(rawTotal);
+    const roundoffAmount = roundedTotal - rawTotal;
     
     // Update display
     document.getElementById('productsTotal').textContent = productsTotal.toFixed(2);
     document.getElementById('additionalChargesDisplay').textContent = additionalCharges.toFixed(2);
     document.getElementById('transportChargesDisplay').textContent = transportCharges.toFixed(2);
-    document.getElementById('grandTotal').textContent = finalTotal.toFixed(2);
+    
+    // Show rounded total with round-off info
+    let displayHtml = roundedTotal.toString();
+    if (Math.abs(roundoffAmount) > 0.001) {
+        const sign = roundoffAmount > 0 ? '+' : '-';
+        displayHtml += ` <small style="font-size:0.8em;color:#666;">(${rawTotal.toFixed(2)} ${sign} ${Math.abs(roundoffAmount).toFixed(2)})</small>`;
+    }
+    document.getElementById('grandTotal').innerHTML = displayHtml;
 }
 
 // This function is now handled by the change event listener above
@@ -323,6 +378,7 @@ document.getElementById('salesReturnForm').addEventListener('submit', function(e
                 mrp: row.querySelector('.mrp').value,
                 return_rate: row.querySelector('.return-rate').value,
                 return_quantity: row.querySelector('.return-quantity').value,
+                return_free_qty: row.querySelector('.return-free-qty').value,
                 discount: row.querySelector('.discount').value,
                 cgst: row.querySelector('.cgst').value,
                 sgst: row.querySelector('.sgst').value,
@@ -410,7 +466,8 @@ function quickSearchProducts(event) {
         return;
     }
     
-    const products = [{% for product in products %}{
+    // Use cached products or fallback to template data
+    const products = window.productCache.length > 0 ? window.productCache : [{% for product in products %}{
         id: {{ product.productid }},
         name: '{{ product.product_name|escapejs }}',
         company: '{{ product.product_company|escapejs }}'
@@ -575,6 +632,7 @@ function createBatchSelectionModal(batches, rowIndex) {
                                     <div class="batch-details">
                                         <span>Exp: ${batch.expiry}</span>
                                         <span>Stock: ${batch.stock}</span>
+                                        <span style="color: #28a745; font-weight: 600;">Free: ${batch.free_qty || 0}</span>
                                         <span>MRP: ₹${batch.mrp}</span>
                                     </div>
                                     <div class="batch-rates">
@@ -670,6 +728,7 @@ function selectBatch(batchNo, rowIndex, batchData) {
         }
         
         row.querySelector('.return-rate').value = selectedRate;
+        row.querySelector('.return-free-qty').value = batchData.free_qty || '0';
         row.querySelector('.cgst').value = '2.5';
         row.querySelector('.sgst').value = '2.5';
         
@@ -1023,6 +1082,7 @@ function fetchBatchDetails(productId, batchNo, rowIndex) {
                     }
                     
                     row.querySelector('.return-rate').value = selectedRate;
+        row.querySelector('.return-free-qty').value = batchData.free_qty || '0';
                     row.querySelector('.cgst').value = '2.5';
                     row.querySelector('.sgst').value = '2.5';
                     
@@ -1058,6 +1118,9 @@ function setCurrentDate() {
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Sales Return Form loaded, initializing...');
+    
+    // Initialize product cache
+    window.initializeProductCache();
     
     // Auto-fill current date
     setCurrentDate();

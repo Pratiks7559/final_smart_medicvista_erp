@@ -233,13 +233,31 @@ function calculateReturnTotal() {
     });
     
     const returnCharges = parseFloat(document.querySelector('input[name="return_charges"]')?.value) || 0;
-    total += returnCharges;
+    const rawTotal = total + returnCharges;
     
-    document.getElementById('returnTotal').textContent = total.toFixed(2);
+    // Round off: 10.50 → 11, 10.49 → 10
+    const roundedTotal = Math.round(rawTotal);
+    const roundoffAmount = roundedTotal - rawTotal;
     
+    // Update display with round-off info
+    let displayHtml = '';
+    if (returnCharges > 0) {
+        displayHtml = `${total.toFixed(2)} + ${returnCharges.toFixed(2)}`;
+    } else {
+        displayHtml = total.toFixed(2);
+    }
+    if (Math.abs(roundoffAmount) > 0.001) {
+        const sign = roundoffAmount > 0 ? '+' : '-';
+        displayHtml += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>${roundedTotal}</strong>`;
+    } else {
+        displayHtml += ` = <strong>${roundedTotal}</strong>`;
+    }
+    document.getElementById('returnTotal').innerHTML = displayHtml;
+    
+    // Save actual amount (with decimals) in database
     const returnTotalInput = document.querySelector('input[name="returninvoice_total"]');
     if (returnTotalInput) {
-        returnTotalInput.value = total.toFixed(2);
+        returnTotalInput.value = rawTotal.toFixed(2);
     }
 }
 

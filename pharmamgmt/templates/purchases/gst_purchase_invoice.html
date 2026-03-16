@@ -322,9 +322,15 @@
                     <td class="text-left">Transport Charges:</td>
                     <td class="text-right">₹{{ invoice.transport_charges|floatformat:2 }}</td>
                 </tr>
+                {% if roundoff_amount and roundoff_amount != 0 %}
+                <tr>
+                    <td class="text-left">Round Off ({% if roundoff_type == 'added' %}+{% else %}-{% endif %}):</td>
+                    <td class="text-right">{% if roundoff_type == 'added' %}+{% else %}-{% endif %}₹{{ roundoff_amount|floatformat:2 }}</td>
+                </tr>
+                {% endif %}
                 <tr class="grand-total">
                     <td class="text-left">GRAND TOTAL:</td>
-                    <td class="text-right">₹{{ grand_total|floatformat:2 }}</td>
+                    <td class="text-right">₹{{ grand_total|floatformat:0 }}</td>
                 </tr>
             </table>
         </div>

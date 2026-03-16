@@ -16,26 +16,30 @@ class FastInventory:
         products_dict = {p.productid: p for p in products_query}
         
         # Bulk fetch all transactions with expiry
-        purchases = defaultdict(lambda: {'qty': 0, 'mrp': 0, 'expiry': None})
-        for p in PurchaseMaster.objects.filter(productid__in=product_ids).values('productid', 'product_batch_no', 'product_quantity', 'product_MRP', 'product_expiry'):
+        purchases = defaultdict(lambda: {'qty': 0, 'free_qty': 0, 'mrp': 0, 'expiry': None})
+        for p in PurchaseMaster.objects.filter(productid__in=product_ids).values('productid', 'product_batch_no', 'product_quantity', 'product_free_qty', 'product_MRP', 'product_expiry'):
             key = (p['productid'], p['product_batch_no'])
             purchases[key]['qty'] += p['product_quantity']
+            purchases[key]['free_qty'] += p['product_free_qty'] or 0
             if not purchases[key]['mrp']:
                 purchases[key]['mrp'] = p['product_MRP'] or 0
             if not purchases[key]['expiry']:
                 purchases[key]['expiry'] = p['product_expiry']
         
-        for c in SupplierChallanMaster.objects.filter(product_id__in=product_ids).values('product_id', 'product_batch_no', 'product_quantity', 'product_mrp', 'product_expiry'):
+        for c in SupplierChallanMaster.objects.filter(product_id__in=product_ids).values('product_id', 'product_batch_no', 'product_quantity', 'product_free_qty', 'product_mrp', 'product_expiry'):
             key = (c['product_id'], c['product_batch_no'])
             purchases[key]['qty'] += c['product_quantity']
+            purchases[key]['free_qty'] += c['product_free_qty'] or 0
             if not purchases[key]['mrp']:
                 purchases[key]['mrp'] = c['product_mrp'] or 0
             if not purchases[key]['expiry']:
                 purchases[key]['expiry'] = c['product_expiry']
         
         sales = defaultdict(int)
-        for s in SalesMaster.objects.filter(productid__in=product_ids).values('productid', 'product_batch_no').annotate(total=Sum('sale_quantity')):
+        sales_free = defaultdict(int)
+        for s in SalesMaster.objects.filter(productid__in=product_ids).values('productid', 'product_batch_no').annotate(total=Sum('sale_quantity'), total_free=Sum('sale_free_qty')):
             sales[(s['productid'], s['product_batch_no'])] = s['total']
+            sales_free[(s['productid'], s['product_batch_no'])] = s['total_free'] or 0
         
         # Add customer challan sales
         for cc in CustomerChallanMaster.objects.filter(product_id__in=product_ids).values('product_id', 'product_batch_no').annotate(total=Sum('sale_quantity')):
@@ -43,12 +47,16 @@ class FastInventory:
             sales[key] += cc['total']
         
         pr = defaultdict(int)
-        for r in ReturnPurchaseMaster.objects.filter(returnproductid__in=product_ids).values('returnproductid', 'returnproduct_batch_no').annotate(total=Sum('returnproduct_quantity')):
+        pr_free = defaultdict(int)
+        for r in ReturnPurchaseMaster.objects.filter(returnproductid__in=product_ids).values('returnproductid', 'returnproduct_batch_no').annotate(total=Sum('returnproduct_quantity'), total_free=Sum('returnproduct_free_qty')):
             pr[(r['returnproductid'], r['returnproduct_batch_no'])] = r['total']
+            pr_free[(r['returnproductid'], r['returnproduct_batch_no'])] = r['total_free'] or 0
         
         sr = defaultdict(int)
-        for r in ReturnSalesMaster.objects.filter(return_productid__in=product_ids).values('return_productid', 'return_product_batch_no').annotate(total=Sum('return_sale_quantity')):
+        sr_free = defaultdict(int)
+        for r in ReturnSalesMaster.objects.filter(return_productid__in=product_ids).values('return_productid', 'return_product_batch_no').annotate(total=Sum('return_sale_quantity'), total_free=Sum('return_sale_free_qty')):
             sr[(r['return_productid'], r['return_product_batch_no'])] = r['total']
+            sr_free[(r['return_productid'], r['return_product_batch_no'])] = r['total_free'] or 0
         
         # CRITICAL FIX: Add stock issues to calculation
         stock_issues = defaultdict(int)
@@ -60,7 +68,12 @@ class FastInventory:
         for key, data in purchases.items():
             pid, batch = key
             stock = data['qty'] - sales.get(key, 0) - pr.get(key, 0) + sr.get(key, 0) - stock_issues.get(key, 0)
-            if stock > 0 and pid in products_dict:
+            free_qty = data['free_qty'] - sales_free.get(key, 0) - pr_free.get(key, 0) + sr_free.get(key, 0)
+            
+            # Total stock includes both regular stock and free qty
+            total_stock = stock + max(0, free_qty)
+            
+            if total_stock > 0 and pid in products_dict:
                 p = products_dict[pid]
                 inventory.append({
                     'product_id': pid,
@@ -70,8 +83,9 @@ class FastInventory:
                     'batch_no': batch,
                     'expiry': data['expiry'] or '',
                     'mrp': data['mrp'],
-                    'stock': stock,
-                    'value': stock * data['mrp']
+                    'stock': total_stock,
+                    'free_qty': max(0, free_qty),
+                    'value': stock * data['mrp']  # Value only for paid stock, not free qty
                 })
         
         return inventory

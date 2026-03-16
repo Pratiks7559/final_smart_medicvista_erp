@@ -100,6 +100,7 @@ def add_supplier_challan(request):
                         product_mrp=float(product_data.get('mrp', 0)),
                         product_purchase_rate=float(rate),
                         product_quantity=float(qty),
+                        product_free_qty=float(product_data.get('free_qty', 0)),
                         product_scheme=float(product_data.get('scheme', 0)),
                         product_discount=float(discount),
                         cgst=float(cgst),
@@ -225,15 +226,16 @@ def view_supplier_challan(request, challan_id):
                         product_mrp=float(product_data.get('mrp', 0)),
                         product_purchase_rate=float(rate),
                         product_quantity=float(qty),
+                        product_free_qty=float(product_data.get('free_qty', 0)),
                         product_scheme=0,
                         product_discount=float(discount),
                         cgst=float(cgst),
                         sgst=float(sgst),
                         total_amount=float(total),
                         challan_calculation_mode='flat',
-                        rate_a=0,
-                        rate_b=0,
-                        rate_c=0
+                        rate_a=float(product_data.get('rate_a', 0)),
+                        rate_b=float(product_data.get('rate_b', 0)),
+                        rate_c=float(product_data.get('rate_c', 0))
                     )
                 
                 return JsonResponse({'success': True, 'message': 'Challan updated successfully'})
@@ -486,6 +488,7 @@ def add_customer_challan(request):
                         product_mrp=float(product_data.get('mrp', 0)),
                         sale_rate=float(rate),
                         sale_quantity=float(qty),
+                        sale_free_qty=float(product_data.get('free_qty', 0)),
                         sale_discount=float(discount),
                         sale_cgst=float(cgst),
                         sale_sgst=float(sgst),
@@ -594,6 +597,7 @@ def view_customer_challan(request, challan_id):
                         product_mrp=float(product_data.get('mrp', 0)),
                         sale_rate=float(rate),
                         sale_quantity=float(qty),
+                        sale_free_qty=float(product_data.get('free_qty', 0)),
                         sale_discount=float(discount),
                         sale_cgst=float(cgst),
                         sale_sgst=float(sgst),
@@ -796,6 +800,7 @@ def get_challan_products_api(request):
                 'mrp': item.product_mrp,
                 'rate': item.sale_rate,
                 'quantity': item.sale_quantity,
+                'free_qty': item.sale_free_qty,
                 'discount': item.sale_discount,
                 'cgst': item.sale_cgst,
                 'sgst': item.sale_sgst,

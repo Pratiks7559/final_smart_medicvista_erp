@@ -2,7 +2,9 @@
 {% load static %}
 {% load custom_filters %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{{ title }}
+{% include 'components/add_product_dialog.html' %}
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales_return_detail.css' %}">
@@ -559,7 +561,8 @@ th, td { display: table-cell !important; }
                     {% if return_invoice.transport_charges > 0 %}
                     <tr><td>Transport Charges:</td><td>₹{{ return_invoice.transport_charges|floatformat:2 }}</td></tr>
                     {% endif %}
-                    <tr style="background: #f8f9fa;"><td><strong>Grand Total:</strong></td><td><strong>₹{{ return_invoice.return_sales_invoice_total|floatformat:2 }}</strong></td></tr>
+                    <tr style="background: #f8f9fa;"><td><strong>Grand Total:</strong></td><td><strong class="rounded-amount" data-actual="{{ return_invoice.return_sales_invoice_total }}">₹{{ return_invoice.return_sales_invoice_total|floatformat:0 }}</strong></td></tr>
+                    <tr><td style="font-size: 10px; color: #666;">Actual Amount:</td><td style="font-size: 10px; color: #666;">₹{{ return_invoice.return_sales_invoice_total|floatformat:2 }}</td></tr>
                     <tr><td>Refunded:</td><td>₹{{ return_invoice.return_sales_invoice_paid|floatformat:2 }}</td></tr>
                     <tr><td><strong>Balance:</strong></td><td><strong>₹{{ return_invoice.balance_due|floatformat:2 }}</strong></td></tr>
                 </table>
@@ -579,6 +582,7 @@ th, td { display: table-cell !important; }
                         <th>MRP</th>
                         <th>Rate</th>
                         <th>Qty</th>
+                        <th>Free Qty</th>
                         <th>Discount</th>
                         <th>CGST%</th>
                         <th>SGST%</th>
@@ -599,6 +603,7 @@ th, td { display: table-cell !important; }
                         <td>₹{{ item.return_product_MRP|floatformat:2 }}</td>
                         <td>₹{{ item.return_sale_rate|floatformat:2 }}</td>
                         <td>{{ item.return_sale_quantity }}</td>
+                        <td>{{ item.return_sale_free_qty|default:0 }}</td>
                         <td>{{ item.return_sale_discount }}{% if item.return_sale_calculation_mode == 'percentage' %}%{% else %} ₹{% endif %}</td>
                         <td>{{ item.return_sale_cgst|floatformat:2 }}%</td>
                         <td>{{ item.return_sale_sgst|floatformat:2 }}%</td>
@@ -608,7 +613,7 @@ th, td { display: table-cell !important; }
                             <div class="sr-detail-item-actions">
                                 {% if user.user_type == 'admin' %}
                                 <button type="button" class="sr-detail-btn sr-detail-btn-outline-danger" title="Delete"
-                                        onclick="showDeleteItemDialog('{{ item.return_sales_id }}', '{{ item.return_product_name|escapejs }}', '{{ item.return_product_batch_no }}')">
+                                        onclick="showDeleteItemDialog('{{ item.return_sales_id }}', '{{ item.return_product_name|escapejs }}', '{{ item.return_product_batch_no|escapejs }}')">
                                     <i class="sr-detail-trash-icon"></i>
                                 </button>
                                 {% endif %}
@@ -619,7 +624,7 @@ th, td { display: table-cell !important; }
                 </tbody>
                 <tfoot>
                     <tr>
-                        <th colspan="9">Total:</th>
+                        <th colspan="10">Total:</th>
                         <th>₹{{ items_total|floatformat:2 }}</th>
                         <th colspan="2"></th>
                     </tr>
@@ -763,6 +768,7 @@ th, td { display: table-cell !important; }
                                     <th>MRP</th>
                                     <th>Rate</th>
                                     <th>Qty</th>
+                                    <th>Free Qty</th>
                                     <th>Discount</th>
                                     <th>CGST%</th>
                                     <th>SGST%</th>
@@ -775,28 +781,32 @@ th, td { display: table-cell !important; }
                                 {% for item in return_items %}
                                 <tr id="editReturnRow_{{ forloop.counter0 }}" data-item-id="{{ item.return_sales_id }}">
                                     <td>
-                                        <select class="form-control form-control-sm product-select" onchange="focusBatchInput({{ forloop.counter0 }})" required>
+                                        <select class="form-control form-control-sm product-select" data-row-index="{{ forloop.counter0 }}" required>
                                             <option value="">Select Product</option>
                                             {% for product in products %}
                                             <option value="{{ product.productid }}" {% if product.productid == item.return_productid.productid %}selected{% endif %}>{{ product.product_name }} - {{ product.product_company }}</option>
                                             {% endfor %}
                                         </select>
+<button type="button" class="btn btn-sm btn-outline-success" onclick="openProductDialog()" style="margin-left: 5px;" title="Add New Product">
+                                <i class="fas fa-plus"></i> Add Product
+                            </button>
                                         <input type="hidden" class="product-id" value="{{ item.return_productid.productid }}">
                                     </td>
                                     <td>
-                                        <input type="text" class="form-control form-control-sm batch-no" value="{{ item.return_product_batch_no }}" placeholder="Click to select batch" onclick="showBatchSelectionForEdit({{ forloop.counter0 }})" required>
+                                        <input type="text" class="form-control form-control-sm batch-no" value="{{ item.return_product_batch_no|escapejs }}" placeholder="Click to select batch" data-row-index="{{ forloop.counter0 }}" required>
                                     </td>
                                     <td><input type="text" class="form-control form-control-sm expiry" value="{{ item.return_product_expiry|expiry_mmyyyy }}" placeholder="MM-YYYY" maxlength="7" required></td>
                                     <td><input type="number" class="form-control form-control-sm mrp" value="{{ item.return_product_MRP }}" step="0.01" required></td>
-                                    <td><input type="number" class="form-control form-control-sm return-rate" value="{{ item.return_sale_rate }}" step="0.01" onchange="calculateEditReturnRowTotal({{ forloop.counter0 }})" required></td>
+                                    <td><input type="number" class="form-control form-control-sm return-rate" value="{{ item.return_sale_rate }}" step="0.01" data-row-index="{{ forloop.counter0 }}" required></td>
                                     <td>
-                                        <input type="number" class="form-control form-control-sm return-qty" value="{{ item.return_sale_quantity }}" step="0.01" oninput="validateEditReturnStock({{ forloop.counter0 }})" onchange="validateEditReturnStock({{ forloop.counter0 }})" required>
+                                        <input type="number" class="form-control form-control-sm return-qty" value="{{ item.return_sale_quantity }}" step="0.01" data-row-index="{{ forloop.counter0 }}" required>
                                         <div class="stock-info-edit" style="display: none;"></div>
                                         <div class="stock-error-edit" style="display: none;"></div>
                                     </td>
-                                    <td><input type="number" class="form-control form-control-sm discount" value="{{ item.return_sale_discount }}" step="0.01" onchange="calculateEditReturnRowTotal({{ forloop.counter0 }})"></td>
-                                    <td><input type="number" class="form-control form-control-sm cgst" value="{{ item.return_sale_cgst }}" step="0.01" onchange="calculateEditReturnRowTotal({{ forloop.counter0 }})"></td>
-                                    <td><input type="number" class="form-control form-control-sm sgst" value="{{ item.return_sale_sgst }}" step="0.01" onchange="calculateEditReturnRowTotal({{ forloop.counter0 }})"></td>
+                                    <td><input type="number" class="form-control form-control-sm return-free-qty" value="{{ item.return_sale_free_qty|default:0 }}" step="0.01" min="0"></td>
+                                    <td><input type="number" class="form-control form-control-sm discount" value="{{ item.return_sale_discount }}" step="0.01" data-row-index="{{ forloop.counter0 }}"></td>
+                                    <td><input type="number" class="form-control form-control-sm cgst" value="{{ item.return_sale_cgst }}" step="0.01" data-row-index="{{ forloop.counter0 }}"></td>
+                                    <td><input type="number" class="form-control form-control-sm sgst" value="{{ item.return_sale_sgst }}" step="0.01" data-row-index="{{ forloop.counter0 }}"></td>
                                     <td>
                                         <select class="form-control form-control-sm reason">
                                             <option value="">Select Reason</option>
@@ -809,7 +819,7 @@ th, td { display: table-cell !important; }
                                         </select>
                                     </td>
                                     <td><span class="edit-return-row-total">{{ item.return_sale_total_amount }}</span></td>
-                                    <td><button type="button" class="btn btn-sm btn-danger" onclick="removeEditReturnProductRow({{ forloop.counter0 }})"><i class="fas fa-trash"></i></button></td>
+                                    <td><button type="button" class="btn btn-sm btn-danger remove-existing-row-btn" data-row-index="{{ forloop.counter0 }}"><i class="fas fa-trash"></i></button></td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -879,6 +889,43 @@ let editReturnProductRowIndex = {{ return_items.count }};
 let currentEditRowIndex = null;
 let currentBatchesData = []; // Store current batch data
 let deleteItemId = null;
+
+// Global product cache for search
+window.productCache = [];
+
+// Function to refresh product cache when new product is added
+window.refreshProductCache = function(newProduct) {
+    console.log('Refreshing product cache with new product:', newProduct);
+    
+    // Add to cache
+    if (newProduct && newProduct.id) {
+        window.productCache.push({
+            id: newProduct.id,
+            name: newProduct.name,
+            company: newProduct.company
+        });
+        console.log('✅ Product added to cache. Total products:', window.productCache.length);
+        
+        // Also add to product select dropdowns in edit modal
+        const productSelects = document.querySelectorAll('.product-select');
+        productSelects.forEach(select => {
+            const newOption = document.createElement('option');
+            newOption.value = newProduct.id;
+            newOption.textContent = `${newProduct.name} - ${newProduct.company}`;
+            select.appendChild(newOption);
+        });
+    }
+};
+
+// Initialize product cache on page load
+window.initializeProductCache = function() {
+    window.productCache = [{% for product in products %}{
+        id: {{ product.productid }},
+        name: '{{ product.product_name|escapejs }}',
+        company: '{{ product.product_company|escapejs }}'
+    },{% endfor %}];
+    console.log('Product cache initialized with', window.productCache.length, 'products');
+};
 
 // Delete item dialog functions
 function showDeleteItemDialog(itemId, productName, batchNo) {
@@ -985,9 +1032,19 @@ function calculateEditReturnTotal() {
     
     const additionalCharges = parseFloat(document.getElementById('editReturnCharges').value) || 0;
     const transportCharges = parseFloat(document.getElementById('editTransportCharges').value) || 0;
-    total += additionalCharges + transportCharges;
+    const rawTotal = total + additionalCharges + transportCharges;
     
-    document.getElementById('editReturnTotal').textContent = total.toFixed(2);
+    // Round off: 10.50 → 11, 10.49 → 10
+    const roundedTotal = Math.round(rawTotal);
+    const roundoffAmount = roundedTotal - rawTotal;
+    
+    // Update display with round-off info
+    let displayHtml = roundedTotal.toString();
+    if (Math.abs(roundoffAmount) > 0.001) {
+        const sign = roundoffAmount > 0 ? '+' : '-';
+        displayHtml += ` <small style="font-size:0.8em;color:#666;">(${rawTotal.toFixed(2)} ${sign} ${Math.abs(roundoffAmount).toFixed(2)})</small>`;
+    }
+    document.getElementById('editReturnTotal').innerHTML = displayHtml;
 }
 
 function saveEditSalesReturn() {
@@ -1017,6 +1074,7 @@ function saveEditSalesReturn() {
                 mrp: row.querySelector('.mrp').value,
                 return_rate: row.querySelector('.return-rate').value,
                 return_quantity: row.querySelector('.return-qty').value,
+                return_free_qty: row.querySelector('.return-free-qty').value || 0,
                 discount: row.querySelector('.discount').value || 0,
                 cgst: row.querySelector('.cgst').value || 2.5,
                 sgst: row.querySelector('.sgst').value || 2.5,
@@ -1197,8 +1255,7 @@ function openQuickProductSearchForEdit() {
             else if (e.key === 'ArrowUp') { e.preventDefault(); navigateResultsEdit(-1); }
             else if (e.key === 'Enter') {
                 e.preventDefault();
-                const selected = resultsDiv.querySelector('.selected');
-                if (selected) selected.click();
+                handleQuickSearchEnter();
             }
         });
     }, 100);
@@ -1216,7 +1273,8 @@ function quickSearchProductsForEdit(event) {
         return;
     }
     
-    const products = [{% for product in products %}{
+    // Use cached products or fallback to template data
+    const products = window.productCache.length > 0 ? window.productCache : [{% for product in products %}{
         id: {{ product.productid }},
         name: '{{ product.product_name|escapejs }}',
         company: '{{ product.product_company|escapejs }}'
@@ -1262,13 +1320,27 @@ function quickSearchProductsForEdit(event) {
         return;
     }
     
-    resultsDiv.innerHTML = filtered.map((product, index) => `
-        <div class="quick-result-item ${index === 0 ? 'selected' : ''}" 
-             onclick="quickSelectEditReturnProduct(${product.id}, '${product.name}')">
-            <div class="product-name">${product.name}</div>
-            <div class="product-company">${product.company}</div>
+    resultsDiv.innerHTML = filtered.map((product, index) => {
+        // Escape product name for safe HTML insertion
+        const safeName = String(product.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const safeCompany = String(product.company).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        
+        return `
+        <div class="quick-result-item ${index === 0 ? 'selected' : ''}" data-product-id="${product.id}">
+            <div class="product-name">${safeName}</div>
+            <div class="product-company">${safeCompany}</div>
         </div>
-    `).join('');
+    `}).join('');
+    
+    // Add click event listeners after DOM insertion
+    setTimeout(() => {
+        document.querySelectorAll('#quickResultsEdit .quick-result-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const productId = parseInt(this.getAttribute('data-product-id'));
+                quickSelectEditReturnProduct(productId, '');
+            });
+        });
+    }, 50);
 }
 
 function navigateResultsEdit(direction) {
@@ -1290,36 +1362,49 @@ function navigateResultsEdit(direction) {
     items[newIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+// Update Enter key handler for quick search
+function handleQuickSearchEnter() {
+    const selected = document.querySelector('#quickResultsEdit .quick-result-item.selected');
+    if (selected) {
+        const productId = parseInt(selected.getAttribute('data-product-id'));
+        quickSelectEditReturnProduct(productId, '');
+    }
+}
+
 function quickSelectEditReturnProduct(productId, productName) {
     const tbody = document.getElementById('editReturnProductRows');
     const row = document.createElement('tr');
     const currentRowIndex = editReturnProductRowIndex;
     row.id = `editReturnRow_${currentRowIndex}`;
     
-    row.innerHTML = `
+    // Create a temporary container to parse HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = `
+        <table><tbody><tr>
         <td>
-            <select class="form-control form-control-sm product-select" onchange="focusBatchInput(${currentRowIndex})" required>
+            <select class="form-control form-control-sm product-select" required>
                 <option value="">Select Product</option>
                 {% for product in products %}
-                <option value="{{ product.productid }}" ${productId == {{ product.productid }} ? 'selected' : ''}>{{ product.product_name }} - {{ product.product_company }}</option>
+                <option value="{{ product.productid }}" ${productId == {{ product.productid }} ? 'selected' : ''}>{{ product.product_name|escapejs }} - {{ product.product_company|escapejs }}</option>
                 {% endfor %}
             </select>
             <input type="hidden" class="product-id" value="${productId}">
         </td>
         <td>
-            <input type="text" class="form-control form-control-sm batch-no" placeholder="Click to select batch" onclick="showBatchSelectionForEdit(${currentRowIndex})" required>
+            <input type="text" class="form-control form-control-sm batch-no" placeholder="Click to select batch" data-row-index="${currentRowIndex}" required>
         </td>
         <td><input type="text" class="form-control form-control-sm expiry" placeholder="MM-YYYY" maxlength="7" required></td>
         <td><input type="number" class="form-control form-control-sm mrp" step="0.01" required></td>
-        <td><input type="number" class="form-control form-control-sm return-rate" step="0.01" onchange="calculateEditReturnRowTotal(${currentRowIndex})" required></td>
+        <td><input type="number" class="form-control form-control-sm return-rate" step="0.01" data-row-index="${currentRowIndex}" required></td>
         <td>
-            <input type="number" class="form-control form-control-sm return-qty" step="0.01" oninput="validateEditReturnStock(${currentRowIndex})" required>
+            <input type="number" class="form-control form-control-sm return-qty" step="0.01" data-row-index="${currentRowIndex}" required>
             <div class="stock-info-edit" style="display: none;"></div>
             <div class="stock-error-edit" style="display: none;"></div>
         </td>
-        <td><input type="number" class="form-control form-control-sm discount" step="0.01" onchange="calculateEditReturnRowTotal(${currentRowIndex})"></td>
-        <td><input type="number" class="form-control form-control-sm cgst" value="2.5" step="0.01" onchange="calculateEditReturnRowTotal(${currentRowIndex})"></td>
-        <td><input type="number" class="form-control form-control-sm sgst" value="2.5" step="0.01" onchange="calculateEditReturnRowTotal(${currentRowIndex})"></td>
+        <td><input type="number" class="form-control form-control-sm return-free-qty" value="0" step="0.01" min="0"></td>
+        <td><input type="number" class="form-control form-control-sm discount" step="0.01" data-row-index="${currentRowIndex}"></td>
+        <td><input type="number" class="form-control form-control-sm cgst" value="2.5" step="0.01" data-row-index="${currentRowIndex}"></td>
+        <td><input type="number" class="form-control form-control-sm sgst" value="2.5" step="0.01" data-row-index="${currentRowIndex}"></td>
         <td>
             <select class="form-control form-control-sm reason">
                 <option value="">Select Reason</option>
@@ -1329,8 +1414,17 @@ function quickSelectEditReturnProduct(productId, productName) {
             </select>
         </td>
         <td><span class="edit-return-row-total">0.00</span></td>
-        <td><button type="button" class="btn btn-sm btn-danger" onclick="removeEditReturnProductRow(${currentRowIndex})"><i class="fas fa-trash"></i></button></td>
+        <td><button type="button" class="btn btn-sm btn-danger remove-row-btn" data-row-index="${currentRowIndex}"><i class="fas fa-trash"></i></button></td>
+        </tr></tbody></table>
     `;
+    
+    // Extract the tr element from the temporary container
+    const newRow = tempDiv.querySelector('tr');
+    
+    // Copy all child nodes to the actual row
+    while (newRow.firstChild) {
+        row.appendChild(newRow.firstChild);
+    }
     
     tbody.appendChild(row);
     editReturnProductRowIndex++;
@@ -1375,40 +1469,48 @@ function createBatchModalForEdit(batches, rowIndex) {
     // Store batch data globally
     currentBatchesData = batches;
     
+    // Create batch items HTML safely
+    const batchItemsHTML = batches.map((batch, index) => {
+        // Escape batch_no for safe HTML insertion
+        const safeBatchNo = String(batch.batch_no || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        const safeExpiry = String(batch.expiry || 'N/A').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        
+        return `
+            <div class="batch-item ${index === 0 ? 'batch-selected' : ''}" data-row-index="${rowIndex}" data-batch-index="${index}">
+                <div class="batch-info">
+                    <div class="batch-no"><strong>${safeBatchNo}</strong></div>
+                    <div class="batch-details">
+                        <span>Exp: ${safeExpiry}</span>
+                        <span>Stock: ${batch.stock || 0}</span>
+                        <span style="color: #28a745; font-weight: 600;">Free: ${batch.free_qty || 0}</span>
+                        <span>MRP: ₹${batch.mrp || 0}</span>
+                        <span>Rate A: ₹${batch.rates?.rate_A || 0}</span>
+                        <span>Rate B: ₹${batch.rates?.rate_B || 0}</span>
+                        <span>Rate C: ₹${batch.rates?.rate_C || 0}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
     const modalHTML = `
         <div id="batchModalEdit" class="batch-modal-overlay">
             <div class="batch-modal-content">
                 <div class="batch-modal-header">
                     <h3>Select Batch</h3>
-                    <button type="button" class="batch-modal-close" onclick="closeBatchModalEdit()">&times;</button>
+                    <button type="button" class="batch-modal-close">&times;</button>
                 </div>
                 <div class="batch-modal-body">
                     <div class="batch-search">
-                        <input type="text" id="batchSearchEdit" placeholder="Search batch..." onkeyup="filterBatchesEdit()">
+                        <input type="text" id="batchSearchEdit" placeholder="Search batch...">
                     </div>
                     <div class="batch-list" id="batchListEdit">
-                        ${batches.map((batch, index) => {
-                            console.log('Batch data:', batch);
-                            return `
-                            <div class="batch-item ${index === 0 ? 'batch-selected' : ''}" data-row-index="${rowIndex}" data-batch-data='${JSON.stringify(batch)}' onclick="selectBatchFromClick(this, ${rowIndex})">
-                                <div class="batch-info">
-                                    <div class="batch-no"><strong>${batch.batch_no}</strong></div>
-                                    <div class="batch-details">
-                                        <span>Exp: ${batch.expiry || 'N/A'}</span>
-                                        <span>Stock: ${batch.stock || 0}</span>
-                                        <span>MRP: ₹${batch.mrp || 0}</span>
-                                        <span>Rate A: ₹${batch.rates?.rate_A || 0}</span>
-                                        <span>Rate B: ₹${batch.rates?.rate_B || 0}</span>
-                                        <span>Rate C: ₹${batch.rates?.rate_C || 0}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `}).join('')}
+                        ${batchItemsHTML}
                     </div>
                 </div>
                 <div class="batch-modal-footer">
                     <small>↑↓: Navigate | Enter: Select | Esc: Close</small>
-                    <button type="button" class="btn btn-secondary" onclick="closeBatchModalEdit()">Cancel</button>
+                    <button type="button" class="btn btn-secondary">Cancel</button>
                 </div>
             </div>
         </div>
@@ -1416,9 +1518,28 @@ function createBatchModalForEdit(batches, rowIndex) {
     
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     
+    // Add event listeners after modal is inserted
     setTimeout(() => {
+        const modal = document.getElementById('batchModalEdit');
+        
+        // Close button
+        modal.querySelector('.batch-modal-close').addEventListener('click', closeBatchModalEdit);
+        modal.querySelector('.btn-secondary').addEventListener('click', closeBatchModalEdit);
+        
+        // Search input
+        document.getElementById('batchSearchEdit').addEventListener('keyup', filterBatchesEdit);
         document.getElementById('batchSearchEdit').focus();
-        // Initialize navigation immediately when modal opens
+        
+        // Batch item clicks
+        document.querySelectorAll('#batchListEdit .batch-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const batchIndex = parseInt(this.getAttribute('data-batch-index'));
+                const rowIdx = parseInt(this.getAttribute('data-row-index'));
+                selectBatchFromIndex(rowIdx, batchIndex);
+            });
+        });
+        
+        // Initialize navigation
         initBatchNavigationEdit();
     }, 100);
 }
@@ -1522,6 +1643,7 @@ function selectBatchForEdit(rowIndex, batchNo, expiry, mrp, rate, stock) {
         
         row.querySelector('.return-rate').value = selectedRate;
         row.querySelector('.return-qty').value = '1';
+          row.querySelector('.return-free-qty').value = selectedBatch?.free_qty || '0';
         
         // Show stock info
         const stockInfo = row.querySelector('.stock-info-edit');
@@ -1557,16 +1679,26 @@ function closeBatchModalEdit() {
     }
 }
 
-function selectBatchFromClick(element, rowIndex) {
-    const batchData = JSON.parse(element.getAttribute('data-batch-data'));
+function selectBatchFromIndex(rowIndex, batchIndex) {
+    const selectedBatch = currentBatchesData[batchIndex];
+    if (!selectedBatch) {
+        console.error('Batch not found at index:', batchIndex);
+        return;
+    }
+    
     selectBatchForEdit(
         rowIndex, 
-        batchData.batch_no, 
-        batchData.expiry, 
-        batchData.mrp, 
-        batchData.purchase_rate || batchData.rate_a || batchData.mrp, 
-        batchData.stock
+        selectedBatch.batch_no, 
+        selectedBatch.expiry, 
+        selectedBatch.mrp, 
+        selectedBatch.purchase_rate || selectedBatch.rate_a || selectedBatch.mrp, 
+        selectedBatch.stock
     );
+}
+
+function selectBatchFromClick(element, rowIndex) {
+    const batchIndex = parseInt(element.getAttribute('data-batch-index'));
+    selectBatchFromIndex(rowIndex, batchIndex);
 }
 
 function closeQuickSearchEdit() {
@@ -1689,6 +1821,68 @@ document.getElementById('deleteItemDialog').addEventListener('click', function(e
 });
 
 // No need to initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize product cache
+    window.initializeProductCache();
+    
+    // Apply round-off on page load - 10.50 → 11, 10.49 → 10 (UI only, DB saves actual)
+    document.querySelectorAll('.rounded-amount').forEach(function(element) {
+        var actualAmount = parseFloat(element.getAttribute('data-actual')) || 0;
+        var roundedAmount = Math.round(actualAmount);
+        element.textContent = '₹' + roundedAmount;
+    });
+    
+    // Add click event listener to batch input fields
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('batch-no')) {
+            const rowIndex = e.target.getAttribute('data-row-index');
+            if (rowIndex !== null) {
+                showBatchSelectionForEdit(parseInt(rowIndex));
+            }
+        }
+    });
+    
+    // Add event listeners for existing rows in edit modal
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('return-rate') || 
+            e.target.classList.contains('discount') || 
+            e.target.classList.contains('cgst') || 
+            e.target.classList.contains('sgst')) {
+            const rowIndex = e.target.getAttribute('data-row-index');
+            if (rowIndex !== null) {
+                calculateEditReturnRowTotal(parseInt(rowIndex));
+            }
+        }
+        
+        if (e.target.classList.contains('product-select')) {
+            const rowIndex = e.target.getAttribute('data-row-index');
+            if (rowIndex !== null) {
+                focusBatchInput(parseInt(rowIndex));
+            }
+        }
+    });
+    
+    // Add event listeners for return qty input
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('return-qty')) {
+            const rowIndex = e.target.getAttribute('data-row-index');
+            if (rowIndex !== null) {
+                validateEditReturnStock(parseInt(rowIndex));
+            }
+        }
+    });
+    
+    // Add event listeners for remove buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-existing-row-btn')) {
+            const btn = e.target.closest('.remove-existing-row-btn');
+            const rowIndex = btn.getAttribute('data-row-index');
+            if (rowIndex !== null) {
+                removeEditReturnProductRow(parseInt(rowIndex));
+            }
+        }
+    });
+});
 </script>
 <div style="position: fixed; bottom: 0; left: 0; right: 0; background: #1f2937; color: #d1d5db; padding: 10px 20px; font-size: 0.8rem; display: flex; justify-content: center; gap: 30px; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">
     <div style="display: flex; align-items: center; gap: 5px;">

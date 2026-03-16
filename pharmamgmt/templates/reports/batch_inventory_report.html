@@ -68,6 +68,7 @@
                             <th>Batch No</th>
                             <th>Expiry</th>
                             <th>Stock Qty</th>
+                            <th>Free Qty</th>
                             <th>MRP</th>
                             <th>Stock Value</th>
                         </tr>
@@ -91,6 +92,7 @@
                                     {{ item.stock }}
                                 {% endif %}
                             </td>
+                            <td>{{ item.free_qty|default:0 }}</td>
                             <td>₹{{ item.mrp|floatformat:2 }}</td>
                             <td>₹{{ item.value|floatformat:2 }}</td>
                         </tr>
@@ -98,7 +100,7 @@
                     </tbody>
                     <tfoot class="batch-table-footer">
                         <tr>
-                            <td colspan="7" class="batch-total-label">Page Total Value:</td>
+                            <td colspan="8" class="batch-total-label">Page Total Value:</td>
                             <td>₹{{ page_total_value|floatformat:2 }}</td>
                         </tr>
                     </tfoot>

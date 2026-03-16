@@ -1016,6 +1016,7 @@ def edit_invoice(request, pk):
                                 product_MRP=float(product_data.get('mrp', 0)),
                                 product_purchase_rate=float(product_data.get('purchase_rate', 0)),
                                 product_quantity=float(product_data.get('quantity', 0)),
+                                product_free_qty=float(product_data.get('free_qty', 0)),
                                 product_scheme=float(product_data.get('scheme', 0)),
                                 product_discount_got=float(product_data.get('discount', 0)),
                                 CGST=float(product_data.get('cgst', 0)),
@@ -1196,7 +1197,7 @@ def add_purchase(request, invoice_id):
             purchase.product_actual_rate = purchase.actual_rate_per_qty
             
             # Calculate total amount before transport charges
-            purchase.total_amount = purchase.product_actual_rate * purchase.product_quantity
+            purchase.total_amount = round(purchase.product_actual_rate * purchase.product_quantity, 2)
             
             # Check if adding this product would exceed the invoice total
             existing_purchases_total = PurchaseMaster.objects.filter(
@@ -1226,17 +1227,17 @@ def add_purchase(request, invoice_id):
                 total_products = len(existing_purchases) + 1
                 
                 # Calculate transport share per product
-                transport_share_per_product = invoice.transport_charges / total_products
+                transport_share_per_product = round(invoice.transport_charges / total_products, 2)
                 
                 # Update this product's transport charges
                 purchase.product_transportation_charges = transport_share_per_product
                 
                 # Add the transport share to the actual rate
-                transport_per_unit = transport_share_per_product / purchase.product_quantity
-                purchase.product_actual_rate = purchase.actual_rate_per_qty + transport_per_unit
+                transport_per_unit = round(transport_share_per_product / purchase.product_quantity, 2)
+                purchase.product_actual_rate = round(purchase.actual_rate_per_qty + transport_per_unit, 2)
                 
                 # Recalculate total amount with transport charges included
-                purchase.total_amount = purchase.product_actual_rate * purchase.product_quantity
+                purchase.total_amount = round(purchase.product_actual_rate * purchase.product_quantity, 2)
                 
                 # Update existing products to redistribute transport charges
                 for prev_purchase in existing_purchases:
@@ -1319,15 +1320,15 @@ def edit_purchase(request, invoice_id, purchase_id):
             # Calculate actual rate based on discount and quantity
             if purchase.purchase_calculation_mode == 'flat':
                 # Flat discount amount
-                purchase.actual_rate_per_qty = purchase.product_purchase_rate - (purchase.product_discount_got / purchase.product_quantity)
+                purchase.actual_rate_per_qty = round(purchase.product_purchase_rate - (purchase.product_discount_got / purchase.product_quantity), 2)
             else:
                 # Percentage discount
-                purchase.actual_rate_per_qty = purchase.product_purchase_rate * (1 - (purchase.product_discount_got / 100))
+                purchase.actual_rate_per_qty = round(purchase.product_purchase_rate * (1 - (purchase.product_discount_got / 100)), 2)
             
             purchase.product_actual_rate = purchase.actual_rate_per_qty
             
             # Calculate total amount without transport charges
-            base_total = purchase.product_actual_rate * purchase.product_quantity
+            base_total = round(purchase.product_actual_rate * purchase.product_quantity, 2)
             
             # Check if updating this product would exceed the invoice total
             # Get the sum of all purchases for this invoice excluding the current one
@@ -1381,24 +1382,24 @@ def edit_purchase(request, invoice_id, purchase_id):
                 total_products = len(other_purchases) + 1
                 
                 # Calculate transport share per product
-                transport_share_per_product = invoice.transport_charges / total_products
+                transport_share_per_product = round(invoice.transport_charges / total_products, 2)
                 
                 # Update this product's transport charges
                 purchase.product_transportation_charges = transport_share_per_product
                 
                 # Add transport share to actual rate
-                transport_per_unit = transport_share_per_product / purchase.product_quantity
-                purchase.product_actual_rate = purchase.actual_rate_per_qty + transport_per_unit
+                transport_per_unit = round(transport_share_per_product / purchase.product_quantity, 2)
+                purchase.product_actual_rate = round(purchase.actual_rate_per_qty + transport_per_unit, 2)
                 
                 # Recalculate total amount with transport charges included
-                purchase.total_amount = purchase.product_actual_rate * purchase.product_quantity
+                purchase.total_amount = round(purchase.product_actual_rate * purchase.product_quantity, 2)
                 
                 # Update other products to redistribute transport charges
                 for other_purchase in other_purchases:
                     other_purchase.product_transportation_charges = transport_share_per_product
-                    other_transport_per_unit = transport_share_per_product / other_purchase.product_quantity
-                    other_purchase.product_actual_rate = other_purchase.actual_rate_per_qty + other_transport_per_unit
-                    other_purchase.total_amount = other_purchase.product_actual_rate * other_purchase.product_quantity
+                    other_transport_per_unit = round(transport_share_per_product / other_purchase.product_quantity, 2)
+                    other_purchase.product_actual_rate = round(other_purchase.actual_rate_per_qty + other_transport_per_unit, 2)
+                    other_purchase.total_amount = round(other_purchase.product_actual_rate * other_purchase.product_quantity, 2)
                     other_purchase.save()
             else:
                 purchase.product_transportation_charges = 0
@@ -1990,7 +1991,7 @@ def add_sale(request, invoice_id):
             
             # Check stock availability first
             from .utils import get_batch_stock_status
-            batch_quantity, is_available = get_batch_stock_status(
+            batch_quantity, batch_free_qty, is_available = get_batch_stock_status(
                 sale.productid.productid, sale.product_batch_no
             )
             
@@ -2327,6 +2328,7 @@ def edit_sales_invoice(request, pk):
                             product_MRP=float(product_data.get('mrp', 0)),
                             sale_rate=float(product_data.get('sale_rate', 0)),
                             sale_quantity=float(product_data.get('quantity', 0)),
+                            sale_free_qty=float(product_data.get('free_qty', 0)),
                             sale_scheme=float(product_data.get('scheme', 0)),
                             sale_discount=discount,
                             sale_calculation_mode=product_data.get('calculation_mode', 'flat'),
@@ -2578,7 +2580,7 @@ def add_sales_invoice_with_products(request):
                             
                             if not is_challan_product:
                                 # Check stock availability only for non-challan products
-                                batch_quantity, is_available = get_batch_stock_status(
+                                batch_quantity, batch_free_qty, is_available = get_batch_stock_status(
                                     product.productid, product_data['batch_no']
                                 )
                                 
@@ -2651,6 +2653,7 @@ def add_sales_invoice_with_products(request):
                                 product_MRP=float(product_data['mrp']),
                                 sale_rate=float(product_data['sale_rate']),
                                 sale_quantity=sale_quantity,
+                                sale_free_qty=float(product_data.get('free_qty', 0)),
                                 sale_scheme=float(product_data.get('scheme', 0)),
                                 sale_discount=discount,
                                 sale_calculation_mode=product_data.get('calculation_mode', 'flat'),
@@ -3098,6 +3101,7 @@ def add_purchase_return(request):
                                     returnproduct_MRP=float(product_data.get('mrp', 0)),
                                     returnproduct_purchase_rate=return_rate,
                                     returnproduct_quantity=return_quantity,
+                                    returnproduct_free_qty=float(product_data.get('return_free_qty', 0)),
                                     returnproduct_cgst=cgst,
                                     returnproduct_sgst=sgst,
                                     returntotal_amount=total_amount,
@@ -3355,6 +3359,7 @@ def update_purchase_return_api(request):
                 returnproduct_MRP=float(product_data.get('mrp', 0)),
                 returnproduct_purchase_rate=return_rate,
                 returnproduct_quantity=return_quantity,
+                returnproduct_free_qty=float(product_data.get('return_free_qty', 0)),
                 returnproduct_cgst=cgst,
                 returnproduct_sgst=sgst,
                 returntotal_amount=item_total,
@@ -3680,6 +3685,7 @@ def add_sales_return(request):
                                 return_product_MRP=float(product_data.get('mrp', 0)),
                                 return_sale_rate=return_rate,
                                 return_sale_quantity=return_quantity,
+                                return_sale_free_qty=float(product_data.get('return_free_qty', 0)),
                                 return_sale_discount=discount,
                                 return_sale_calculation_mode='flat',
                                 return_sale_cgst=cgst,
@@ -4357,6 +4363,7 @@ def update_sales_return_api(request):
                         return_product_MRP=float(product_data.get('mrp', 0)),
                         return_sale_rate=rate,
                         return_sale_quantity=qty,
+                        return_sale_free_qty=float(product_data.get('return_free_qty', 0)),
                         return_sale_discount=discount,
                         return_sale_calculation_mode='flat',
                         return_sale_cgst=cgst,
@@ -5843,7 +5850,7 @@ def get_product_info(request):
                     response_data['product_expiry'] = purchase_record.product_expiry
                     
                     # Check stock availability
-                    batch_quantity, is_available = get_batch_stock_status(product_id, batch_no)
+                    batch_quantity, batch_free_qty, is_available = get_batch_stock_status(product_id, batch_no)
                     response_data.update({
                         'batch_stock_available': is_available,
                         'batch_stock_quantity': batch_quantity
@@ -5978,7 +5985,8 @@ def get_product_batch_selector(request):
             'product_batch_no',
             'product_expiry', 
             'product_MRP',
-            'product_actual_rate'
+            'product_actual_rate',
+            'product_free_qty'
         ).distinct()
         
         challan_batches = SupplierChallanMaster.objects.filter(
@@ -5998,7 +6006,8 @@ def get_product_batch_selector(request):
                 'product_batch_no': batch['product_batch_no'],
                 'product_expiry': batch['product_expiry'],
                 'product_MRP': batch['product_MRP'],
-                'product_actual_rate': batch['product_actual_rate']
+                'product_actual_rate': batch['product_actual_rate'],
+                'product_free_qty': batch.get('product_free_qty', 0)
             }
         
         for batch in challan_batches:
@@ -6008,7 +6017,8 @@ def get_product_batch_selector(request):
                     'product_batch_no': batch['product_batch_no'],
                     'product_expiry': batch['product_expiry'],
                     'product_MRP': batch['product_mrp'],
-                    'product_actual_rate': batch['product_purchase_rate']
+                    'product_actual_rate': batch['product_purchase_rate'],
+                    'product_free_qty': 0
                 }
         
         batches = list(all_batches.values())
@@ -6045,7 +6055,7 @@ def get_product_batch_selector(request):
             batch_no = batch['product_batch_no']
             
             # Use the corrected stock calculation function
-            current_stock, is_available = get_batch_stock_status(product_id, batch_no)
+            current_stock, current_free_qty, is_available = get_batch_stock_status(product_id, batch_no)
             
             # Only include batches with stock > 0
             if current_stock > 0:
@@ -6073,6 +6083,7 @@ def get_product_batch_selector(request):
                     'stock': current_stock,
                     'mrp': float(batch['product_MRP'] or 0),
                     'purchase_rate': float(batch['product_actual_rate'] or batch['product_MRP'] or 0),
+                    'free_qty': batch_free_qty,
                     'rate_a': rates['rate_A'],
                     'rate_b': rates['rate_B'],
                     'rate_c': rates['rate_C'],
@@ -6141,10 +6152,9 @@ def get_batch_details(request):
                 'error': 'Batch not found'
             }, status=404)
         
-        # Use the StockManager for accurate stock calculation
-        from .stock_manager import StockManager
-        batch_stock_info = StockManager._get_batch_stock(product_id, batch_no)
-        current_stock = batch_stock_info['batch_stock']
+        # Use get_batch_stock_status for accurate stock and free qty calculation
+        from .utils import get_batch_stock_status
+        current_stock, current_free_qty, is_available = get_batch_stock_status(product_id, batch_no)
         
         # Convert expiry date to MM-YYYY format
         def convert_expiry_to_mmyyyy(expiry_input):
@@ -6197,6 +6207,7 @@ def get_batch_details(request):
             'expiry': expiry_mmyyyy,
             'mrp': float(batch.product_MRP or 0),
             'purchase_rate': float(batch.product_actual_rate or 0),
+            'free_qty': current_free_qty,
             'available_stock': current_stock,
             'rates': rates
         })
@@ -8763,7 +8774,7 @@ def get_product_batches(request):
         batch_list = []
         for batch in batches:
             # Get stock for this batch
-            batch_quantity, is_available = get_batch_stock_status(
+            batch_quantity, batch_free_qty, is_available = get_batch_stock_status(
                 product_id, batch['product_batch_no']
             )
             
@@ -8803,7 +8814,7 @@ def get_batch_details(request):
         
         if purchase:
             # Get available stock
-            batch_quantity, is_available = get_batch_stock_status(product_id, batch_no)
+            batch_quantity, batch_free_qty, is_available = get_batch_stock_status(product_id, batch_no)
             
             # Get sale rates if available
             try:
@@ -8858,11 +8869,11 @@ def get_product_batch_selector(request):
         # 1. Get batches from PurchaseMaster
         purchase_batches = PurchaseMaster.objects.filter(
             productid=product_id
-        ).values('product_batch_no', 'product_expiry', 'product_MRP').distinct()
+        ).values('product_batch_no', 'product_expiry', 'product_MRP', 'product_free_qty').distinct()
         
         for batch in purchase_batches:
             batch_no = batch['product_batch_no']
-            batch_quantity, is_available = get_batch_stock_status(product_id, batch_no)
+            batch_quantity, batch_free_qty, is_available = get_batch_stock_status(product_id, batch_no)
             
             try:
                 sale_rate = SaleRateMaster.objects.get(productid=product_id, product_batch_no=batch_no)
@@ -8877,6 +8888,7 @@ def get_product_batch_selector(request):
                 'expiry': expiry_display,
                 'mrp': float(batch['product_MRP'] or 0),
                 'stock': batch_quantity,
+                'free_qty': batch_free_qty,
                 'is_available': is_available,
                 'rates': rates
             }
@@ -8891,7 +8903,7 @@ def get_product_batch_selector(request):
             if batch_no in batch_dict:
                 continue
             
-            batch_quantity, is_available = get_batch_stock_status(product_id, batch_no)
+            batch_quantity, batch_free_qty, is_available = get_batch_stock_status(product_id, batch_no)
             
             try:
                 sale_rate = SaleRateMaster.objects.get(productid=product_id, product_batch_no=batch_no)
@@ -8906,6 +8918,7 @@ def get_product_batch_selector(request):
                 'expiry': expiry_display,
                 'mrp': float(batch['product_mrp'] or 0),
                 'stock': batch_quantity,
+                'free_qty': batch_free_qty,
                 'is_available': is_available,
                 'rates': rates
             }
@@ -11922,6 +11935,9 @@ def print_gst_purchase_invoice(request, invoice_id):
     }
     
     return render(request, 'purchases/gst_purchase_invoice.html', context)
+
+
+
 
 
 

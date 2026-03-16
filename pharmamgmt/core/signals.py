@@ -119,9 +119,9 @@ def update_cache_on_purchase_delete(sender, instance, **kwargs):
         
         # Recalculate batch stock from remaining transactions
         from .inventory_cache import calculate_batch_stock
-        current_stock = calculate_batch_stock(product_id, batch_no, expiry_date)
+        current_stock, current_free_qty = calculate_batch_stock(product_id, batch_no, expiry_date)
         
-        if current_stock <= 0:
+        if current_stock <= 0 and current_free_qty <= 0:
             # Delete batch cache if no stock remains
             from .models import BatchInventoryCache
             BatchInventoryCache.objects.filter(
@@ -188,9 +188,9 @@ def update_cache_on_supplier_challan_delete(sender, instance, **kwargs):
         
         # Recalculate batch stock from remaining transactions
         from .inventory_cache import calculate_batch_stock
-        current_stock = calculate_batch_stock(product_id, batch_no, expiry_date)
+        current_stock, current_free_qty = calculate_batch_stock(product_id, batch_no, expiry_date)
         
-        if current_stock <= 0:
+        if current_stock <= 0 and current_free_qty <= 0:
             # Delete batch cache if no stock remains
             from .models import BatchInventoryCache
             BatchInventoryCache.objects.filter(

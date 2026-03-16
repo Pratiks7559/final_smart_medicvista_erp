@@ -1,0 +1,304 @@
+<!-- Add Product Dialog - Reusable Component -->
+<div id="addProductDialog" class="product-dialog-overlay" style="display: none;">
+    <div class="product-dialog-content">
+        <div class="product-dialog-header">
+            <h3><i class="fas fa-plus-circle"></i> Add New Product</h3>
+            <button type="button" class="product-dialog-close" onclick="closeProductDialog()">&times;</button>
+        </div>
+        <div class="product-dialog-body">
+            <form id="addProductForm" class="product-dialog-form" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="product-form-row">
+                    <div class="product-form-col">
+                        <label class="product-form-label">Product Name*</label>
+                        <input type="text" name="product_name" class="product-form-input" required>
+                    </div>
+                    <div class="product-form-col">
+                        <label class="product-form-label">Company*</label>
+                        <input type="text" name="product_company" class="product-form-input" required>
+                    </div>
+                </div>
+                
+                <div class="product-form-row">
+                    <div class="product-form-col">
+                        <label class="product-form-label">Packing*</label>
+                        <input type="text" name="product_packing" class="product-form-input" placeholder="e.g., 10x10" required>
+                    </div>
+                    <div class="product-form-col">
+                        <label class="product-form-label">Salt Composition*</label>
+                        <input type="text" name="product_salt" class="product-form-input" required>
+                    </div>
+                </div>
+                
+                <div class="product-form-row">
+                    <div class="product-form-col">
+                        <label class="product-form-label">Category*</label>
+                        <select name="product_category" class="product-form-input" required>
+                            <option value="">Select Category</option>
+                            <option value="tablet">Tablet</option>
+                            <option value="capsule">Capsule</option>
+                            <option value="syrup">Syrup</option>
+                            <option value="injection">Injection</option>
+                            <option value="cream">Cream</option>
+                            <option value="powder">Powder</option>
+                            <option value="drops">Drops</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="product-form-col">
+                        <label class="product-form-label">HSN Code*</label>
+                        <input type="text" name="product_hsn" class="product-form-input" placeholder="e.g., 30049099" required>
+                    </div>
+                </div>
+                
+                <div class="product-form-row">
+                    <div class="product-form-col">
+                        <label class="product-form-label">HSN Tax %*</label>
+                        <input type="text" name="product_hsn_percent" class="product-form-input" placeholder="e.g., 12" required>
+                    </div>
+                    <div class="product-form-col">
+                        <label class="product-form-label">Product Barcode</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="text" name="product_barcode" id="productBarcodeInput" class="product-form-input" placeholder="Scan or enter product barcode" style="flex: 1;">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="generateBarcode()" title="Generate Barcode">
+                                <i class="fas fa-barcode"></i> Generate
+                            </button>
+                        </div>
+                        <small style="color: #666; font-size: 12px; display: block; margin-top: 4px;">Optional - Scan or generate barcode</small>
+                    </div>
+                </div>
+                
+                <div class="product-form-row">
+                    <div class="product-form-col-full">
+                        <label class="product-form-label">Product Image</label>
+                        <input type="file" name="product_image" id="productImageInput" class="product-form-input" accept="image/*" onchange="previewImage(event)">
+                        <div id="imagePreview" style="margin-top: 10px; display: none;">
+                            <img id="previewImg" src="" alt="Preview" style="max-width: 200px; max-height: 200px; border: 1px solid #ddd; border-radius: 4px; padding: 5px;">
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="product-dialog-footer">
+            <button type="button" class="product-dialog-btn product-dialog-btn-secondary" onclick="closeProductDialog()">Cancel</button>
+            <button type="button" class="product-dialog-btn product-dialog-btn-primary" onclick="saveProduct()">Save Product</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.product-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-dialog-content {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.product-dialog-header {
+    padding: 20px;
+    border-bottom: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    border-radius: 8px 8px 0 0;
+}
+
+.product-dialog-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.product-dialog-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+.product-dialog-close:hover {
+    color: #000;
+}
+
+.product-dialog-body {
+    padding: 20px;
+}
+
+.product-form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.product-form-col {
+    flex: 1;
+}
+
+.product-form-col-full {
+    flex: 1 1 100%;
+}
+
+.product-form-label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+}
+
+.product-form-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.product-form-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.product-dialog-footer {
+    padding: 20px;
+    border-top: 1px solid #e5e5e5;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: #f8f9fa;
+    border-radius: 0 0 8px 8px;
+}
+
+.product-dialog-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.product-dialog-btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.product-dialog-btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.product-dialog-btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.product-dialog-btn-secondary:hover {
+    background-color: #545b62;
+}
+</style>
+
+<script>
+function openProductDialog() {
+    document.getElementById('addProductDialog').style.display = 'flex';
+    setTimeout(() => {
+        document.querySelector('#addProductForm input[name="product_name"]').focus();
+    }, 100);
+}
+
+function closeProductDialog() {
+    document.getElementById('addProductDialog').style.display = 'none';
+    document.getElementById('addProductForm').reset();
+    // Clear image preview
+    document.getElementById('imagePreview').style.display = 'none';
+    document.getElementById('previewImg').src = '';
+}
+
+function generateBarcode() {
+    // Generate random 13-digit barcode (EAN-13 format)
+    const barcode = '890' + Math.floor(Math.random() * 10000000000).toString().padStart(10, '0');
+    document.getElementById('productBarcodeInput').value = barcode;
+}
+
+function previewImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('previewImg').src = e.target.result;
+            document.getElementById('imagePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function saveProduct() {
+    const form = document.getElementById('addProductForm');
+    const formData = new FormData(form);
+    
+    const saveBtn = document.querySelector('.product-dialog-btn-primary');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    saveBtn.disabled = true;
+    
+    fetch('/api/add-product/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Add to all product dropdowns
+            const productSelects = document.querySelectorAll('select[name*="product"], .product-select');
+            productSelects.forEach(select => {
+                const newOption = document.createElement('option');
+                newOption.value = data.product.id;
+                newOption.textContent = `${data.product.name} - ${data.product.company}`;
+                select.appendChild(newOption);
+            });
+            
+            // Refresh product search cache by reloading the page data
+            // This ensures the new product appears in search immediately
+            if (typeof window.refreshProductCache === 'function') {
+                window.refreshProductCache(data.product);
+            }
+            
+            closeProductDialog();
+            alert(data.message + '\n\nThe product is now available in search!');
+        } else {
+            alert('Error: ' + (data.error || 'Failed to add product'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while saving the product.');
+    })
+    .finally(() => {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+    });
+}
+</script>

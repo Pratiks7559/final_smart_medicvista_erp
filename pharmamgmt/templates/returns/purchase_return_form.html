@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{{ title }}
+{% include 'components/add_product_dialog.html' %}
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" type="text/css" href="{% static 'css/purchase_return_form.css' %}">
@@ -90,6 +92,7 @@
                                     <th class="ci-th-mrp">MRP</th>
                                     <th class="ci-th-purchase-rate">Return Rate</th>
                                     <th class="ci-th-qty">Return Qty</th>
+                                    <th class="ci-th-qty">Free Qty</th>
                                     <th class="ci-th-gst">CGST %</th>
                                     <th class="ci-th-gst">SGST %</th>
                                     <th class="ci-th-reason">Reason</th>
@@ -146,6 +149,33 @@
 <script>
 let returnProductRowIndex = 0;
 
+// Global product cache for search
+window.productCache = [];
+
+// Function to refresh product cache when new product is added
+window.refreshProductCache = function(newProduct) {
+    console.log('Refreshing product cache with new product:', newProduct);
+    
+    if (newProduct && newProduct.id) {
+        window.productCache.push({
+            id: newProduct.id,
+            name: newProduct.name,
+            company: newProduct.company
+        });
+        console.log('✓ Product added to cache. Total products:', window.productCache.length);
+    }
+};
+
+// Initialize product cache on page load
+window.initializeProductCache = function() {
+    window.productCache = [{% for product in products %}{
+        id: {{ product.productid }},
+        name: '{{ product.product_name|escapejs }}',
+        company: '{{ product.product_company|escapejs }}'
+    },{% endfor %}];
+    console.log('Product cache initialized with', window.productCache.length, 'products');
+};
+
 function addReturnProductRow() {
     const tbody = document.getElementById('returnProductRows');
     const row = document.createElement('tr');
@@ -157,7 +187,10 @@ function addReturnProductRow() {
             {% for product in products %}
             <option value="{{ product.productid }}">{{ product.product_name }} - {{ product.product_company }}</option>
             {% endfor %}
-        </select></td>
+        </select>
+<button type="button" class="btn btn-sm btn-outline-success" onclick="openProductDialog()" style="margin-left: 5px;" title="Add New Product">
+                                <i class="fas fa-plus"></i> Add Product
+                            </button></td>
         <td><input type="text" class="batch-no" placeholder="Batch No" required></td>
         <td><input type="text" class="expiry date-input" placeholder="MM-YYYY" maxlength="8" required></td>
         <td><input type="number" class="mrp" step="0.01" placeholder="MRP" min="0.01" required></td>
@@ -170,6 +203,7 @@ function addReturnProductRow() {
             <div class="available-stock" style="font-size: 0.8rem; color: #666; margin-top: 2px;"></div>
             <div class="stock-error" style="display: none; color: #dc3545; font-size: 0.75rem; margin-top: 4px; padding: 2px 4px; background: #f8d7da; border-radius: 3px; border-left: 3px solid #dc3545;"></div>
         </td>
+        <td><input type="number" class="return-free-qty" step="0.01" placeholder="0" value="0" min="0"></td>
         <td><input type="number" class="cgst" step="0.01" placeholder="CGST %" value="2.5" min="0" onchange="calculateReturnRowTotal(${returnProductRowIndex})"></td>
         <td><input type="number" class="sgst" step="0.01" placeholder="SGST %" value="2.5" min="0" onchange="calculateReturnRowTotal(${returnProductRowIndex})"></td>
         <td><select class="reason" required>
@@ -372,11 +406,25 @@ function calculateReturnTotal() {
         total += parseFloat(span.textContent) || 0;
     });
     
-    document.getElementById('returnTotal').textContent = total.toFixed(2);
+    // Round off: 10.50 → 11, 10.49 → 10
+    const rawTotal = total;
+    const roundedTotal = Math.round(rawTotal);
+    const roundoffAmount = roundedTotal - rawTotal;
     
+    // Update display with round-off info
+    let displayHtml = '';
+    if (Math.abs(roundoffAmount) > 0.001) {
+        const sign = roundoffAmount > 0 ? '+' : '-';
+        displayHtml = `${rawTotal.toFixed(2)} ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>${roundedTotal}</strong>`;
+    } else {
+        displayHtml = `<strong>${roundedTotal}</strong>`;
+    }
+    document.getElementById('returnTotal').innerHTML = displayHtml;
+    
+    // Save actual amount (with decimals) in database
     const returnTotalInput = document.querySelector('input[name*="returninvoice_total"]');
     if (returnTotalInput) {
-        returnTotalInput.value = total.toFixed(2);
+        returnTotalInput.value = rawTotal.toFixed(2);
     }
 }
 function setCurrentReturnDate() {
@@ -470,6 +518,7 @@ function collectReturnProductsData() {
             const mrp = row.querySelector('.mrp')?.value?.trim() || '0';
             const returnRate = row.querySelector('.return-rate')?.value?.trim() || '0';
             const returnQty = row.querySelector('.return-qty')?.value?.trim() || '0';
+            const returnFreeQty = row.querySelector('.return-free-qty')?.value?.trim() || '0';
             const cgst = row.querySelector('.cgst')?.value?.trim() || '0';
             const sgst = row.querySelector('.sgst')?.value?.trim() || '0';
             const reason = row.querySelector('.reason')?.value?.trim() || '';
@@ -481,6 +530,7 @@ function collectReturnProductsData() {
                 mrp: mrp,
                 return_rate: returnRate,
                 return_quantity: returnQty,
+                return_free_qty: returnFreeQty,
                 cgst: cgst,
                 sgst: sgst,
                 reason: reason
@@ -658,7 +708,8 @@ function quickSearchProducts(event) {
     },{% endfor %}];
     
     // Filter products that START with the search term (first 2+ letters)
-    const filtered = products.filter(p => {
+    // Use cached products or fallback to template data
+    const filtered = (window.productCache.length > 0 ? window.productCache : products).filter(p => {
         // Primary filter: starts with search term (case-sensitive first, then case-insensitive)
         const exactStartsName = p.name.startsWith(originalSearchTerm);
         const exactStartsCompany = p.company.startsWith(originalSearchTerm);
@@ -808,6 +859,7 @@ function createReturnBatchModal(batches, rowIndex) {
                                     <div class="batch-details">
                                         <span>Exp: ${batch.expiry}</span>
                                         <span>Stock: ${batch.stock}</span>
+                                        <span style=\"color: #28a745; font-weight: 600;\">Free: ${batch.free_qty || 0}</span>
                                         <span>MRP: ₹${batch.mrp}</span>
                                     </div>
                                 </div>
@@ -882,6 +934,7 @@ function selectReturnBatch(batchNo, rowIndex, batchData) {
         row.querySelector('.expiry').value = batchData.expiry;
         row.querySelector('.mrp').value = batchData.mrp;
         row.querySelector('.return-rate').value = batchData.purchase_rate || batchData.mrp;
+          row.querySelector('.return-free-qty').value = batchData.free_qty || '0';
         
         // Show available stock
         const stockDiv = row.querySelector('.available-stock');
@@ -996,6 +1049,9 @@ function setupReturnQuantityValidation() {
 
 document.addEventListener('DOMContentLoaded', function() {
     setCurrentReturnDate();
+    
+    // Initialize product cache
+    window.initializeProductCache();
     
     // Setup enhanced quantity validation
     setupReturnQuantityValidation();

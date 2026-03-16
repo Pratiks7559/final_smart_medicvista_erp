@@ -203,6 +203,8 @@ body.select2-open {
     }
 }
 </style>
+
+{% include 'components/add_product_dialog.html' %}
 {% endblock %}
 
 {% block extra_js %}
@@ -300,6 +302,7 @@ body.select2-open {
                                             <th class="ci-th-mrp">MRP</th>
                                             <th class="ci-th-challan-rate">challan Rate</th>
                                             <th class="ci-th-qty">Qty</th>
+                                            <th class="ci-th-free-qty">Free Qty</th>
                                             <th class="ci-th-discount">Discount</th>
                                             <th class="ci-th-cgst">CGST %</th>
                                             <th class="ci-th-sgst">SGST %</th>
@@ -628,6 +631,33 @@ body.select2-open {
 <script>
 let productRowIndex = 0;
 
+// Global product cache for search
+window.productCache = [];
+
+// Function to refresh product cache when new product is added
+window.refreshProductCache = function(newProduct) {
+    console.log('Refreshing product cache with new product:', newProduct);
+    
+    if (newProduct && newProduct.id) {
+        window.productCache.push({
+            id: newProduct.id,
+            name: newProduct.name,
+            company: newProduct.company
+        });
+        console.log('✅ Product added to cache. Total products:', window.productCache.length);
+    }
+};
+
+// Initialize product cache on page load
+window.initializeProductCache = function() {
+    window.productCache = [{% for product in products %}{
+        id: {{ product.productid }},
+        name: '{{ product.product_name|escapejs }}',
+        company: '{{ product.product_company|escapejs }}'
+    },{% endfor %}];
+    console.log('Product cache initialized with', window.productCache.length, 'products');
+};
+
 function addProductRow() {
     const tbody = document.getElementById('productRows');
     const row = document.createElement('tr');
@@ -639,12 +669,16 @@ function addProductRow() {
             {% for product in products %}
             <option value="{{ product.productid }}">{{ product.product_name }} - {{ product.product_company }}</option>
             {% endfor %}
-        </select></td>
+        </select>
+<button type="button" class="btn btn-sm btn-outline-success" onclick="openProductDialog()" style="margin-left: 5px;" title="Add New Product">
+                                <i class="fas fa-plus"></i> Add Product
+                            </button></td>
         <td><input type="text" class="batch-no" placeholder="Batch No" required></td>
         <td><input type="text" class="expiry" placeholder="MM-YYYY" maxlength="7" title="Enter expiry in MM-YYYY format (e.g., 12-2025)" required></td>
         <td><input type="number" class="mrp" step="0.01" placeholder="MRP" min="0.01" required></td>
         <td><input type="number" class="challan-rate" step="0.01" placeholder="Rate" min="0.01" onchange="calculateRowTotal(${productRowIndex})" required></td>
         <td><input type="number" class="qty" placeholder="Qty" min="0.01" step="0.01" onchange="calculateRowTotal(${productRowIndex})" required></td>
+        <td><input type="number" class="free-qty" placeholder="Free Qty" min="0" step="0.01" value="0"></td>
         <td><input type="number" class="discount" step="0.01" placeholder="Discount" min="0" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="cgst-rate" step="0.01" placeholder="CGST %" min="0" max="50" value="2.5" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="sgst-rate" step="0.01" placeholder="SGST %" min="0" max="50" value="2.5" onchange="calculateRowTotal(${productRowIndex})"></td>
@@ -691,24 +725,35 @@ function calculateRowTotal(rowIndex) {
 }
 
 function calculatechallanTotal() {
-    let total = 0;
+    let productsTotal = 0;
     document.querySelectorAll('.row-total').forEach(span => {
-        total += parseFloat(span.textContent) || 0;
+        productsTotal += parseFloat(span.textContent) || 0;
     });
     
     const transportCharges = parseFloat(document.getElementById('transport_charges').value) || 0;
-    const finalTotal = total + transportCharges;
+    const rawTotal = productsTotal + transportCharges;
+    const roundedTotal = Math.round(rawTotal); // Round to nearest integer
+    const roundoffAmount = roundedTotal - rawTotal;
     
+    // Update display with round-off info
+    let displayHtml = '';
     if (transportCharges > 0) {
-        document.getElementById('challanTotal').innerHTML = `${total.toFixed(2)} + ${transportCharges.toFixed(2)} = <strong>${finalTotal.toFixed(2)}</strong>`;
+        displayHtml = `${productsTotal.toFixed(2)} + ${transportCharges.toFixed(2)}`;
     } else {
-        document.getElementById('challanTotal').textContent = finalTotal.toFixed(2);
+        displayHtml = productsTotal.toFixed(2);
     }
+    if (Math.abs(roundoffAmount) > 0.001) {
+        const sign = roundoffAmount > 0 ? '+' : '-';
+        displayHtml += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>${roundedTotal}</strong>`;
+    } else {
+        displayHtml += ` = <strong>${roundedTotal}</strong>`;
+    }
+    document.getElementById('challanTotal').innerHTML = displayHtml;
     
-    // Auto-fill the challan total field
+    // Save ACTUAL amount (with decimals) in database
     const challanTotalInput = document.querySelector('input[name*="challan_total"]');
     if (challanTotalInput) {
-        challanTotalInput.value = finalTotal.toFixed(2);
+        challanTotalInput.value = rawTotal.toFixed(2);
     }
 }
 
@@ -1142,6 +1187,7 @@ function collectProductsData() {
             const mrp = row.querySelector('.mrp')?.value?.trim() || '0';
             const challanRate = row.querySelector('.challan-rate')?.value?.trim() || '0';
             const quantity = row.querySelector('.qty')?.value?.trim() || '0';
+            const freeQty = row.querySelector('.free-qty')?.value?.trim() || '0';
             const discount = row.querySelector('.discount')?.value?.trim() || '0';
             const cgstRate = row.querySelector('.cgst-rate')?.value?.trim() || '0';
             const sgstRate = row.querySelector('.sgst-rate')?.value?.trim() || '0';
@@ -1156,14 +1202,15 @@ function collectProductsData() {
                 mrp: mrp,
                 challan_rate: challanRate,
                 quantity: quantity,
+                free_qty: freeQty,
                 scheme: '0',
                 discount: discount,
                 cgst: cgstRate,
                 sgst: sgstRate,
                 calculation_mode: 'flat',
-                rate_A: rateA,
-                rate_B: rateB,
-                rate_C: rateC
+                rate_a: rateA,
+                rate_b: rateB,
+                rate_c: rateC
             };
             
             console.log(`Row ${index + 1} data:`, product);
@@ -1271,7 +1318,8 @@ function quickSearchProducts(event) {
         company: '{{ product.product_company|escapejs }}'
     },{% endfor %}];
     
-    const filtered = products.filter(p => {
+    // Use cached products or fallback to template data
+    const filtered = (window.productCache.length > 0 ? window.productCache : products).filter(p => {
         const exactStartsName = p.name.startsWith(originalSearchTerm);
         const exactStartsCompany = p.company.startsWith(originalSearchTerm);
         const startsName = p.name.toLowerCase().startsWith(searchTerm);
@@ -1547,6 +1595,9 @@ function filterBatches() {
 
 // Form submission handler
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize product cache
+    window.initializeProductCache();
+    
     // Select2 removed - using native dropdown
     
     addProductRow();

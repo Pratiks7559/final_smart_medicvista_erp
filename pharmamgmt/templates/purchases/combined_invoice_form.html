@@ -207,6 +207,8 @@ body.select2-open {
 
 
 </style>
+
+{% include 'components/add_product_dialog.html' %}
 {% endblock %}
 
 {% block extra_js %}
@@ -214,6 +216,8 @@ body.select2-open {
 <!-- SELECT2 JS - COMMENTED OUT
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 -->
+
+{% include 'components/add_product_dialog.html' %}
 {% endblock %}
 
 {% block content %}
@@ -291,12 +295,13 @@ body.select2-open {
                             <div class="ci-products-header">
                                 <div class="ci-products-title-area">
                                     <h6 class="ci-section-title">Products</h6>
-                                    <small class="ci-keyboard-shortcuts">⚡ F2 (Quick Search), Ctrl+Enter (Add Product), Ctrl+D (Duplicate), Ctrl+S (Save), Alt+W (Batch)</small>
+                                    <small class="ci-keyboard-shortcuts">âš¡ F2 (Quick Search), Ctrl+Enter (Add Product), Ctrl+D (Duplicate), Ctrl+S (Save), Alt+W (Batch)</small>
                                 </div>
                                 <div class="ci-header-buttons">
                                     <button type="button" class="ci-add-product-btn" onclick="addProductRow()">
                                         <i class="fas fa-plus"></i> Add Product
                                     </button>
+                                     <button type="button" class="btn btn-sm btn-outline-success" onclick="openProductDialog()" style="margin-left: 10px;" title="Add New Product to Database"><i class="fas fa-plus-circle"></i> New Product</button>
                                 </div>
                             </div>
                             <div class="ci-table-container">
@@ -309,6 +314,7 @@ body.select2-open {
                                             <th class="ci-th-mrp">MRP</th>
                                             <th class="ci-th-purchase-rate">Purchase Rate</th>
                                             <th class="ci-th-qty">Qty</th>
+                                            <th class="ci-th-free-qty">Free Qty</th>
                                             <th class="ci-th-discount">Discount</th>
                                             <th class="ci-th-cgst">CGST %</th>
                                             <th class="ci-th-sgst">SGST %</th>
@@ -447,7 +453,7 @@ body.select2-open {
         <div class="pull-challan-dialog-footer">
             <div class="selected-summary">
                 <span id="selectedChallanCount">0 challans selected</span>
-                <span id="selectedChallanTotal">Total: ₹0.00</span>
+                <span id="selectedChallanTotal">Total: â‚¹0.00</span>
             </div>
             <div class="dialog-buttons">
                 <button type="button" class="pull-challan-btn-secondary" onclick="closePullChallanDialog()">Cancel</button>
@@ -1045,6 +1051,34 @@ body.select2-open {
 <script>
 let productRowIndex = 0;
 
+// Global product cache for search
+window.productCache = [];
+
+// Function to refresh product cache when new product is added
+window.refreshProductCache = function(newProduct) {
+    console.log('Refreshing product cache with new product:', newProduct);
+    
+    // Add to cache
+    if (newProduct && newProduct.id) {
+        window.productCache.push({
+            id: newProduct.id,
+            name: newProduct.name,
+            company: newProduct.company
+        });
+        console.log('✅ Product added to cache. Total products:', window.productCache.length);
+    }
+};
+
+// Initialize product cache on page load
+window.initializeProductCache = function() {
+    window.productCache = [{% for product in products %}{
+        id: {{ product.productid }},
+        name: '{{ product.product_name|escapejs }}',
+        company: '{{ product.product_company|escapejs }}'
+    },{% endfor %}];
+    console.log('Product cache initialized with', window.productCache.length, 'products');
+};
+
 function addProductRow() {
     // Reset challan flag when manually adding products
     if (document.getElementById('productRows').children.length === 0) {
@@ -1067,6 +1101,7 @@ function addProductRow() {
         <td><input type="number" class="mrp" step="any" placeholder="MRP" min="0.01" required></td>
         <td><input type="number" class="purchase-rate" step="any" placeholder="Rate" min="0.01" onchange="calculateRowTotal(${productRowIndex})" required></td>
         <td><input type="number" class="qty" placeholder="Qty" min="0.01" step="any" onchange="calculateRowTotal(${productRowIndex})" required></td>
+        <td><input type="number" class="free-qty" placeholder="Free Qty" min="0" step="any" value="0"></td>
         <td><input type="number" class="discount" step="any" placeholder="Discount" min="0" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="cgst-rate" step="any" placeholder="CGST %" min="0" max="50" value="2.5" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="sgst-rate" step="any" placeholder="SGST %" min="0" max="50" value="2.5" onchange="calculateRowTotal(${productRowIndex})"></td>
@@ -1159,27 +1194,58 @@ function calculateInvoiceTotal() {
     
     const transportInput = document.querySelector('input[name*="transport_charges"]');
     const transportCharges = parseFloat(String(transportInput ? transportInput.value : '0')) || 0;
-    const finalTotal = productsTotal + transportCharges;
+    const rawTotal = productsTotal + transportCharges;
+    const roundedTotal = Math.round(rawTotal); // Round off to nearest integer
+    const roundoffAmount = roundedTotal - rawTotal;
     
-    console.log(`Invoice Total: Products=${productsTotal.toFixed(2)}, Transport=${transportCharges.toFixed(2)}, Final=${finalTotal.toFixed(2)}`);
+    console.log(`Invoice Total: Products=${productsTotal.toFixed(2)}, Transport=${transportCharges.toFixed(2)}, Raw=${rawTotal.toFixed(2)}, RoundOff=${roundoffAmount.toFixed(2)}, Rounded=${roundedTotal}`);
     
-    // Update display
+    // Update display with round-off info
+    let displayHtml = '';
     if (transportCharges > 0) {
-        document.getElementById('invoiceTotal').innerHTML = `${productsTotal.toFixed(2)} + ${transportCharges.toFixed(2)} = <strong>${finalTotal.toFixed(2)}</strong>`;
+        displayHtml = `${productsTotal.toFixed(2)} + ${transportCharges.toFixed(2)}`;
     } else {
-        document.getElementById('invoiceTotal').textContent = finalTotal.toFixed(2);
+        displayHtml = productsTotal.toFixed(2);
     }
+    if (Math.abs(roundoffAmount) > 0.001) {
+        const sign = roundoffAmount > 0 ? '+' : '-';
+        displayHtml += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>${roundedTotal}</strong>`;
+    } else {
+        displayHtml += ` = <strong>${roundedTotal}</strong>`;
+    }
+    document.getElementById('invoiceTotal').innerHTML = displayHtml;
     
-    // Auto-fill the invoice total field - try multiple selectors
+    // Save ACTUAL amount (with decimals) in database, but show rounded in UI
     const invoiceTotalInput = document.querySelector('input[name*="invoice_total"]') || 
                              document.querySelector('#id_invoice_total') ||
                              document.querySelector('input[id*="invoice_total"]');
     
     if (invoiceTotalInput) {
-        invoiceTotalInput.value = finalTotal.toFixed(2);
-        console.log(`Invoice total field updated: ${finalTotal.toFixed(2)}`);
+        // Store actual amount with decimals for database
+        invoiceTotalInput.value = rawTotal.toFixed(2);
+        // Store round-off info in hidden fields
+        let roundoffAmountInput = document.getElementById('roundoffAmount');
+        let roundoffTypeInput = document.getElementById('roundoffType');
         
-        // Trigger change event to ensure any listeners are notified
+        if (!roundoffAmountInput) {
+            roundoffAmountInput = document.createElement('input');
+            roundoffAmountInput.type = 'hidden';
+            roundoffAmountInput.id = 'roundoffAmount';
+            roundoffAmountInput.name = 'roundoff_amount';
+            invoiceTotalInput.parentNode.appendChild(roundoffAmountInput);
+        }
+        if (!roundoffTypeInput) {
+            roundoffTypeInput = document.createElement('input');
+            roundoffTypeInput.type = 'hidden';
+            roundoffTypeInput.id = 'roundoffType';
+            roundoffTypeInput.name = 'roundoff_type';
+            invoiceTotalInput.parentNode.appendChild(roundoffTypeInput);
+        }
+        
+        roundoffAmountInput.value = Math.abs(roundoffAmount).toFixed(2);
+        roundoffTypeInput.value = roundoffAmount >= 0 ? 'added' : 'deducted';
+        
+        console.log(`Saved: Actual=${rawTotal.toFixed(2)}, RoundOff=${Math.abs(roundoffAmount).toFixed(2)}, Type=${roundoffAmount >= 0 ? 'added' : 'deducted'}`);
         invoiceTotalInput.dispatchEvent(new Event('change', { bubbles: true }));
         invoiceTotalInput.dispatchEvent(new Event('input', { bubbles: true }));
     } else {
@@ -1614,6 +1680,7 @@ function collectAllProductsData() {
             const mrp = row.querySelector('.mrp')?.value?.trim() || '0';
             const purchaseRate = row.querySelector('.purchase-rate')?.value?.trim() || '0';
             const quantity = row.querySelector('.qty')?.value?.trim() || '0';
+            const freeQty = row.querySelector('.free-qty')?.value?.trim() || '0';
             const discount = row.querySelector('.discount')?.value?.trim() || '0';
             const cgstRate = row.querySelector('.cgst-rate')?.value?.trim() || '0';
             const sgstRate = row.querySelector('.sgst-rate')?.value?.trim() || '0';
@@ -1637,6 +1704,7 @@ function collectAllProductsData() {
                 mrp: String(mrp),
                 purchase_rate: String(purchaseRate),
                 quantity: String(quantity),
+                free_qty: String(freeQty),
                 scheme: '0',
                 discount: String(discount),
                 cgst: String(cgstRate),
@@ -1650,6 +1718,7 @@ function collectAllProductsData() {
                 challan_date: String(rowChallanDate)
             };
             
+            console.log(`Row ${index + 1} FREE_QTY:`, freeQty, '| Product data:',  product);
             console.log(`Row ${index + 1} data:`, product);
             products.push(product);
         }
@@ -1670,7 +1739,7 @@ function openQuickProductSearch() {
         <div id="quickProductModal" class="quick-search-overlay">
             <div class="quick-search-content">
                 <div class="quick-search-header">
-                    <h4>🔍 Quick Product Search</h4>
+                    <h4>ðŸ” Quick Product Search</h4>
                     <small>Type product name and press Enter</small>
                 </div>
                 <div class="quick-search-input">
@@ -1678,7 +1747,7 @@ function openQuickProductSearch() {
                 </div>
                 <div class="quick-search-results" id="quickResults"></div>
                 <div class="quick-search-footer">
-                    <small>↑↓: Navigate | Enter: Select | Esc: Close</small>
+                    <small>â†‘â†“: Navigate | Enter: Select | Esc: Close</small>
                 </div>
             </div>
         </div>
@@ -1749,7 +1818,8 @@ function quickSearchProducts(event) {
         return;
     }
     
-    const products = [{% for product in products %}{
+    // Use cached products or fallback to template data
+    const products = window.productCache.length > 0 ? window.productCache : [{% for product in products %}{
         id: {{ product.productid }},
         name: '{{ product.product_name|escapejs }}',
         company: '{{ product.product_company|escapejs }}'
@@ -1916,7 +1986,7 @@ function createBatchSelectionModal(batches, rowIndex, productId) {
                                     <div class="batch-details">
                                         <span>Exp: ${batch.expiry}</span>
                                         <span class="${batch.stock <= 10 ? 'text-danger' : 'text-success'}">Stock: ${batch.stock}</span>
-                                        <span>MRP: ₹${batch.mrp}</span>
+                                        <span>MRP: â‚¹${batch.mrp}</span>
                                     </div>
                                 </div>
 
@@ -1926,7 +1996,7 @@ function createBatchSelectionModal(batches, rowIndex, productId) {
                 </div>
                 <div class="batch-modal-footer">
                     <div class="batch-shortcuts">
-                        <small>↑↓: Navigate | Enter: Select | Esc: Close</small>
+                        <small>â†‘â†“: Navigate | Enter: Select | Esc: Close</small>
                     </div>
                     <button type="button" class="btn btn-secondary" onclick="closeBatchModal()">Cancel</button>
                 </div>
@@ -2038,6 +2108,31 @@ function filterBatches() {
 
 // Form submission handler
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize product cache
+    window.initializeProductCache();
+    
+    // Check if URL has openProductDialog parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openProductDialog') === 'true') {
+        console.log('Auto-opening product dialog from URL parameter...');
+        setTimeout(() => {
+            if (typeof openProductDialog === 'function') {
+                openProductDialog();
+            } else {
+                const dialog = document.getElementById('addProductDialog');
+                if (dialog) {
+                    dialog.style.display = 'flex';
+                    setTimeout(() => {
+                        const nameInput = document.querySelector('#addProductForm input[name="product_name"]');
+                        if (nameInput) nameInput.focus();
+                    }, 100);
+                }
+            }
+            // Clean URL after opening dialog
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }, 500);
+    }
+    
     /* SELECT2 FOR SUPPLIER - COMMENTED OUT
     // Initialize Select2 for supplier dropdown
     $('select[name*="supplierid"]').select2({
@@ -2128,10 +2223,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (invoiceNoInput) {
             invoiceNoInput.focus();
-            console.log('✓ Invoice number field focused:', invoiceNoInput.name);
+            console.log('âœ“ Invoice number field focused:', invoiceNoInput.name);
             return true;
         } else {
-            console.error('❌ Invoice number field not found');
+            console.error('âŒ Invoice number field not found');
             return false;
         }
     }
@@ -2523,7 +2618,7 @@ function displayChallans(challans) {
             </td>
             <td>${challan.challan_no}</td>
             <td>${new Date(challan.challan_date).toLocaleDateString('en-GB')}</td>
-            <td>₹${parseFloat(challan.challan_total).toFixed(2)}</td>
+            <td>â‚¹${parseFloat(challan.challan_total).toFixed(2)}</td>
             <td><span class="challan-status ${statusClass}">${statusText}</span></td>
         `;
         
@@ -2583,7 +2678,7 @@ function updateSelectedChallanSummary() {
     });
     
     document.getElementById('selectedChallanCount').textContent = `${count} challan${count !== 1 ? 's' : ''} selected`;
-    document.getElementById('selectedChallanTotal').textContent = `Total: ₹${total.toFixed(2)}`;
+    document.getElementById('selectedChallanTotal').textContent = `Total: â‚¹${total.toFixed(2)}`;
     
     // Enable/disable pull button
     const pullBtn = document.getElementById('pullSelectedBtn');
@@ -2674,10 +2769,10 @@ function addProductRowFromChallan(product) {
     row.setAttribute('data-challan-no', product.challan_no || '');
     row.setAttribute('data-challan-date', product.challan_date || '');
     
-    console.log(`Adding challan product: challan_no=${product.challan_no}, challan_date=${product.challan_date}`);
+    console.log(`Adding challan product:`, product);
     
     // Format expiry date to MM-YYYY if needed
-    let expiry = product.product_expiry || '';
+    let expiry = product.expiry || product.product_expiry || '';
     if (expiry && expiry.length === 10 && expiry.includes('-')) {
         const parts = expiry.split('-');
         if (parts.length === 3 && parts[0].length === 4) {
@@ -2692,12 +2787,13 @@ function addProductRowFromChallan(product) {
             <option value="{{ product.productid }}">{{ product.product_name }} - {{ product.product_company }}</option>
             {% endfor %}
         </select></td>
-        <td><input type="text" class="batch-no" placeholder="Batch No" value="${String(product.product_batch_no || '')}" required></td>
+        <td><input type="text" class="batch-no" placeholder="Batch No" value="${String(product.batch_no || product.product_batch_no || '')}" required></td>
         <td><input type="text" class="expiry" placeholder="MM-YYYY" maxlength="7" title="Enter expiry in MM-YYYY format (e.g., 12-2025)" value="${String(expiry)}" required></td>
-        <td><input type="number" class="mrp" step="any" placeholder="MRP" min="0.01" value="${String(product.product_mrp || '')}" required></td>
-        <td><input type="number" class="purchase-rate" step="any" placeholder="Rate" min="0.01" value="${String(product.product_purchase_rate || '')}" onchange="calculateRowTotal(${productRowIndex})" required></td>
-        <td><input type="number" class="qty" placeholder="Qty" min="0.01" step="any" value="${String(product.product_quantity || '')}" onchange="calculateRowTotal(${productRowIndex})" required></td>
-        <td><input type="number" class="discount" step="any" placeholder="Discount" min="0" value="${String(product.product_discount || '0')}" onchange="calculateRowTotal(${productRowIndex})"></td>
+        <td><input type="number" class="mrp" step="any" placeholder="MRP" min="0.01" value="${String(product.mrp || product.product_mrp || '')}" required></td>
+        <td><input type="number" class="purchase-rate" step="any" placeholder="Rate" min="0.01" value="${String(product.rate || product.product_purchase_rate || '')}" onchange="calculateRowTotal(${productRowIndex})" required></td>
+        <td><input type="number" class="qty" placeholder="Qty" min="0.01" step="any" value="${String(product.quantity || product.product_quantity || '')}" onchange="calculateRowTotal(${productRowIndex})" required></td>
+        <td><input type="number" class="free-qty" placeholder="Free Qty" min="0" step="any" value="${String(product.free_qty || product.product_free_qty || '0')}"></td>
+        <td><input type="number" class="discount" step="any" placeholder="Discount" min="0" value="${String(product.discount || product.product_discount || '0')}" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="cgst-rate" step="any" placeholder="CGST %" min="0" max="50" value="${String(product.cgst || '2.5')}" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="sgst-rate" step="any" placeholder="SGST %" min="0" max="50" value="${String(product.sgst || '2.5')}" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="rate-a" step="any" placeholder="Rate A" min="0" value="${String(product.rate_a || '')}"></td>
@@ -2812,18 +2908,23 @@ function forceChallanTotalCalculation() {
     
     // Update invoice total
     const transportCharges = parseFloat(document.querySelector('input[name*="transport_charges"]')?.value) || 0;
-    const finalTotal = grandTotal + transportCharges;
+    const rawTotal = grandTotal + transportCharges;
+    const finalTotal = Math.round(rawTotal); // Round off
+    const roundoffAmount = finalTotal - rawTotal;
     
-    console.log(`Grand Total: ${grandTotal.toFixed(2)}, Transport: ${transportCharges.toFixed(2)}, Final: ${finalTotal.toFixed(2)}`);
+    console.log(`Grand Total: ${grandTotal.toFixed(2)}, Transport: ${transportCharges.toFixed(2)}, Raw: ${rawTotal.toFixed(2)}, RoundOff: ${roundoffAmount.toFixed(2)}, Final: ${finalTotal}`);
     
     // Update display
     const invoiceTotalDisplay = document.getElementById('invoiceTotal');
     if (invoiceTotalDisplay) {
-        if (transportCharges > 0) {
-            invoiceTotalDisplay.innerHTML = `${grandTotal.toFixed(2)} + ${transportCharges.toFixed(2)} = <strong>${finalTotal.toFixed(2)}</strong>`;
+        let displayHtml = transportCharges > 0 ? `${grandTotal.toFixed(2)} + ${transportCharges.toFixed(2)}` : grandTotal.toFixed(2);
+        if (Math.abs(roundoffAmount) > 0.001) {
+            const sign = roundoffAmount > 0 ? '+' : '-';
+            displayHtml += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>${finalTotal}</strong>`;
         } else {
-            invoiceTotalDisplay.textContent = finalTotal.toFixed(2);
+            displayHtml += ` = <strong>${finalTotal}</strong>`;
         }
+        invoiceTotalDisplay.innerHTML = displayHtml;
     }
     
     // Update invoice total input field
@@ -2832,9 +2933,9 @@ function forceChallanTotalCalculation() {
                              document.querySelector('input[id*="invoice_total"]');
     
     if (invoiceTotalInput) {
-        invoiceTotalInput.value = finalTotal.toFixed(2);
+        invoiceTotalInput.value = rawTotal.toFixed(2);  // Save actual decimal value, not rounded
         invoiceTotalInput.dispatchEvent(new Event('change', { bubbles: true }));
-        console.log(`Invoice total field forcefully updated to: ${finalTotal.toFixed(2)}`);
+        console.log(`Invoice total field updated to: ${rawTotal.toFixed(2)} (Rounded display: ${finalTotal})`);
     }
     
     return finalTotal;
@@ -2876,4 +2977,6 @@ function forceChallanTotalCalculation() {
     </div> -->
 </div>
 
+
+{% include 'components/add_product_dialog.html' %}
 {% endblock %}

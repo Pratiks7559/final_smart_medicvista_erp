@@ -71,8 +71,8 @@ def validate_expiry_format(expiry_str):
 
 def get_batch_stock_status(product_id, batch_no, expiry_date=None, exclude_sale_id=None):
     """
-    Calculate current stock for a specific product batch + expiry combination
-    Returns a tuple of (available_quantity, is_available)
+    Calculate current stock and free qty for a specific product batch + expiry combination
+    Returns a tuple of (available_quantity, available_free_qty, is_available)
     Enhanced with better error handling and user feedback
     Now includes stock issues in calculation - FIXED FOR UI UPDATE
     
@@ -85,11 +85,17 @@ def get_batch_stock_status(product_id, batch_no, expiry_date=None, exclude_sale_
     try:
         from django.db.models import Sum
         
+        # ⬆️ INCREASE: Purchase + Supplier Challan + Sales Return
         # Get total stock for batch from invoices
         batch_purchased_invoice = PurchaseMaster.objects.filter(
             productid=product_id, 
             product_batch_no=batch_no
         ).aggregate(total=Sum('product_quantity'))['total'] or 0
+        
+        batch_purchased_free_invoice = PurchaseMaster.objects.filter(
+            productid=product_id, 
+            product_batch_no=batch_no
+        ).aggregate(total=Sum('product_free_qty'))['total'] or 0
         
         # Get total stock for batch from challans
         from .models import SupplierChallanMaster
@@ -98,8 +104,15 @@ def get_batch_stock_status(product_id, batch_no, expiry_date=None, exclude_sale_
             product_batch_no=batch_no
         ).aggregate(total=Sum('product_quantity'))['total'] or 0
         
-        batch_purchased = batch_purchased_invoice + batch_purchased_challan
+        batch_purchased_free_challan = SupplierChallanMaster.objects.filter(
+            product_id=product_id, 
+            product_batch_no=batch_no
+        ).aggregate(total=Sum('product_free_qty'))['total'] or 0
         
+        batch_purchased = batch_purchased_invoice + batch_purchased_challan
+        batch_purchased_free = batch_purchased_free_invoice + batch_purchased_free_challan
+        
+        # ⬇️ DECREASE: Sales + Customer Challan + Purchase Return
         # Get sold quantity from sales invoices, excluding specific sale if provided (for edit mode)
         sales_query = SalesMaster.objects.filter(
             productid=product_id, 
@@ -110,6 +123,7 @@ def get_batch_stock_status(product_id, batch_no, expiry_date=None, exclude_sale_
             sales_query = sales_query.exclude(id=exclude_sale_id)
         
         batch_sold_invoices = sales_query.aggregate(total=Sum('sale_quantity'))['total'] or 0
+        batch_sold_free_invoices = sales_query.aggregate(total=Sum('sale_free_qty'))['total'] or 0
         
         # Get sold quantity from customer challans
         from .models import CustomerChallanMaster
@@ -118,17 +132,35 @@ def get_batch_stock_status(product_id, batch_no, expiry_date=None, exclude_sale_
             product_batch_no=batch_no
         ).aggregate(total=Sum('sale_quantity'))['total'] or 0
         
-        batch_sold = batch_sold_invoices + batch_sold_challans
+        batch_sold_free_challans = CustomerChallanMaster.objects.filter(
+            product_id=product_id, 
+            product_batch_no=batch_no
+        ).aggregate(total=Sum('sale_free_qty'))['total'] or 0
         
+        batch_sold = batch_sold_invoices + batch_sold_challans
+        batch_sold_free = batch_sold_free_invoices + batch_sold_free_challans
+        
+        # Purchase returns (reduces stock)
         purchase_returns = ReturnPurchaseMaster.objects.filter(
             returnproductid=product_id,
             returnproduct_batch_no=batch_no
         ).aggregate(total=Sum('returnproduct_quantity'))['total'] or 0
         
+        purchase_returns_free = ReturnPurchaseMaster.objects.filter(
+            returnproductid=product_id,
+            returnproduct_batch_no=batch_no
+        ).aggregate(total=Sum('returnproduct_free_qty'))['total'] or 0
+        
+        # Sales returns (increases stock)
         sales_returns = ReturnSalesMaster.objects.filter(
             return_productid=product_id,
             return_product_batch_no=batch_no
         ).aggregate(total=Sum('return_sale_quantity'))['total'] or 0
+        
+        sales_returns_free = ReturnSalesMaster.objects.filter(
+            return_productid=product_id,
+            return_product_batch_no=batch_no
+        ).aggregate(total=Sum('return_sale_free_qty'))['total'] or 0
         
         # Get stock issues (reduces stock) - CRITICAL FOR UI UPDATE
         from .models import StockIssueDetail
@@ -137,21 +169,25 @@ def get_batch_stock_status(product_id, batch_no, expiry_date=None, exclude_sale_
             batch_no=batch_no
         ).aggregate(total=Sum('quantity_issued'))['total'] or 0
         
-        # Calculate current stock including stock issues - UPDATED CALCULATION FOR UI FIX
+        # ✅ FINAL CALCULATION (same formula for both stock and free qty)
         current_stock = batch_purchased - batch_sold - purchase_returns + sales_returns - stock_issues
+        current_free_qty = batch_purchased_free - batch_sold_free - purchase_returns_free + sales_returns_free
         
         # Debug logging for stock issue tracking - Enhanced for troubleshooting
         print(f"[OK] Stock calculation for Product {product_id}, Batch {batch_no}:")
         print(f"   [+] Purchased: {batch_purchased} (Invoice: {batch_purchased_invoice} + Challan: {batch_purchased_challan})")
+        print(f"   [+] Purchased Free: {batch_purchased_free} (Invoice: {batch_purchased_free_invoice} + Challan: {batch_purchased_free_challan})")
         print(f"   [-] Sold: {batch_sold} (Invoice: {batch_sold_invoices} + Challan: {batch_sold_challans})")
+        print(f"   [-] Sold Free: {batch_sold_free} (Invoice: {batch_sold_free_invoices} + Challan: {batch_sold_free_challans})")
         print(f"   [R] Returns: Purchase(-{purchase_returns}) + Sales(+{sales_returns}) = {sales_returns - purchase_returns}")
+        print(f"   [R] Returns Free: Purchase(-{purchase_returns_free}) + Sales(+{sales_returns_free}) = {sales_returns_free - purchase_returns_free}")
         print(f"   [!] Stock Issues: -{stock_issues}")
-        print(f"   [=] Final Stock: {current_stock} (Available: {current_stock > 0})")
+        print(f"   [=] Final Stock: {current_stock}, Free Qty: {current_free_qty} (Available: {current_stock > 0})")
         
-        return current_stock, float(current_stock) > 0
+        return current_stock, current_free_qty, float(current_stock) > 0
     except Exception as e:
         print(f"[ERROR] Error processing inventory for Product {product_id}, Batch {batch_no}: {e}")
-        return 0, False
+        return 0, 0, False
 
 
 def get_stock_status(product_id):

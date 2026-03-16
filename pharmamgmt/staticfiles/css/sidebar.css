@@ -47,7 +47,8 @@ body {
 .sidebar-container:not(.active) .nav-text,
 .sidebar-container:not(.active) .user-name,
 .sidebar-container:not(.active) .user-type,
-.sidebar-container:not(.active) .nav-arrow {
+.sidebar-container:not(.active) .nav-arrow,
+.sidebar-container:not(.active) .shortcut-badge {
     display: none;
 }
 
@@ -321,7 +322,7 @@ body {
     font-size: 0.8rem;
 }
 
-/* Hide shortcut badges */
+/* Shortcut badges */
 .shortcut-badge {
     display: none !important;
 }

@@ -48,7 +48,9 @@
             </div>
             <div class="contra-detail-field">
                 <div class="contra-detail-label">Amount</div>
-                <div class="contra-detail-value">₹{{ contra.amount|floatformat:2 }}</div>
+                <div class="contra-detail-value">
+                    ₹<span id="displayAmount"></span>
+                </div>
             </div>
             <div class="contra-detail-field">
                 <div class="contra-detail-label">From Account</div>
@@ -98,7 +100,7 @@
                 </div>
                 <div class="contra-delete-dialog-row">
                     <span class="contra-delete-dialog-label">Amount:</span>
-                    <span>₹{{ contra.amount|floatformat:2 }}</span>
+                    <span>₹<span id="deleteDisplayAmount"></span></span>
                 </div>
             </div>
         </div>
@@ -118,6 +120,20 @@
 </form>
 
 <script>
+// Round off display logic
+const actualAmount = {{ contra.amount }};
+const roundedAmount = Math.round(actualAmount);
+const displayAmountEl = document.getElementById('displayAmount');
+const deleteDisplayAmountEl = document.getElementById('deleteDisplayAmount');
+
+if (actualAmount !== roundedAmount) {
+    displayAmountEl.innerHTML = `${roundedAmount} <small style="color: #666;">(₹${actualAmount.toFixed(2)})</small>`;
+    deleteDisplayAmountEl.innerHTML = `${roundedAmount} <small style="color: #666;">(₹${actualAmount.toFixed(2)})</small>`;
+} else {
+    displayAmountEl.textContent = roundedAmount;
+    deleteDisplayAmountEl.textContent = roundedAmount;
+}
+
 function showDeleteDialog() {
     document.getElementById('deleteContraDialog').style.display = 'flex';
     setTimeout(() => {

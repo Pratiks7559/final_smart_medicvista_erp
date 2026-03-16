@@ -90,8 +90,15 @@ def print_gst_purchase_invoice(request, invoice_id):
     total_sgst = sum(item['sgst_amount'] for item in items_with_calculations)
     grand_total = total_taxable + total_cgst + total_sgst + Decimal(str(invoice.transport_charges or 0))
     
-    # Convert amount to words
-    amount_in_words = number_to_words(float(grand_total))
+    # Apply round-off to grand total
+    from .roundoff_utils import calculate_roundoff
+    roundoff_data = calculate_roundoff(float(grand_total))
+    rounded_grand_total = Decimal(str(roundoff_data['rounded_amount']))
+    roundoff_amount = Decimal(str(roundoff_data['roundoff_amount']))
+    roundoff_type = roundoff_data['roundoff_type']  # 'added' or 'deducted'
+
+    # Convert amount to words (use rounded total)
+    amount_in_words = number_to_words(float(rounded_grand_total))
     
     print("\n=== FINAL GST SUMMARY ===")
     print(f"GST Summary Keys: {list(gst_summary.keys())}")
@@ -118,7 +125,10 @@ def print_gst_purchase_invoice(request, invoice_id):
         'total_taxable': total_taxable,
         'total_cgst': total_cgst,
         'total_sgst': total_sgst,
-        'grand_total': grand_total,
+        'grand_total': rounded_grand_total,
+        'grand_total_before_roundoff': grand_total,
+        'roundoff_amount': roundoff_amount,
+        'roundoff_type': roundoff_type,
         'amount_in_words': amount_in_words,
         'pharmacy': pharmacy,
     }

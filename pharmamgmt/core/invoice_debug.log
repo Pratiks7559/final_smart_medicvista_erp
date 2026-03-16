@@ -2160,3 +2160,1172 @@
 2026-01-16 14:47:25,247 - core.combined_invoice_view - INFO - PURCHASE CREATED: ASITUSS-A SYP 100ML, Batch: 2546, Qty: 1.0
 2026-01-16 14:47:25,256 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Invoice total: 1.0499999999999998
 2026-01-16 14:47:25,257 - core.combined_invoice_view - INFO - Invoice 96046 created successfully with 1 products
+2026-03-13 13:41:18,670 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['S3irC9ILWxWKWKSaOEGswa6QS2ugG9KDYU8GkE23qgCwPerFZeqZdUd171b2Re0z'], 'invoice_no': ['78'], 'invoice_date': ['2026-03-13'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"123456","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"3","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-13 13:41:18,691 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"123456","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"3","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-13 13:41:18,692 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-13 13:41:18,721 - core.combined_invoice_view - INFO - Invoice created with ID: 134991
+2026-03-13 13:41:18,727 - core.combined_invoice_view - INFO - Invoice 78 created without products - header only
+2026-03-13 13:41:18,731 - core.combined_invoice_view - INFO - Products total: 0, Transport: 0.0, Invoice total: 0.0
+2026-03-13 13:41:18,732 - core.combined_invoice_view - INFO - Invoice 78 created successfully with 0 products
+2026-03-13 13:46:12,288 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['bO9j4jK49fZgNzHPIu3AenGkgdsqTiEQhFZyMO4mDYF2G3gkT4N7V7Nvvc9c4nUM'], 'invoice_no': ['1234567890'], 'invoice_date': ['2012-03-13'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"123456","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"1","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-13 13:46:12,389 - core.combined_invoice_view - ERROR - Invoice form validation errors: <ul class="errorlist"><li>__all__<ul class="errorlist nonfield"><li>Invoice master with this Invoice no and Supplierid already exists.</li></ul></li></ul>
+2026-03-13 13:46:33,974 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['DvFup1Ry271K6HTNtB9F4PITmCkOTp77JmvJ7wbQwQHwZbsiEbTcLzP4BB1A4un3'], 'invoice_no': ['123456789011'], 'invoice_date': ['2012-03-13'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"5656","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"1","rate_c":"1","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-13 13:46:33,986 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"5656","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"1","rate_c":"1","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-13 13:46:33,986 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-13 13:46:33,992 - core.combined_invoice_view - INFO - Invoice created with ID: 134992
+2026-03-13 13:46:34,002 - core.combined_invoice_view - ERROR - Error processing product 1: cannot access local variable 'datetime' where it is not associated with a value
+2026-03-13 13:46:34,003 - core.combined_invoice_view - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\core\combined_invoice_view.py", line 173, in add_invoice_with_products
+    current_year = datetime.now().year
+                   ^^^^^^^^
+UnboundLocalError: cannot access local variable 'datetime' where it is not associated with a value
+
+2026-03-13 13:46:34,004 - core.combined_invoice_view - INFO - Invoice 123456789011 created without products - header only
+2026-03-13 13:46:34,008 - core.combined_invoice_view - INFO - Products total: 0, Transport: 0.0, Invoice total: 0.0
+2026-03-13 13:46:34,009 - core.combined_invoice_view - INFO - Invoice 123456789011 created successfully with 0 products
+2026-03-13 13:48:20,610 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['WV7hEeiUymmNcNVEaWsrKOgAj1ERssDy2MXwmJCc252z5hu9lwcYrynLy0lDDxTu'], 'invoice_no': ['0000'], 'invoice_date': ['2013-03-13'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"11121","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-13 13:48:20,636 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"11121","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-13 13:48:20,636 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-13 13:48:20,661 - core.combined_invoice_view - INFO - Invoice created with ID: 134993
+2026-03-13 13:48:20,667 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-13 13:48:20,668 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=3.0
+2026-03-13 13:48:20,674 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-13 13:48:20,989 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-13 13:48:20,990 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 11121, Qty: 1.0
+2026-03-13 13:48:21,006 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Invoice total: 1.0499999999999998
+2026-03-13 13:48:21,007 - core.combined_invoice_view - INFO - Invoice 0000 created successfully with 1 products
+2026-03-13 13:57:16,876 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['HZeSFzSVxS85cXVOUcNbA6ZVIsqJEOhzNQ47n4cd1BOR5ruj5MxIhQ66Xr7vPTxv'], 'invoice_no': ['121'], 'invoice_date': ['2026-03-12'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"1111","expiry":"12-2027","mrp":"1","purchase_rate":"1","quantity":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-13 13:57:16,896 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"1111","expiry":"12-2027","mrp":"1","purchase_rate":"1","quantity":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-13 13:57:16,896 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-13 13:57:16,909 - core.combined_invoice_view - INFO - Invoice created with ID: 134994
+2026-03-13 13:57:16,913 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-13 13:57:16,913 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=2.0
+2026-03-13 13:57:16,914 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-13 13:57:17,164 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-13 13:57:17,164 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 1111, Qty: 1.0
+2026-03-13 13:57:17,176 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-13 13:57:17,177 - core.combined_invoice_view - INFO - Invoice 121 created successfully with 1 products
+2026-03-13 20:43:35,311 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['RH3KiBkgxBqyunPSJpuHF9nK8sNykJbyYTHftWUlZTw37XnKYStKaqiLGjRy4b99'], 'invoice_no': ['1234567890'], 'invoice_date': ['2026-03-13'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['118.00'], 'products_data': ['[{"productid":"2","batch_no":"101","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"100","free_qty":"10","scheme":"0","discount":"0","cgst":"9","sgst":"9","calculation_mode":"flat","rate_a":"5","rate_b":"6","rate_c":"7","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-13 20:43:35,400 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2","batch_no":"101","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"100","free_qty":"10","scheme":"0","discount":"0","cgst":"9","sgst":"9","calculation_mode":"flat","rate_a":"5","rate_b":"6","rate_c":"7","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-13 20:43:35,406 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-13 20:43:35,438 - core.combined_invoice_view - INFO - Invoice created with ID: 134995
+2026-03-13 20:43:35,521 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-13 20:43:35,524 - core.combined_invoice_view - INFO - Setting rates for 1ST AID TRANSPORE TAPE .5"": A=5.0, B=6.0, C=7.0
+2026-03-13 20:43:35,534 - core.combined_invoice_view - INFO - Product 1ST AID TRANSPORE TAPE .5"": Base=100.0, CGST=9.0, SGST=9.0, Total=118.0
+2026-03-13 20:43:35,687 - core.combined_invoice_view - ERROR - Error processing product 1: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+2026-03-13 20:43:35,690 - core.combined_invoice_view - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+psycopg2.errors.UndefinedColumn: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\core\combined_invoice_view.py", line 322, in add_invoice_with_products
+    purchase.save()
+    ~~~~~~~~~~~~~^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 902, in save
+    self.save_base(
+    ~~~~~~~~~~~~~~^
+        using=using,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        update_fields=update_fields,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1008, in save_base
+    updated = self._save_table(
+        raw,
+    ...<4 lines>...
+        update_fields,
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1169, in _save_table
+    results = self._do_insert(
+        cls._base_manager, using, fields, returning_fields, raw
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1210, in _do_insert
+    return manager._insert(
+           ~~~~~~~~~~~~~~~^
+        [self],
+        ^^^^^^^
+    ...<3 lines>...
+        raw=raw,
+        ^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\query.py", line 1868, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1882, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+
+2026-03-13 20:43:35,708 - core.combined_invoice_view - INFO - Invoice 1234567890 created without products - header only
+2026-03-13 20:43:35,816 - core.combined_invoice_view - ERROR - Unexpected error creating invoice: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+2026-03-13 20:43:35,820 - core.combined_invoice_view - ERROR - Full error traceback: Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+psycopg2.errors.UndefinedColumn: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\core\combined_invoice_view.py", line 322, in add_invoice_with_products
+    purchase.save()
+    ~~~~~~~~~~~~~^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 902, in save
+    self.save_base(
+    ~~~~~~~~~~~~~~^
+        using=using,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        update_fields=update_fields,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1008, in save_base
+    updated = self._save_table(
+        raw,
+    ...<4 lines>...
+        update_fields,
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1169, in _save_table
+    results = self._do_insert(
+        cls._base_manager, using, fields, returning_fields, raw
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1210, in _do_insert
+    return manager._insert(
+           ~~~~~~~~~~~~~~~^
+        [self],
+        ^^^^^^^
+    ...<3 lines>...
+        raw=raw,
+        ^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\query.py", line 1868, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1882, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\core\combined_invoice_view.py", line 376, in add_invoice_with_products
+    invoice.save()
+    ~~~~~~~~~~~~^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 902, in save
+    self.save_base(
+    ~~~~~~~~~~~~~~^
+        using=using,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        update_fields=update_fields,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1008, in save_base
+    updated = self._save_table(
+        raw,
+    ...<4 lines>...
+        update_fields,
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1138, in _save_table
+    updated = self._do_update(
+        base_qs, using, pk_val, values, update_fields, forced_update
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1203, in _do_update
+    return filtered._update(values) > 0
+           ~~~~~~~~~~~~~~~~^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\query.py", line 1286, in _update
+    return query.get_compiler(self.db).execute_sql(ROW_COUNT)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 99, in _execute
+    self.db.validate_no_broken_transaction()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\base\base.py", line 521, in validate_no_broken_transaction
+    raise TransactionManagementError(
+    ...<2 lines>...
+    ) from self.rollback_exc
+django.db.transaction.TransactionManagementError: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+
+2026-03-13 20:45:40,368 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['MkhjLGDBmKQwnzPXSGp8gidnIsmS5RwcTwVOW1dGO2W109nP79obLz8ogjqSPjuN'], 'invoice_no': ['12345678'], 'invoice_date': ['2026-03-13'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['118.00'], 'products_data': ['[{"productid":"2","batch_no":"101","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"100","free_qty":"10","scheme":"0","discount":"0","cgst":"9","sgst":"9","calculation_mode":"flat","rate_a":"5","rate_b":"6","rate_c":"7","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-13 20:45:40,456 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2","batch_no":"101","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"100","free_qty":"10","scheme":"0","discount":"0","cgst":"9","sgst":"9","calculation_mode":"flat","rate_a":"5","rate_b":"6","rate_c":"7","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-13 20:45:40,460 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-13 20:45:40,476 - core.combined_invoice_view - INFO - Invoice created with ID: 134996
+2026-03-13 20:45:40,497 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-13 20:45:40,500 - core.combined_invoice_view - INFO - Setting rates for 1ST AID TRANSPORE TAPE .5"": A=5.0, B=6.0, C=7.0
+2026-03-13 20:45:40,507 - core.combined_invoice_view - INFO - Product 1ST AID TRANSPORE TAPE .5"": Base=100.0, CGST=9.0, SGST=9.0, Total=118.0
+2026-03-13 20:45:40,592 - core.combined_invoice_view - ERROR - Error processing product 1: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+2026-03-13 20:45:40,595 - core.combined_invoice_view - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+psycopg2.errors.UndefinedColumn: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\core\combined_invoice_view.py", line 322, in add_invoice_with_products
+    purchase.save()
+    ~~~~~~~~~~~~~^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 902, in save
+    self.save_base(
+    ~~~~~~~~~~~~~~^
+        using=using,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        update_fields=update_fields,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1008, in save_base
+    updated = self._save_table(
+        raw,
+    ...<4 lines>...
+        update_fields,
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1169, in _save_table
+    results = self._do_insert(
+        cls._base_manager, using, fields, returning_fields, raw
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1210, in _do_insert
+    return manager._insert(
+           ~~~~~~~~~~~~~~~^
+        [self],
+        ^^^^^^^
+    ...<3 lines>...
+        raw=raw,
+        ^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\query.py", line 1868, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1882, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+
+2026-03-13 20:45:40,611 - core.combined_invoice_view - INFO - Invoice 12345678 created without products - header only
+2026-03-13 20:45:40,715 - core.combined_invoice_view - ERROR - Unexpected error creating invoice: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+2026-03-13 20:45:40,718 - core.combined_invoice_view - ERROR - Full error traceback: Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+psycopg2.errors.UndefinedColumn: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\core\combined_invoice_view.py", line 322, in add_invoice_with_products
+    purchase.save()
+    ~~~~~~~~~~~~~^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 902, in save
+    self.save_base(
+    ~~~~~~~~~~~~~~^
+        using=using,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        update_fields=update_fields,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1008, in save_base
+    updated = self._save_table(
+        raw,
+    ...<4 lines>...
+        update_fields,
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1169, in _save_table
+    results = self._do_insert(
+        cls._base_manager, using, fields, returning_fields, raw
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1210, in _do_insert
+    return manager._insert(
+           ~~~~~~~~~~~~~~~^
+        [self],
+        ^^^^^^^
+    ...<3 lines>...
+        raw=raw,
+        ^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\query.py", line 1868, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1882, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\core\combined_invoice_view.py", line 376, in add_invoice_with_products
+    invoice.save()
+    ~~~~~~~~~~~~^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 902, in save
+    self.save_base(
+    ~~~~~~~~~~~~~~^
+        using=using,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        update_fields=update_fields,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1008, in save_base
+    updated = self._save_table(
+        raw,
+    ...<4 lines>...
+        update_fields,
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1138, in _save_table
+    updated = self._do_update(
+        base_qs, using, pk_val, values, update_fields, forced_update
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1203, in _do_update
+    return filtered._update(values) > 0
+           ~~~~~~~~~~~~~~~~^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\query.py", line 1286, in _update
+    return query.get_compiler(self.db).execute_sql(ROW_COUNT)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 99, in _execute
+    self.db.validate_no_broken_transaction()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\base\base.py", line 521, in validate_no_broken_transaction
+    raise TransactionManagementError(
+    ...<2 lines>...
+    ) from self.rollback_exc
+django.db.transaction.TransactionManagementError: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+
+2026-03-14 11:18:06,135 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['TSWAyvpWMD1ydiaby8Xbu5Q4EFMF9NIdbN1ieB65f9621sSlIdUmaNBUzyELWx2B'], 'invoice_no': ['4567'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"12344","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 11:18:06,144 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"12344","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 11:18:06,147 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 11:18:06,154 - core.combined_invoice_view - INFO - Invoice created with ID: 134997
+2026-03-14 11:18:06,380 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 11:18:06,381 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=3.0
+2026-03-14 11:18:06,381 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 11:18:06,394 - core.combined_invoice_view - ERROR - Error processing product 1: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+2026-03-14 11:18:06,394 - core.combined_invoice_view - ERROR - Full traceback: Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+psycopg2.errors.UndefinedColumn: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\core\combined_invoice_view.py", line 322, in add_invoice_with_products
+    purchase.save()
+    ~~~~~~~~~~~~~^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 902, in save
+    self.save_base(
+    ~~~~~~~~~~~~~~^
+        using=using,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        update_fields=update_fields,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1008, in save_base
+    updated = self._save_table(
+        raw,
+    ...<4 lines>...
+        update_fields,
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1169, in _save_table
+    results = self._do_insert(
+        cls._base_manager, using, fields, returning_fields, raw
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1210, in _do_insert
+    return manager._insert(
+           ~~~~~~~~~~~~~~~^
+        [self],
+        ^^^^^^^
+    ...<3 lines>...
+        raw=raw,
+        ^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\query.py", line 1868, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1882, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+
+2026-03-14 11:18:06,397 - core.combined_invoice_view - INFO - Invoice 4567 created without products - header only
+2026-03-14 11:18:06,412 - core.combined_invoice_view - ERROR - Unexpected error creating invoice: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+2026-03-14 11:18:06,413 - core.combined_invoice_view - ERROR - Full error traceback: Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+psycopg2.errors.UndefinedColumn: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\core\combined_invoice_view.py", line 322, in add_invoice_with_products
+    purchase.save()
+    ~~~~~~~~~~~~~^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 902, in save
+    self.save_base(
+    ~~~~~~~~~~~~~~^
+        using=using,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        update_fields=update_fields,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1008, in save_base
+    updated = self._save_table(
+        raw,
+    ...<4 lines>...
+        update_fields,
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1169, in _save_table
+    results = self._do_insert(
+        cls._base_manager, using, fields, returning_fields, raw
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1210, in _do_insert
+    return manager._insert(
+           ~~~~~~~~~~~~~~~^
+        [self],
+        ^^^^^^^
+    ...<3 lines>...
+        raw=raw,
+        ^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\query.py", line 1868, in _insert
+    return query.get_compiler(using=using).execute_sql(returning_fields)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1882, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: column "product_free_qty" of relation "core_purchasemaster" does not exist
+LINE 1: ...RP", "product_purchase_rate", "product_quantity", "product_f...
+                                                             ^
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\core\combined_invoice_view.py", line 376, in add_invoice_with_products
+    invoice.save()
+    ~~~~~~~~~~~~^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 902, in save
+    self.save_base(
+    ~~~~~~~~~~~~~~^
+        using=using,
+        ^^^^^^^^^^^^
+    ...<2 lines>...
+        update_fields=update_fields,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1008, in save_base
+    updated = self._save_table(
+        raw,
+    ...<4 lines>...
+        update_fields,
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1138, in _save_table
+    updated = self._do_update(
+        base_qs, using, pk_val, values, update_fields, forced_update
+    )
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\base.py", line 1203, in _do_update
+    return filtered._update(values) > 0
+           ~~~~~~~~~~~~~~~~^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\query.py", line 1286, in _update
+    return query.get_compiler(self.db).execute_sql(ROW_COUNT)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 2060, in execute_sql
+    row_count = super().execute_sql(result_type)
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\models\sql\compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\utils.py", line 99, in _execute
+    self.db.validate_no_broken_transaction()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\pharmaproject pratk\WebsiteHostingService\WebsiteHostingService\WebsiteHostingService\pharmamgmt\venv\Lib\site-packages\django\db\backends\base\base.py", line 521, in validate_no_broken_transaction
+    raise TransactionManagementError(
+    ...<2 lines>...
+    ) from self.rollback_exc
+django.db.transaction.TransactionManagementError: An error occurred in the current transaction. You can't execute queries until the end of the 'atomic' block.
+
+2026-03-14 11:30:20,963 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['TSWAyvpWMD1ydiaby8Xbu5Q4EFMF9NIdbN1ieB65f9621sSlIdUmaNBUzyELWx2B'], 'invoice_no': ['4567'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"12344","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 11:30:20,986 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"12344","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 11:30:20,987 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 11:30:21,000 - core.combined_invoice_view - INFO - Invoice created with ID: 134998
+2026-03-14 11:30:21,048 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 11:30:21,049 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=3.0
+2026-03-14 11:30:21,050 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 11:30:21,275 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 11:30:21,276 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 12344, Qty: 1.0
+2026-03-14 11:30:21,286 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 11:30:21,287 - core.combined_invoice_view - INFO - Invoice 4567 created successfully with 1 products
+2026-03-14 11:31:32,894 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['JHiRkbT4HdGXptCWWhV4bHtIYxqnwibL1Cnz0hAdaJLrdDk66mSfRpeyTqitj2v9'], 'invoice_no': ['45678'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"033","expiry":"12-2024","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 11:31:32,907 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"033","expiry":"12-2024","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 11:31:32,909 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 11:31:32,915 - core.combined_invoice_view - INFO - Invoice created with ID: 134999
+2026-03-14 11:31:32,941 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 11:31:32,942 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=3.0
+2026-03-14 11:31:32,943 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 11:31:32,989 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 11:31:32,990 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 033, Qty: 1.0
+2026-03-14 11:31:32,998 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 11:31:32,999 - core.combined_invoice_view - INFO - Invoice 45678 created successfully with 1 products
+2026-03-14 11:36:35,207 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['wdddUOg6NbTiVOBhSKncSxZ0zI3eqmUKO8iVAUXfgHYMJYjr2PknyfKQuBVkd6e8'], 'invoice_no': ['1221211'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"03030","expiry":"12-2025","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 11:36:35,219 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"03030","expiry":"12-2025","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 11:36:35,220 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 11:36:35,226 - core.combined_invoice_view - INFO - Invoice created with ID: 135000
+2026-03-14 11:36:35,276 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 11:36:35,278 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=3.0
+2026-03-14 11:36:35,279 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 11:36:35,345 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 11:36:35,346 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 03030, Qty: 1.0
+2026-03-14 11:36:35,354 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 11:36:35,355 - core.combined_invoice_view - INFO - Invoice 1221211 created successfully with 1 products
+2026-03-14 11:59:29,407 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['IUN13ygDWbEouXmbJn126DzA3HB6MhV10PSJJEXMpHJSi74lTsYdMlkqYAtcz1fp'], 'invoice_no': ['1234567'], 'invoice_date': ['2026-03-14'], 'supplierid': ['861'], 'transport_charges': ['0'], 'invoice_total': ['525.00'], 'products_data': ['[{"productid":"3377","batch_no":"123","expiry":"12-2027","mrp":"10","purchase_rate":"5","quantity":"100","free_qty":"10","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"10","rate_b":"11","rate_c":"12","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 11:59:29,426 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"123","expiry":"12-2027","mrp":"10","purchase_rate":"5","quantity":"100","free_qty":"10","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"10","rate_b":"11","rate_c":"12","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 11:59:29,427 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 11:59:29,460 - core.combined_invoice_view - INFO - Invoice created with ID: 135002
+2026-03-14 11:59:29,465 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 11:59:29,466 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=10.0, B=11.0, C=12.0
+2026-03-14 11:59:29,468 - core.combined_invoice_view - INFO - Product paracetamol: Base=500.0, CGST=12.5, SGST=12.5, Total=525.0
+2026-03-14 11:59:29,733 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 11:59:29,734 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 123, Qty: 100.0
+2026-03-14 11:59:29,749 - core.combined_invoice_view - INFO - Products total: 525.0, Transport: 0.0, Before roundoff: 525.0, Roundoff: 0.0 (deducted), Final total: 525
+2026-03-14 11:59:29,750 - core.combined_invoice_view - INFO - Invoice 1234567 created successfully with 1 products
+2026-03-14 12:23:07,009 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['reIxhwHL8muIYf5ZsLH0h2aGKm2qdosmA8cHKJv8ht1J7LRjSUZmSzGGeq18niI7'], 'invoice_no': ['098765'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"4764","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 12:23:07,029 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"4764","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 12:23:07,030 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 12:23:07,044 - core.combined_invoice_view - INFO - Invoice created with ID: 135004
+2026-03-14 12:23:07,048 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 12:23:07,049 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=3.0
+2026-03-14 12:23:07,050 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 12:23:07,284 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 12:23:07,285 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 4764, Qty: 1.0
+2026-03-14 12:23:07,299 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 12:23:07,300 - core.combined_invoice_view - INFO - Invoice 098765 created successfully with 1 products
+2026-03-14 12:31:19,716 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['ic9uBy4a5YGxa0wdI4UyHcfHxV91j6q7r6DE4LSxe5dyjwix8dcUiJLH1Z8Jt0GS'], 'invoice_no': ['54555'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"12345","expiry":"12-2056","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 12:31:19,729 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"12345","expiry":"12-2056","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 12:31:19,730 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 12:31:19,735 - core.combined_invoice_view - INFO - Invoice created with ID: 135005
+2026-03-14 12:31:19,746 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 12:31:19,749 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=2.0
+2026-03-14 12:31:19,750 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 12:31:19,828 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 12:31:19,828 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 12345, Qty: 1.0
+2026-03-14 12:31:19,838 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 12:31:19,839 - core.combined_invoice_view - INFO - Invoice 54555 created successfully with 1 products
+2026-03-14 12:38:02,504 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['FiNKtvCyttFyUWgdnfSMUb5vk5dOA89yOchUWIqVCAcz3s2xNoa8vIBvO9cwK2pj'], 'invoice_no': ['1234567'], 'invoice_date': ['2026-03-14'], 'supplierid': ['861'], 'transport_charges': ['0'], 'invoice_total': ['52.50'], 'products_data': ['[{"productid":"3377","batch_no":"3434","expiry":"12-2034","mrp":"10","purchase_rate":"5","quantity":"10","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"11","rate_b":"12","rate_c":"13","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 12:38:02,512 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"3434","expiry":"12-2034","mrp":"10","purchase_rate":"5","quantity":"10","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"11","rate_b":"12","rate_c":"13","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 12:38:02,512 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 12:38:02,516 - core.combined_invoice_view - INFO - Invoice created with ID: 135006
+2026-03-14 12:38:02,520 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 12:38:02,521 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=11.0, B=12.0, C=13.0
+2026-03-14 12:38:02,521 - core.combined_invoice_view - INFO - Product paracetamol: Base=50.0, CGST=1.25, SGST=1.25, Total=52.5
+2026-03-14 12:38:02,574 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 12:38:02,575 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 3434, Qty: 10.0
+2026-03-14 12:38:02,583 - core.combined_invoice_view - INFO - Products total: 52.5, Transport: 0.0, Before roundoff: 52.5, Roundoff: 0.5 (deducted), Final total: 52
+2026-03-14 12:38:02,583 - core.combined_invoice_view - INFO - Invoice 1234567 created successfully with 1 products
+2026-03-14 12:41:55,864 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['AruGCitbam8b4MWpF3hdKdGc6TdkpRNNJlYQ5vhyjtFcdiIJ5czzlKccAXc2zL3y'], 'invoice_no': ['5858588'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"9999","expiry":"12-2028","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 12:41:55,886 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"9999","expiry":"12-2028","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 12:41:55,889 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 12:41:55,899 - core.combined_invoice_view - INFO - Invoice created with ID: 135007
+2026-03-14 12:41:55,904 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 12:41:55,905 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=3.0
+2026-03-14 12:41:55,905 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 12:41:56,059 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 12:41:56,060 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 9999, Qty: 1.0
+2026-03-14 12:41:56,070 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 12:41:56,070 - core.combined_invoice_view - INFO - Invoice 5858588 created successfully with 1 products
+2026-03-14 12:47:07,841 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['ts8AZTiqSbu0dcURbme7xst2oZ3NIqtKCmCKs66N1i11mIGbBvwt8ZZ2S32vSkJv'], 'invoice_no': ['00'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"3434","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 12:47:07,851 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"3434","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 12:47:07,852 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 12:47:07,857 - core.combined_invoice_view - INFO - Invoice created with ID: 135008
+2026-03-14 12:47:07,860 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 12:47:07,861 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=2.0
+2026-03-14 12:47:07,867 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 12:47:07,943 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 12:47:07,944 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 3434, Qty: 1.0
+2026-03-14 12:47:07,951 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 12:47:07,951 - core.combined_invoice_view - INFO - Invoice 00 created successfully with 1 products
+2026-03-14 12:55:43,437 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['iyqG1RDrGXFYv4u6etpmhtNFF1QIDNdyrsUQu4rOP4cZEAgqECHIS0jF95PqNHtj'], 'invoice_no': ['030303'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"3456","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 12:55:43,448 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"3456","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 12:55:43,449 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 12:55:43,454 - core.combined_invoice_view - INFO - Invoice created with ID: 135009
+2026-03-14 12:55:43,460 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 12:55:43,460 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=2.0
+2026-03-14 12:55:43,462 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 12:55:43,619 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 12:55:43,620 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 3456, Qty: 1.0
+2026-03-14 12:55:43,630 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 12:55:43,630 - core.combined_invoice_view - INFO - Invoice 030303 created successfully with 1 products
+2026-03-14 12:58:35,503 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['W1hSjXRwBkS3qKPa4MXog4RbcSBhu6yq5VL2MaFTKrp4zgBuuVfKRBnbGWAZE0Ob'], 'invoice_no': ['3236'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"345","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 12:58:35,516 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"345","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 12:58:35,517 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 12:58:35,522 - core.combined_invoice_view - INFO - Invoice created with ID: 135010
+2026-03-14 12:58:35,532 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 12:58:35,533 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=2.0
+2026-03-14 12:58:35,534 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 12:58:35,618 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 12:58:35,619 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 345, Qty: 1.0
+2026-03-14 12:58:35,634 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 12:58:35,635 - core.combined_invoice_view - INFO - Invoice 3236 created successfully with 1 products
+2026-03-14 13:12:43,498 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['o94zS1ES0oVYAZYuScPN2H4IjGdU7VhI5606YcIymGfxNJmQqY0c6UgoLyLjbLjM'], 'invoice_no': ['33'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"2322","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 13:12:43,526 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"2322","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 13:12:43,527 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 13:12:43,552 - core.combined_invoice_view - INFO - Invoice created with ID: 135011
+2026-03-14 13:12:43,557 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 13:12:43,557 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=2.0
+2026-03-14 13:12:43,558 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 13:12:43,672 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 13:12:43,673 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 2322, Qty: 1.0
+2026-03-14 13:12:43,687 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 13:12:43,688 - core.combined_invoice_view - INFO - Invoice 33 created successfully with 1 products
+2026-03-14 13:19:04,207 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['fsOi19F2VSDXHE5oYo9j1rK4OqAFTyHcWpKP7kJIhaXwUotKwakI5EWKgi84XoJg'], 'invoice_no': ['123456'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['52.50'], 'products_data': ['[{"productid":"3377","batch_no":"1323","expiry":"12-2027","mrp":"10","purchase_rate":"5","quantity":"10","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"11","rate_b":"12","rate_c":"13","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 13:19:04,220 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"1323","expiry":"12-2027","mrp":"10","purchase_rate":"5","quantity":"10","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"11","rate_b":"12","rate_c":"13","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 13:19:04,221 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 13:19:04,250 - core.combined_invoice_view - INFO - Invoice created with ID: 135012
+2026-03-14 13:19:04,256 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 13:19:04,257 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=11.0, B=12.0, C=13.0
+2026-03-14 13:19:04,261 - core.combined_invoice_view - INFO - Product paracetamol: Base=50.0, CGST=1.25, SGST=1.25, Total=52.5
+2026-03-14 13:19:04,332 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 13:19:04,333 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 1323, Qty: 10.0
+2026-03-14 13:19:04,344 - core.combined_invoice_view - INFO - Products total: 52.5, Transport: 0.0, Before roundoff: 52.5, Roundoff: 0.5 (deducted), Final total: 52
+2026-03-14 13:19:04,345 - core.combined_invoice_view - INFO - Invoice 123456 created successfully with 1 products
+2026-03-14 13:21:08,458 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['M5sEICv6eMuOi4eWzai9OdRpoMeu7BWDt2obONzMA4OnvOCi7WtySq35QEMTbrYH'], 'invoice_no': ['8788'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"34556","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 13:21:08,468 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"34556","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 13:21:08,469 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 13:21:08,475 - core.combined_invoice_view - INFO - Invoice created with ID: 135013
+2026-03-14 13:21:08,479 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 13:21:08,479 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=2.0
+2026-03-14 13:21:08,480 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 13:21:08,531 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 13:21:08,532 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 34556, Qty: 1.0
+2026-03-14 13:21:08,541 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 13:21:08,541 - core.combined_invoice_view - INFO - Invoice 8788 created successfully with 1 products
+2026-03-14 13:27:12,536 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['t3Sxau5589qWcSWydAUcbhECoDb2ibNha0O4gF9LurKvpCkULm5BfuQiQvJrm1Pl'], 'invoice_no': ['4678'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"22222","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"5","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 13:27:12,562 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"22222","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"5","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 13:27:12,563 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 13:27:12,569 - core.combined_invoice_view - INFO - Invoice created with ID: 135014
+2026-03-14 13:27:12,576 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 13:27:12,577 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=3.0
+2026-03-14 13:27:12,578 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 13:27:12,771 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 13:27:12,772 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 22222, Qty: 1.0
+2026-03-14 13:27:12,784 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 13:27:12,785 - core.combined_invoice_view - INFO - Invoice 4678 created successfully with 1 products
+2026-03-14 13:32:29,416 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['mAS20LBam8Y0xfi1y53QI1TZvOOZ1aZ8n9woKP6ac6siJAkheS3AS6U7MgjN1Hk1'], 'invoice_no': ['23'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"111","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"5","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 13:32:29,430 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"111","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"5","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 13:32:29,430 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 13:32:29,436 - core.combined_invoice_view - INFO - Invoice created with ID: 135015
+2026-03-14 13:32:29,442 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 13:32:29,443 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=3.0
+2026-03-14 13:32:29,444 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 13:32:29,620 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 13:32:29,621 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 111, Qty: 1.0
+2026-03-14 13:32:29,632 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 13:32:29,633 - core.combined_invoice_view - INFO - Invoice 23 created successfully with 1 products
+2026-03-14 13:35:04,369 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['Y7qCrOVK0suAtv09R3519lz1bmuqG4EyZG4YbSqKQqYSFQ2pxQ5LjqA9sOZeGBZr'], 'invoice_no': ['9090'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"3377","batch_no":"0000","expiry":"12-2046","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"5","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 13:35:04,381 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"0000","expiry":"12-2046","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"5","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 13:35:04,382 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 13:35:04,386 - core.combined_invoice_view - INFO - Invoice created with ID: 135016
+2026-03-14 13:35:04,390 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 13:35:04,392 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=2.0
+2026-03-14 13:35:04,393 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 13:35:04,550 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 13:35:04,551 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 0000, Qty: 1.0, Free Qty: 5.0
+2026-03-14 13:35:04,560 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 13:35:04,561 - core.combined_invoice_view - INFO - Invoice 9090 created successfully with 1 products
+2026-03-14 19:14:47,756 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['ZHrNX3XeLerjfTSusWTZRvNDaGZBfBNGuvd2dc1zJIDVTQJ4iqni6JbKHF1hgeri'], 'invoice_no': ['3353'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['2.10'], 'products_data': ['[{"productid":"1136","batch_no":"1234","expiry":"12-2025","mrp":"2","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"2","rate_b":"3","rate_c":"4","from_challan":true,"challan_no":"123","challan_date":"14-03-2026"},{"productid":"3377","batch_no":"13","expiry":"12-2033","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"12","rate_b":"2","rate_c":"2","from_challan":true,"challan_no":"123","challan_date":"14-03-2026"}]'], 'is_from_challan': ['true']}>
+2026-03-14 19:14:47,787 - core.combined_invoice_view - INFO - Products data received: [{"productid":"1136","batch_no":"1234","expiry":"12-2025","mrp":"2","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"2","rate_b":"3","rate_c":"4","from_challan":true,"challan_no":"123","challan_date":"14-03-2026"},{"productid":"3377","batch_no":"13","expiry":"12-2033","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"12","rate_b":"2","rate_c":"2","from_challan":true,"challan_no":"123","challan_date":"14-03-2026"}]
+2026-03-14 19:14:47,788 - core.combined_invoice_view - INFO - Challan flag: true
+2026-03-14 19:14:47,796 - core.combined_invoice_view - INFO - Invoice created with ID: 135017
+2026-03-14 19:14:47,993 - core.combined_invoice_view - INFO - Challan data received: challan_no=123, challan_date=14-03-2026
+2026-03-14 19:14:47,994 - core.combined_invoice_view - INFO - Set source_challan_no: 123
+2026-03-14 19:14:47,996 - core.combined_invoice_view - INFO - Set source_challan_date: 2026-03-14
+2026-03-14 19:14:47,997 - core.combined_invoice_view - INFO - Setting rates for EXAMINATION GLOVES 100: A=2.0, B=3.0, C=4.0
+2026-03-14 19:14:47,997 - core.combined_invoice_view - INFO - Product EXAMINATION GLOVES 100: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 19:14:48,214 - core.combined_invoice_view - INFO - Product EXAMINATION GLOVES 100 added to invoice
+2026-03-14 19:14:48,214 - core.combined_invoice_view - INFO - PURCHASE CREATED: EXAMINATION GLOVES 100, Batch: 1234, Qty: 1.0, Free Qty: 1.0
+2026-03-14 19:14:48,222 - core.combined_invoice_view - INFO - Challan data received: challan_no=123, challan_date=14-03-2026
+2026-03-14 19:14:48,223 - core.combined_invoice_view - INFO - Set source_challan_no: 123
+2026-03-14 19:14:48,223 - core.combined_invoice_view - INFO - Set source_challan_date: 2026-03-14
+2026-03-14 19:14:48,224 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=12.0, B=2.0, C=2.0
+2026-03-14 19:14:48,224 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 19:14:48,263 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 19:14:48,264 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 13, Qty: 1.0, Free Qty: 1.0
+2026-03-14 19:14:48,272 - core.combined_invoice_view - INFO - Products total: 2.0999999999999996, Transport: 0.0, Before roundoff: 2.0999999999999996, Roundoff: 0.09999999999999964 (deducted), Final total: 2
+2026-03-14 19:14:48,285 - core.combined_invoice_view - ERROR - Error moving challan entry: SupplierChallanMaster2() got unexpected keyword arguments: 'product_free_qty'
+2026-03-14 19:14:48,296 - core.combined_invoice_view - ERROR - Error moving challan entry: SupplierChallanMaster2() got unexpected keyword arguments: 'product_free_qty'
+2026-03-14 19:14:48,297 - core.combined_invoice_view - INFO - Invoice 3353 created successfully with 2 products
+2026-03-14 19:20:14,008 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['OgNlEa8w10s1IrxZ0L3gGhJoTSokPz7Gj4zAUjcRZuEDmoozQfxzVv7vqRq0QcLi'], 'invoice_no': ['25654'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['2.10'], 'products_data': ['[{"productid":"1136","batch_no":"1234","expiry":"12-2025","mrp":"2","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"2","rate_b":"3","rate_c":"4","from_challan":true,"challan_no":"123","challan_date":"14-03-2026"},{"productid":"3377","batch_no":"13","expiry":"12-2033","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"12","rate_b":"2","rate_c":"2","from_challan":true,"challan_no":"123","challan_date":"14-03-2026"}]'], 'is_from_challan': ['true']}>
+2026-03-14 19:20:14,028 - core.combined_invoice_view - INFO - Products data received: [{"productid":"1136","batch_no":"1234","expiry":"12-2025","mrp":"2","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"2","rate_b":"3","rate_c":"4","from_challan":true,"challan_no":"123","challan_date":"14-03-2026"},{"productid":"3377","batch_no":"13","expiry":"12-2033","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"12","rate_b":"2","rate_c":"2","from_challan":true,"challan_no":"123","challan_date":"14-03-2026"}]
+2026-03-14 19:20:14,029 - core.combined_invoice_view - INFO - Challan flag: true
+2026-03-14 19:20:14,036 - core.combined_invoice_view - INFO - Invoice created with ID: 135018
+2026-03-14 19:20:14,081 - core.combined_invoice_view - INFO - Challan data received: challan_no=123, challan_date=14-03-2026
+2026-03-14 19:20:14,082 - core.combined_invoice_view - INFO - Set source_challan_no: 123
+2026-03-14 19:20:14,083 - core.combined_invoice_view - INFO - Set source_challan_date: 2026-03-14
+2026-03-14 19:20:14,084 - core.combined_invoice_view - INFO - Setting rates for EXAMINATION GLOVES 100: A=2.0, B=3.0, C=4.0
+2026-03-14 19:20:14,084 - core.combined_invoice_view - INFO - Product EXAMINATION GLOVES 100: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 19:20:14,217 - core.combined_invoice_view - INFO - Product EXAMINATION GLOVES 100 added to invoice
+2026-03-14 19:20:14,218 - core.combined_invoice_view - INFO - PURCHASE CREATED: EXAMINATION GLOVES 100, Batch: 1234, Qty: 1.0, Free Qty: 1.0
+2026-03-14 19:20:14,227 - core.combined_invoice_view - INFO - Challan data received: challan_no=123, challan_date=14-03-2026
+2026-03-14 19:20:14,228 - core.combined_invoice_view - INFO - Set source_challan_no: 123
+2026-03-14 19:20:14,228 - core.combined_invoice_view - INFO - Set source_challan_date: 2026-03-14
+2026-03-14 19:20:14,229 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=12.0, B=2.0, C=2.0
+2026-03-14 19:20:14,229 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 19:20:14,278 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-14 19:20:14,278 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 13, Qty: 1.0, Free Qty: 1.0
+2026-03-14 19:20:14,285 - core.combined_invoice_view - INFO - Products total: 2.0999999999999996, Transport: 0.0, Before roundoff: 2.0999999999999996, Roundoff: 0.09999999999999964 (deducted), Final total: 2
+2026-03-14 19:20:14,375 - core.combined_invoice_view - INFO - Moved challan entry to SupplierChallanMaster2: EXAMINATION GLOVES 100 - 1234
+2026-03-14 19:20:14,442 - core.combined_invoice_view - INFO - Moved challan entry to SupplierChallanMaster2: paracetamol - 13
+2026-03-14 19:20:14,443 - core.combined_invoice_view - INFO - Total 2 challan entries moved to SupplierChallanMaster2
+2026-03-14 19:20:14,443 - core.combined_invoice_view - INFO - Invoice 25654 created successfully with 2 products
+2026-03-14 21:57:59,097 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['gKLqAO6PLX7lpDqcWVJRhZbcDmaVaHK871Ec5LEK8HNY8snIevQ3xAKnnFKoY0vC'], 'invoice_no': ['123'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"2755","batch_no":"123","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 21:57:59,115 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2755","batch_no":"123","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 21:57:59,116 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 21:57:59,121 - core.combined_invoice_view - INFO - Invoice created with ID: 135019
+2026-03-14 21:57:59,128 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 21:57:59,129 - core.combined_invoice_view - INFO - Setting rates for RESTUSS SYP 100ML: A=1.0, B=2.0, C=2.0
+2026-03-14 21:57:59,131 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 21:57:59,201 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML added to invoice
+2026-03-14 21:57:59,201 - core.combined_invoice_view - INFO - PURCHASE CREATED: RESTUSS SYP 100ML, Batch: 123, Qty: 1.0, Free Qty: 1.0
+2026-03-14 21:57:59,214 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 21:57:59,215 - core.combined_invoice_view - INFO - Invoice 123 created successfully with 1 products
+2026-03-14 22:08:35,422 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['7JZuMcuQb7nExFhBLtI5VVWheFgnrThUnkAw3Y2foE3OaoCPOdzcXAxchaPqOalA'], 'invoice_no': ['122'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"2755","batch_no":"1323","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"1","rate_c":"1","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 22:08:35,438 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2755","batch_no":"1323","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"1","rate_c":"1","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 22:08:35,441 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 22:08:35,448 - core.combined_invoice_view - INFO - Invoice created with ID: 135020
+2026-03-14 22:08:35,454 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 22:08:35,456 - core.combined_invoice_view - INFO - Setting rates for RESTUSS SYP 100ML: A=1.0, B=1.0, C=1.0
+2026-03-14 22:08:35,457 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 22:08:35,571 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML added to invoice
+2026-03-14 22:08:35,572 - core.combined_invoice_view - INFO - PURCHASE CREATED: RESTUSS SYP 100ML, Batch: 1323, Qty: 1.0, Free Qty: 1.0
+2026-03-14 22:08:35,585 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 22:08:35,586 - core.combined_invoice_view - INFO - Invoice 122 created successfully with 1 products
+2026-03-14 22:16:14,534 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['qjvfpA6kP0tp1n5ht8RpSVzY12blUrgoGU6hGmEJ2x9zE6qvwSIwUAaT4xKohIk4'], 'invoice_no': ['111'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"2755","batch_no":"333","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":true,"challan_no":"242","challan_date":"14-03-2026"}]'], 'is_from_challan': ['true']}>
+2026-03-14 22:16:14,553 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2755","batch_no":"333","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":true,"challan_no":"242","challan_date":"14-03-2026"}]
+2026-03-14 22:16:14,554 - core.combined_invoice_view - INFO - Challan flag: true
+2026-03-14 22:16:14,562 - core.combined_invoice_view - INFO - Invoice created with ID: 135021
+2026-03-14 22:16:14,570 - core.combined_invoice_view - INFO - Challan data received: challan_no=242, challan_date=14-03-2026
+2026-03-14 22:16:14,571 - core.combined_invoice_view - INFO - Set source_challan_no: 242
+2026-03-14 22:16:14,573 - core.combined_invoice_view - INFO - Set source_challan_date: 2026-03-14
+2026-03-14 22:16:14,574 - core.combined_invoice_view - INFO - Setting rates for RESTUSS SYP 100ML: A=1.0, B=2.0, C=3.0
+2026-03-14 22:16:14,575 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 22:16:14,738 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML added to invoice
+2026-03-14 22:16:14,738 - core.combined_invoice_view - INFO - PURCHASE CREATED: RESTUSS SYP 100ML, Batch: 333, Qty: 1.0, Free Qty: 1.0
+2026-03-14 22:16:14,747 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 22:16:14,799 - core.combined_invoice_view - INFO - Moved challan entry to SupplierChallanMaster2: RESTUSS SYP 100ML - 333
+2026-03-14 22:16:14,800 - core.combined_invoice_view - INFO - Total 1 challan entries moved to SupplierChallanMaster2
+2026-03-14 22:16:14,801 - core.combined_invoice_view - INFO - Invoice 111 created successfully with 1 products
+2026-03-14 22:23:46,081 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['hSvdSukdR4eeqYlXelhv6LprfOl9k3eOxt6f9gSC4BUo3HGbh58C8q0mijUcHkiu'], 'invoice_no': ['21324'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"2755","batch_no":"1111","expiry":"12-2032","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-14 22:23:46,093 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2755","batch_no":"1111","expiry":"12-2032","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-14 22:23:46,094 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-14 22:23:46,104 - core.combined_invoice_view - INFO - Invoice created with ID: 135022
+2026-03-14 22:23:46,109 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-14 22:23:46,110 - core.combined_invoice_view - INFO - Setting rates for RESTUSS SYP 100ML: A=1.0, B=2.0, C=3.0
+2026-03-14 22:23:46,113 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 22:23:46,229 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML added to invoice
+2026-03-14 22:23:46,230 - core.combined_invoice_view - INFO - PURCHASE CREATED: RESTUSS SYP 100ML, Batch: 1111, Qty: 1.0, Free Qty: 1.0
+2026-03-14 22:23:46,245 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 22:23:46,246 - core.combined_invoice_view - INFO - Invoice 21324 created successfully with 1 products
+2026-03-14 22:29:17,292 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['ANm4QPtSrR7JCAwBiNYRUxIScRYaDigfQoX67B1hEoNTfjRPlxPYWcjNfmxd0zkV'], 'invoice_no': ['111'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"2755","batch_no":"111","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"3","rate_c":"3","from_challan":true,"challan_no":"1111","challan_date":"14-03-2026"}]'], 'is_from_challan': ['true']}>
+2026-03-14 22:29:17,313 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2755","batch_no":"111","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"3","rate_c":"3","from_challan":true,"challan_no":"1111","challan_date":"14-03-2026"}]
+2026-03-14 22:29:17,314 - core.combined_invoice_view - INFO - Challan flag: true
+2026-03-14 22:29:17,319 - core.combined_invoice_view - INFO - Invoice created with ID: 135023
+2026-03-14 22:29:17,323 - core.combined_invoice_view - INFO - Challan data received: challan_no=1111, challan_date=14-03-2026
+2026-03-14 22:29:17,324 - core.combined_invoice_view - INFO - Set source_challan_no: 1111
+2026-03-14 22:29:17,325 - core.combined_invoice_view - INFO - Set source_challan_date: 2026-03-14
+2026-03-14 22:29:17,325 - core.combined_invoice_view - INFO - Setting rates for RESTUSS SYP 100ML: A=1.0, B=3.0, C=3.0
+2026-03-14 22:29:17,326 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 22:29:17,498 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML added to invoice
+2026-03-14 22:29:17,498 - core.combined_invoice_view - INFO - PURCHASE CREATED: RESTUSS SYP 100ML, Batch: 111, Qty: 1.0, Free Qty: 1.0
+2026-03-14 22:29:17,511 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 22:29:17,567 - core.combined_invoice_view - INFO - Moved challan entry to SupplierChallanMaster2: RESTUSS SYP 100ML - 111
+2026-03-14 22:29:17,568 - core.combined_invoice_view - INFO - Total 1 challan entries moved to SupplierChallanMaster2
+2026-03-14 22:29:17,569 - core.combined_invoice_view - INFO - Invoice 111 created successfully with 1 products
+2026-03-14 22:39:28,276 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['6GXRsJyUMvkMe28yl7alsVFntidhirCgmhyTJv6jZ20WRLtMoR1suAgiwNMkFIGW'], 'invoice_no': ['111111111'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"2755","batch_no":"1111","expiry":"12-2034","mrp":"11","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":true,"challan_no":"1111","challan_date":"14-03-2026"}]'], 'is_from_challan': ['true']}>
+2026-03-14 22:39:28,302 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2755","batch_no":"1111","expiry":"12-2034","mrp":"11","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":true,"challan_no":"1111","challan_date":"14-03-2026"}]
+2026-03-14 22:39:28,304 - core.combined_invoice_view - INFO - Challan flag: true
+2026-03-14 22:39:28,311 - core.combined_invoice_view - INFO - Invoice created with ID: 135024
+2026-03-14 22:39:28,316 - core.combined_invoice_view - INFO - Challan data received: challan_no=1111, challan_date=14-03-2026
+2026-03-14 22:39:28,317 - core.combined_invoice_view - INFO - Set source_challan_no: 1111
+2026-03-14 22:39:28,318 - core.combined_invoice_view - INFO - Set source_challan_date: 2026-03-14
+2026-03-14 22:39:28,319 - core.combined_invoice_view - INFO - Setting rates for RESTUSS SYP 100ML: A=1.0, B=2.0, C=3.0
+2026-03-14 22:39:28,320 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 22:39:28,503 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML added to invoice
+2026-03-14 22:39:28,503 - core.combined_invoice_view - INFO - PURCHASE CREATED: RESTUSS SYP 100ML, Batch: 1111, Qty: 1.0, Free Qty: 1.0
+2026-03-14 22:39:28,510 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 22:39:28,561 - core.combined_invoice_view - INFO - Moved challan entry to SupplierChallanMaster2: RESTUSS SYP 100ML - 1111
+2026-03-14 22:39:28,561 - core.combined_invoice_view - INFO - Total 1 challan entries moved to SupplierChallanMaster2
+2026-03-14 22:39:28,562 - core.combined_invoice_view - INFO - Invoice 111111111 created successfully with 1 products
+2026-03-14 22:47:17,248 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['jp1UEbN9zwpmIPzy4btS46amf7bxE3YNz0CWVXlyM35wlyUM7VkZ6LLhiCKA1k2t'], 'invoice_no': ['11111'], 'invoice_date': ['2026-03-14'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"2755","batch_no":"11111","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":true,"challan_no":"1111111111111123","challan_date":"14-03-2026"}]'], 'is_from_challan': ['true']}>
+2026-03-14 22:47:17,270 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2755","batch_no":"11111","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":true,"challan_no":"1111111111111123","challan_date":"14-03-2026"}]
+2026-03-14 22:47:17,273 - core.combined_invoice_view - INFO - Challan flag: true
+2026-03-14 22:47:17,278 - core.combined_invoice_view - INFO - Invoice created with ID: 135025
+2026-03-14 22:47:17,281 - core.combined_invoice_view - INFO - Challan data received: challan_no=1111111111111123, challan_date=14-03-2026
+2026-03-14 22:47:17,282 - core.combined_invoice_view - INFO - Set source_challan_no: 1111111111111123
+2026-03-14 22:47:17,285 - core.combined_invoice_view - INFO - Set source_challan_date: 2026-03-14
+2026-03-14 22:47:17,285 - core.combined_invoice_view - INFO - Setting rates for RESTUSS SYP 100ML: A=1.0, B=2.0, C=2.0
+2026-03-14 22:47:17,287 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML: Base=1.0, CGST=0.025, SGST=0.025, Total=1.0499999999999998
+2026-03-14 22:47:17,443 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML added to invoice
+2026-03-14 22:47:17,444 - core.combined_invoice_view - INFO - PURCHASE CREATED: RESTUSS SYP 100ML, Batch: 11111, Qty: 1.0, Free Qty: 1.0
+2026-03-14 22:47:17,455 - core.combined_invoice_view - INFO - Products total: 1.0499999999999998, Transport: 0.0, Before roundoff: 1.0499999999999998, Roundoff: 0.04999999999999982 (deducted), Final total: 1
+2026-03-14 22:47:17,506 - core.combined_invoice_view - INFO - Moved challan entry to SupplierChallanMaster2: RESTUSS SYP 100ML - 11111
+2026-03-14 22:47:17,506 - core.combined_invoice_view - INFO - Total 1 challan entries moved to SupplierChallanMaster2
+2026-03-14 22:47:17,507 - core.combined_invoice_view - INFO - Invoice 11111 created successfully with 1 products
+2026-03-15 13:27:49,153 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['Qm9GftwCYW1M8lTaTSLlNgcgJWdHv5lVYWBTTMpHqSdGZB1MkBudoqgRbmByh2b2'], 'invoice_no': ['14'], 'invoice_date': ['2026-03-15'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"2755","batch_no":"111","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-15 13:27:49,168 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2755","batch_no":"111","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-15 13:27:49,169 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-15 13:27:49,201 - core.combined_invoice_view - INFO - Invoice created with ID: 135026
+2026-03-15 13:27:49,205 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-15 13:27:49,206 - core.combined_invoice_view - INFO - Setting rates for RESTUSS SYP 100ML: A=1.0, B=2.0, C=3.0
+2026-03-15 13:27:49,206 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-15 13:27:49,405 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML added to invoice
+2026-03-15 13:27:49,406 - core.combined_invoice_view - INFO - PURCHASE CREATED: RESTUSS SYP 100ML, Batch: 111, Qty: 1.0, Free Qty: 1.0
+2026-03-15 13:27:49,415 - core.combined_invoice_view - INFO - Products total: 1.06, Transport: 0.0, Before roundoff: 1.06, Roundoff: 0.06000000000000005 (deducted), Final total: 1
+2026-03-15 13:27:49,416 - core.combined_invoice_view - INFO - Invoice 14 created successfully with 1 products
+2026-03-15 15:09:23,527 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['rAwGJ6tDGdRQOQ18hjSlLulZuk4MmI5GEDakKP5p6wQhLyhL1HlKI9uWFV40cFxo'], 'invoice_no': ['23456'], 'invoice_date': ['2012-03-15'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"2752","batch_no":"111","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-15 15:09:23,545 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2752","batch_no":"111","expiry":"12-2012","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-15 15:09:23,545 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-15 15:09:23,576 - core.combined_invoice_view - INFO - Invoice created with ID: 135027
+2026-03-15 15:09:23,805 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-15 15:09:23,806 - core.combined_invoice_view - INFO - Setting rates for RESTCOF CAP 10 CAP: A=1.0, B=2.0, C=3.0
+2026-03-15 15:09:23,807 - core.combined_invoice_view - INFO - Product RESTCOF CAP 10 CAP: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-15 15:09:23,983 - core.combined_invoice_view - INFO - Product RESTCOF CAP 10 CAP added to invoice
+2026-03-15 15:09:23,984 - core.combined_invoice_view - INFO - PURCHASE CREATED: RESTCOF CAP 10 CAP, Batch: 111, Qty: 1.0, Free Qty: 1.0
+2026-03-15 15:09:23,993 - core.combined_invoice_view - INFO - Products total: 1.06, Transport: 0.0, Before roundoff: 1.06, Roundoff: 0.06000000000000005 (deducted), Final total: 1
+2026-03-15 15:09:23,994 - core.combined_invoice_view - INFO - Invoice 23456 created successfully with 1 products
+2026-03-15 15:11:17,584 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['sogCh1qUiblcPQ9eqd8aRxvdRRQZPvOgFrUgiK2GIukDMypRaBBzOcEa2sQdFsgY'], 'invoice_no': ['11111'], 'invoice_date': ['2013-03-15'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"2752","batch_no":"111","expiry":"12-2013","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"3","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-15 15:11:17,596 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2752","batch_no":"111","expiry":"12-2013","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"3","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-15 15:11:17,597 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-15 15:11:17,600 - core.combined_invoice_view - INFO - Invoice created with ID: 135028
+2026-03-15 15:11:17,622 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-15 15:11:17,623 - core.combined_invoice_view - INFO - Setting rates for RESTCOF CAP 10 CAP: A=1.0, B=3.0, C=3.0
+2026-03-15 15:11:17,625 - core.combined_invoice_view - INFO - Product RESTCOF CAP 10 CAP: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-15 15:11:17,695 - core.combined_invoice_view - INFO - Product RESTCOF CAP 10 CAP added to invoice
+2026-03-15 15:11:17,695 - core.combined_invoice_view - INFO - PURCHASE CREATED: RESTCOF CAP 10 CAP, Batch: 111, Qty: 1.0, Free Qty: 1.0
+2026-03-15 15:11:17,704 - core.combined_invoice_view - INFO - Products total: 1.06, Transport: 0.0, Before roundoff: 1.06, Roundoff: 0.06000000000000005 (deducted), Final total: 1
+2026-03-15 15:11:17,704 - core.combined_invoice_view - INFO - Invoice 11111 created successfully with 1 products
+2026-03-15 18:16:49,877 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['soZExDUAq8P17tv9DPq07GmvittgckrL4t9WBEwXqhKSPLYlPH8G6HOLLCxSfe9n'], 'invoice_no': ['111'], 'invoice_date': ['2026-03-15'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['2'], 'roundoff_amount': ['0.10'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"2755","batch_no":"1112424","expiry":"12-2034","mrp":"2","purchase_rate":"2","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-15 18:16:49,898 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2755","batch_no":"1112424","expiry":"12-2034","mrp":"2","purchase_rate":"2","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-15 18:16:49,900 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-15 18:16:49,934 - core.combined_invoice_view - INFO - Invoice created with ID: 135029
+2026-03-15 18:16:49,938 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-15 18:16:49,939 - core.combined_invoice_view - INFO - Setting rates for RESTUSS SYP 100ML: A=1.0, B=2.0, C=3.0
+2026-03-15 18:16:49,940 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML: Base=2.0, CGST=0.05, SGST=0.05, Total=2.1
+2026-03-15 18:16:50,061 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML added to invoice
+2026-03-15 18:16:50,062 - core.combined_invoice_view - INFO - PURCHASE CREATED: RESTUSS SYP 100ML, Batch: 1112424, Qty: 1.0, Free Qty: 1.0
+2026-03-15 18:16:50,075 - core.combined_invoice_view - INFO - Saved invoice: Total=2.0, RoundOff=0.1 (deducted)
+2026-03-15 18:16:50,076 - core.combined_invoice_view - INFO - Invoice 111 created successfully with 1 products
+2026-03-15 18:33:20,115 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['gqwNLnITeN1spiZf5E6WsZQfsobz2CaFSvG5PokgeWWj7AsrhwOCr0ivVxfb5wSh'], 'invoice_no': ['233'], 'invoice_date': ['2026-03-15'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"256","batch_no":"12232","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-15 18:33:20,138 - core.combined_invoice_view - INFO - Products data received: [{"productid":"256","batch_no":"12232","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-15 18:33:20,139 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-15 18:33:20,145 - core.combined_invoice_view - INFO - Invoice created with ID: 135030
+2026-03-15 18:33:20,158 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-15 18:33:20,159 - core.combined_invoice_view - INFO - Setting rates for ASTE-5 SKIN CREAM 15GM: A=1.0, B=2.0, C=3.0
+2026-03-15 18:33:20,160 - core.combined_invoice_view - INFO - Product ASTE-5 SKIN CREAM 15GM: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-15 18:33:20,364 - core.combined_invoice_view - INFO - Product ASTE-5 SKIN CREAM 15GM added to invoice
+2026-03-15 18:33:20,365 - core.combined_invoice_view - INFO - PURCHASE CREATED: ASTE-5 SKIN CREAM 15GM, Batch: 12232, Qty: 1.0, Free Qty: 1.0
+2026-03-15 18:33:20,378 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-03-15 18:33:20,379 - core.combined_invoice_view - INFO - Invoice 233 created successfully with 1 products
+2026-03-15 20:23:56,953 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['8uGkDCzNRWxsnzkLPYmNAzHgpODot6pZZmlbCos1xcatsNeDM1b5w5n4nsN4g3fN'], 'invoice_no': ['12113131'], 'invoice_date': ['2013-03-15'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"825","batch_no":"436571234","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"2","rate_b":"3","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-15 20:23:56,980 - core.combined_invoice_view - INFO - Products data received: [{"productid":"825","batch_no":"436571234","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"2","rate_b":"3","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-15 20:23:56,981 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-15 20:23:56,988 - core.combined_invoice_view - INFO - Invoice created with ID: 135031
+2026-03-15 20:23:56,992 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-15 20:23:56,994 - core.combined_invoice_view - INFO - Setting rates for DACPAR GEL 15GM: A=2.0, B=3.0, C=3.0
+2026-03-15 20:23:56,994 - core.combined_invoice_view - INFO - Product DACPAR GEL 15GM: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-15 20:23:57,168 - core.combined_invoice_view - INFO - Product DACPAR GEL 15GM added to invoice
+2026-03-15 20:23:57,169 - core.combined_invoice_view - INFO - PURCHASE CREATED: DACPAR GEL 15GM, Batch: 436571234, Qty: 1.0, Free Qty: 1.0
+2026-03-15 20:23:57,180 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-03-15 20:23:57,180 - core.combined_invoice_view - INFO - Invoice 12113131 created successfully with 1 products
+2026-03-15 22:08:24,891 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['1F7QLdbKpRsnKf59QyLlAqrvBdgAbIqHCPBMzsi0CTZGQNC38fAAF14QCMb7dxIu'], 'invoice_no': ['1234'], 'invoice_date': ['2026-03-15'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"2","batch_no":"11","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"0","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-15 22:08:24,914 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2","batch_no":"11","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"0","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-15 22:08:24,914 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-15 22:08:24,920 - core.combined_invoice_view - INFO - Invoice created with ID: 135032
+2026-03-15 22:08:24,926 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-15 22:08:24,928 - core.combined_invoice_view - INFO - Setting rates for 1ST AID TRANSPORE TAPE .5"": A=1.0, B=2.0, C=3.0
+2026-03-15 22:08:24,928 - core.combined_invoice_view - INFO - Product 1ST AID TRANSPORE TAPE .5"": Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-15 22:08:25,108 - core.combined_invoice_view - INFO - Product 1ST AID TRANSPORE TAPE .5"" added to invoice
+2026-03-15 22:08:25,109 - core.combined_invoice_view - INFO - PURCHASE CREATED: 1ST AID TRANSPORE TAPE .5"", Batch: 11, Qty: 1.0, Free Qty: 0.0
+2026-03-15 22:08:25,120 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-03-15 22:08:25,121 - core.combined_invoice_view - INFO - Invoice 1234 created successfully with 1 products
+2026-03-16 10:13:39,311 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['hV60CDd2ocynkC6ojPf3YEp3UEPNRbpCdCCjtQiRBYU75lzjTShAdgrCwAadHZEn'], 'invoice_no': ['111111'], 'invoice_date': ['2012-05-16'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"4004","batch_no":"11111","expiry":"12-2033","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-16 10:13:39,324 - core.combined_invoice_view - INFO - Products data received: [{"productid":"4004","batch_no":"11111","expiry":"12-2033","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-16 10:13:39,325 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-16 10:13:39,359 - core.combined_invoice_view - INFO - Invoice created with ID: 135033
+2026-03-16 10:13:39,363 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-16 10:13:39,363 - core.combined_invoice_view - INFO - Setting rates for Qwert: A=1.0, B=2.0, C=3.0
+2026-03-16 10:13:39,364 - core.combined_invoice_view - INFO - Product Qwert: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-16 10:13:39,606 - core.combined_invoice_view - INFO - Product Qwert added to invoice
+2026-03-16 10:13:39,606 - core.combined_invoice_view - INFO - PURCHASE CREATED: Qwert, Batch: 11111, Qty: 1.0, Free Qty: 1.0
+2026-03-16 10:13:39,616 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-03-16 10:13:39,616 - core.combined_invoice_view - INFO - Invoice 111111 created successfully with 1 products
+2026-03-16 10:58:55,204 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['4bFB9Gj4OxtWgDqqp7gHtXaYf0gO088A0SbU0ToT1jPG1mTlZaieIzcxRWBeQWnl'], 'invoice_no': ['111111'], 'invoice_date': ['2026-03-16'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"2","batch_no":"3232","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"2","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-16 10:58:55,339 - core.combined_invoice_view - ERROR - Invoice form validation errors: <ul class="errorlist"><li>__all__<ul class="errorlist nonfield"><li>Invoice master with this Invoice no and Supplierid already exists.</li></ul></li></ul>
+2026-03-16 10:59:28,261 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['9D5LNZ3Vx29xc8MbEjLwi59DFiYSb3mN5kB4Ec8KKOvhXRf6emN3xHbcheji1RBy'], 'invoice_no': ['1111111'], 'invoice_date': ['2026-03-16'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"2","batch_no":"242434","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-16 10:59:28,271 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2","batch_no":"242434","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-16 10:59:28,274 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-16 10:59:28,300 - core.combined_invoice_view - INFO - Invoice created with ID: 135034
+2026-03-16 10:59:28,305 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-16 10:59:28,306 - core.combined_invoice_view - INFO - Setting rates for 1ST AID TRANSPORE TAPE .5"": A=1.0, B=2.0, C=3.0
+2026-03-16 10:59:28,307 - core.combined_invoice_view - INFO - Product 1ST AID TRANSPORE TAPE .5"": Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-16 10:59:28,376 - core.combined_invoice_view - INFO - Product 1ST AID TRANSPORE TAPE .5"" added to invoice
+2026-03-16 10:59:28,377 - core.combined_invoice_view - INFO - PURCHASE CREATED: 1ST AID TRANSPORE TAPE .5"", Batch: 242434, Qty: 1.0, Free Qty: 1.0
+2026-03-16 10:59:28,385 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-03-16 10:59:28,385 - core.combined_invoice_view - INFO - Invoice 1111111 created successfully with 1 products
+2026-03-16 11:05:14,369 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['VcejGOIrag3WZrx25c2lmhz4R9lQaygGRTKCx1Ngn2pGKa0XFf4SBTBDt5Gg0mvr'], 'invoice_no': ['1101010'], 'invoice_date': ['2026-03-16'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"2","batch_no":"22","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-16 11:05:14,379 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2","batch_no":"22","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-16 11:05:14,380 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-16 11:05:14,386 - core.combined_invoice_view - INFO - Invoice created with ID: 135035
+2026-03-16 11:05:14,390 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-16 11:05:14,391 - core.combined_invoice_view - INFO - Setting rates for 1ST AID TRANSPORE TAPE .5"": A=1.0, B=2.0, C=3.0
+2026-03-16 11:05:14,392 - core.combined_invoice_view - INFO - Product 1ST AID TRANSPORE TAPE .5"": Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-16 11:05:14,487 - core.combined_invoice_view - INFO - Product 1ST AID TRANSPORE TAPE .5"" added to invoice
+2026-03-16 11:05:14,488 - core.combined_invoice_view - INFO - PURCHASE CREATED: 1ST AID TRANSPORE TAPE .5"", Batch: 22, Qty: 1.0, Free Qty: 1.0
+2026-03-16 11:05:14,497 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-03-16 11:05:14,498 - core.combined_invoice_view - INFO - Invoice 1101010 created successfully with 1 products

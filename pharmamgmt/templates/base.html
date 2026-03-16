@@ -243,6 +243,36 @@
         
         // Universal ESC key navigation with unlimited backward navigation
         document.addEventListener('keydown', function(e) {
+            // Ctrl+M shortcut for Add New Product (Global) - Works on ALL pages
+            if (e.ctrlKey && e.key === 'm' && !e.shiftKey && !e.altKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('Ctrl+M pressed - Opening add product dialog...');
+                
+                // Check if openProductDialog function exists
+                if (typeof openProductDialog === 'function') {
+                    openProductDialog();
+                } else {
+                    const dialog = document.getElementById('addProductDialog');
+                    if (dialog) {
+                        dialog.style.display = 'flex';
+                        setTimeout(() => {
+                            const nameInput = document.querySelector('#addProductForm input[name="product_name"]');
+                            if (nameInput) nameInput.focus();
+                        }, 100);
+                    } else {
+                        // Redirect to combined invoice form with product dialog
+                        console.log('Redirecting to combined invoice form for product addition...');
+                        showNavigationInfo(0, 0, '🔄 Redirecting to add product...');
+                        setTimeout(() => {
+                            window.location.href = "{% url 'add_invoice_with_products' %}?openProductDialog=true";
+                        }, 500);
+                    }
+                }
+                return false;
+            }
+            
             if (e.key === 'Escape') {
                 // Check if we're in a modal or special context first
                 const activeModals = document.querySelectorAll('.modal:not([style*="display: none"]), .modal-overlay:not([style*="display: none"]), .quick-search-overlay, .batch-modal-overlay');

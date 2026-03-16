@@ -4,6 +4,8 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/sales_invoice_detail.css' %}">
+
+{% include 'components/add_product_dialog.html' %}
 {% endblock %}
 
 {% block page_actions %}
@@ -70,7 +72,8 @@
                 <div class="invoice-total-section">
                     <div class="invoice-total-display">
                         <h6 class="invoice-total-label">Invoice Total</h6>
-                        <h5 class="invoice-total-value">{{ invoice.sales_invoice_total|currency }}</h5>
+                        <h5 class="invoice-total-value">₹<span class="rounded-amount" data-actual="{{ invoice.sales_invoice_total }}">{{ invoice.sales_invoice_total|floatformat:0 }}</span></h5>
+                        <small style="color: #6c757d; font-size: 0.85em;">(₹{{ invoice.sales_invoice_total|floatformat:2 }})</small>
                     </div>
                 </div>
             </div>
@@ -101,8 +104,9 @@
                     <div class="balance-due-display">
                         <h6 class="balance-due-label">Balance Due</h6>
                         <h5 class="balance-due-value {% if invoice.sales_invoice_total > invoice.sales_invoice_paid %}text-danger{% else %}text-success{% endif %}">
-                            {{ invoice.sales_invoice_total|subtract:invoice.sales_invoice_paid|currency }}
+                            ₹<span class="rounded-amount" data-actual="{{ invoice.sales_invoice_total|subtract:invoice.sales_invoice_paid }}">{{ invoice.sales_invoice_total|subtract:invoice.sales_invoice_paid|floatformat:0 }}</span>
                         </h5>
+                        <small style="color: #6c757d; font-size: 0.85em;">(₹{{ invoice.sales_invoice_total|subtract:invoice.sales_invoice_paid|floatformat:2 }})</small>
                     </div>
                 </div>
             </div>
@@ -171,6 +175,7 @@
                                 <th class="rate-type-header">Rate Type</th>
                                 <th class="rate-header">Rate</th>
                                 <th class="quantity-header">Qty</th>
+                                <th class="free-qty-header" style="text-align: center; min-width: 80px; background-color: #d4edda;">Free Qty</th>
                                 <th class="discount-header">Discount</th>
                                 <th class="cgst-header">CGST %</th>
                                 <th class="sgst-header">SGST %</th>
@@ -192,6 +197,7 @@
                                 <td class="rate-type-cell">{{ sale.rate_applied }}</td>
                                 <td class="rate-cell">{{ sale.sale_rate|currency }}</td>
                                 <td class="quantity-cell">{{ sale.sale_quantity|floatformat:2 }}</td>
+                                <td class="free-qty-cell" style="text-align: center; font-weight: 600; color: #28a745; background-color: #d4edda;">{{ sale.sale_free_qty|floatformat:2 }}</td>
                                 <td class="discount-cell">
                                     {% if sale.sale_calculation_mode == 'flat' %}
                                         {{ sale.sale_discount|currency }}
@@ -212,7 +218,7 @@
                             </tr>
                             {% empty %}
                             <tr class="no-products-row">
-                                <td colspan="11" class="no-products-cell">No products added to this invoice</td>
+                                <td colspan="12" class="no-products-cell">No products added to this invoice</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -221,19 +227,33 @@
                             <tr>
                                 <td colspan="10" style="text-align: right; font-weight: 600;">Subtotal:</td>
                                 <td style="font-weight: 600;">{{ products_total|currency }}</td>
+                                <td></td>
                             </tr>
                             <tr>
                                 <td colspan="10" style="text-align: right; font-weight: 600;">Transport Charges:</td>
                                 <td style="font-weight: 600;">{{ invoice.sales_transport_charges|currency }}</td>
+                                <td></td>
                             </tr>
                             <tr class="total-row" style="background: #f8f9fa;">
                                 <td colspan="10" class="total-label-cell" style="font-weight: 700; font-size: 16px;"><strong>Grand Total:</strong></td>
-                                <td class="total-value-cell" style="font-weight: 700; font-size: 16px;">{{ invoice.sales_invoice_total|currency }}</td>
+                                <td class="total-value-cell" style="font-weight: 700; font-size: 16px;">₹{{ invoice.sales_invoice_total|floatformat:0 }}</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="10" style="text-align: right; color: #6c757d; font-size: 0.9em;">Actual Amount:</td>
+                                <td style="color: #6c757d; font-size: 0.9em;">₹{{ invoice.sales_invoice_total|floatformat:2 }}</td>
+                                <td></td>
                             </tr>
                             {% else %}
                             <tr class="total-row" style="background: #f8f9fa;">
                                 <td colspan="10" class="total-label-cell" style="font-weight: 700; font-size: 16px;"><strong>Grand Total:</strong></td>
-                                <td class="total-value-cell" style="font-weight: 700; font-size: 16px;">{{ invoice.sales_invoice_total|currency }}</td>
+                                <td class="total-value-cell" style="font-weight: 700; font-size: 16px;">₹{{ invoice.sales_invoice_total|floatformat:0 }}</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td colspan="10" style="text-align: right; color: #6c757d; font-size: 0.9em;">Actual Amount:</td>
+                                <td style="color: #6c757d; font-size: 0.9em;">₹{{ invoice.sales_invoice_total|floatformat:2 }}</td>
+                                <td></td>
                             </tr>
                             {% endif %}
                         </tfoot>
@@ -342,6 +362,7 @@
                                         <th>MRP</th>
                                         <th>Rate</th>
                                         <th>Qty</th>
+                                        <th>Free Qty</th>
                                         <th>Discount</th>
                                         <th>CGST %</th>
                                         <th>SGST %</th>
@@ -361,6 +382,9 @@
                                                 </option>
                                                 {% endfor %}
                                             </select>
+<button type="button" class="btn btn-sm btn-outline-success" onclick="openProductDialog()" style="margin-left: 5px;" title="Add New Product">
+                                <i class="fas fa-plus"></i> Add Product
+                            </button>
                                         </td>
                                         <td>
                                             <input type="text" class="form-control batch-no" name="batch_no" value="{{ sale.product_batch_no }}" required>
@@ -375,6 +399,7 @@
                                                    onchange="validateEditStockAndCalculate({{ forloop.counter0 }})" required>
                                             <div class="stock-error" style="display: none; color: #dc3545; font-size: 0.75rem; margin-top: 4px;"></div>
                                         </td>
+                                        <td><input type="number" class="form-control free-quantity" name="free_quantity" value="{{ sale.sale_free_qty }}" step="0.01" min="0"></td>
                                         <td><input type="number" class="form-control discount" name="discount" value="{{ sale.sale_discount }}" step="0.01" min="0"></td>
                                         <td><input type="number" class="form-control cgst" name="cgst" value="{{ sale.sale_cgst }}" step="0.01" min="0"></td>
                                         <td><input type="number" class="form-control sgst" name="sgst" value="{{ sale.sale_sgst }}" step="0.01" min="0"></td>
@@ -404,6 +429,45 @@
 
 {% block extra_js %}
 <script>
+// Global product cache for search
+window.productCache = [];
+
+// Function to refresh product cache when new product is added
+window.refreshProductCache = function(newProduct) {
+    console.log('Refreshing product cache with new product:', newProduct);
+    
+    if (newProduct && newProduct.id) {
+        window.productCache.push({
+            id: newProduct.id,
+            name: newProduct.name,
+            company: newProduct.company
+        });
+        console.log('✓ Product added to cache. Total products:', window.productCache.length);
+    }
+};
+
+// Initialize product cache on page load
+window.initializeProductCache = function() {
+    window.productCache = [{% for product in products %}{
+        id: {{ product.productid }},
+        name: '{{ product.product_name|escapejs }}',
+        company: '{{ product.product_company|escapejs }}'
+    },{% endfor %}];
+    console.log('Product cache initialized with', window.productCache.length, 'products');
+};
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    window.initializeProductCache();
+    
+    // Apply round-off to all amounts - 10.50 → 11, 10.49 → 10 (UI only)
+    document.querySelectorAll('.rounded-amount').forEach(element => {
+        const actualAmount = parseFloat(element.getAttribute('data-actual')) || 0;
+        const roundedAmount = Math.round(actualAmount);
+        element.textContent = roundedAmount;
+    });
+});
+
 // Add Sales Payment Dialog - Compact with Enhanced CSS
 function openAddSalesPaymentDialog() {
     const existingDialog = document.getElementById('addSalesPaymentDialog');
@@ -581,6 +645,7 @@ document.getElementById('addEditProductRow').addEventListener('click', function(
                    onchange="validateEditStockAndCalculate(${editProductRowIndex})" required>
             <div class="stock-error" style="display: none; color: #dc3545; font-size: 0.75rem; margin-top: 4px;"></div>
         </td>
+        <td><input type="number" class="form-control free-quantity" name="free_quantity" step="0.01" min="0" value="0"></td>
         <td><input type="number" class="form-control discount" name="discount" step="0.01" min="0" value="0"></td>
         <td><input type="number" class="form-control cgst" name="cgst" step="0.01" min="0" value="2.5"></td>
         <td><input type="number" class="form-control sgst" name="sgst" step="0.01" min="0" value="2.5"></td>
@@ -715,6 +780,7 @@ function fillEditBatchDetails(data, rowIndex) {
     }
     
     row.querySelector('.quantity').value = '1';
+    row.querySelector('.free-quantity').value = data.free_qty || '0';
     row.querySelector('.discount').value = '0';
     row.querySelector('.cgst').value = '2.5';
     row.querySelector('.sgst').value = '2.5';
@@ -740,11 +806,12 @@ function fillEditBatchDetails(data, rowIndex) {
     
     row.querySelector('.rate').value = selectedRate;
     
-    // Show enhanced stock info with rate source
+    // Show enhanced stock info with rate source and free qty
     const stockValue = data.available_stock !== undefined ? data.available_stock : (data.stock || 0);
+    const freeQty = data.free_qty || 0;
     const stockInfo = document.createElement('small');
     stockInfo.className = 'text-success stock-info';
-    stockInfo.innerHTML = `<i class="fas fa-info-circle"></i> Stock: ${stockValue} | Applied: ${rateSource} = ₹${selectedRate}`;
+    stockInfo.innerHTML = `<i class="fas fa-info-circle"></i> Stock: ${stockValue} | Free: ${freeQty} | Applied: ${rateSource} = ₹${selectedRate}`;
     
     const existingInfo = row.querySelector('.stock-info');
     if (existingInfo) existingInfo.remove();
@@ -831,6 +898,7 @@ document.getElementById('saveEditSalesInvoice').addEventListener('click', functi
                 mrp: row.querySelector('.mrp').value,
                 sale_rate: row.querySelector('.rate').value,
                 quantity: quantityInput.value,
+                free_qty: row.querySelector('.free-quantity').value || '0',
                 discount: row.querySelector('.discount').value,
                 cgst: row.querySelector('.cgst').value,
                 sgst: row.querySelector('.sgst').value,
@@ -1207,7 +1275,8 @@ function editQuickSearchProducts(event) {
     },{% endfor %}];
     
     // Filter products that START with the search term (first 2+ letters)
-    const filtered = products.filter(p => {
+    // Use cached products or fallback to template data
+    const filtered = (window.productCache.length > 0 ? window.productCache : products).filter(p => {
         // Primary filter: starts with search term (case-sensitive first, then case-insensitive)
         const exactStartsName = p.name.startsWith(originalSearchTerm);
         const exactStartsCompany = p.company.startsWith(originalSearchTerm);
@@ -1381,6 +1450,7 @@ function createEditBatchSelectionModal(batches, rowIndex) {
                                     <div class="batch-details">
                                         <span class="batch-expiry">Exp: ${batch.expiry}</span>
                                         <span class="batch-stock">Stock: ${batch.stock}</span>
+                                        <span class="batch-free" style="color: #28a745; font-weight: 600;">Free: ${batch.free_qty || 0}</span>
                                         <span class="batch-mrp">MRP: ₹${batch.mrp}</span>
                                     </div>
                                     <div class="batch-rates">
@@ -1532,6 +1602,7 @@ function selectEditBatch(batchNo, rowIndex, batchData) {
         
         row.querySelector('.rate').value = selectedRate;
         row.querySelector('.quantity').value = '1';
+        row.querySelector('.free-quantity').value = batchData.free_qty || '0';
         row.querySelector('.discount').value = '0';
         row.querySelector('.cgst').value = '2.5';
         row.querySelector('.sgst').value = '2.5';
@@ -1547,10 +1618,10 @@ function selectEditBatch(batchNo, rowIndex, batchData) {
             validateEditStockAndCalculate(rowIndex);
         }, 200);
         
-        // Show enhanced stock info with rate source
+        // Show enhanced stock info with rate source and free qty
         const stockInfo = document.createElement('small');
         stockInfo.className = 'text-success stock-info';
-        stockInfo.innerHTML = `<i class="fas fa-info-circle"></i> Stock: ${batchData.stock} | Applied: ${rateSource} = ₹${selectedRate}`;
+        stockInfo.innerHTML = `<i class="fas fa-info-circle"></i> Stock: ${batchData.stock} | Free: ${batchData.free_qty || 0} | Applied: ${rateSource} = ₹${selectedRate}`;
         
         const existingInfo = row.querySelector('.stock-info');
         if (existingInfo) existingInfo.remove();

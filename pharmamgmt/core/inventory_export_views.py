@@ -26,19 +26,323 @@ from collections import defaultdict
 import calendar
 
 def get_batch_inventory_data(search_query=''):
-    from .utils import get_stock_status
+    """Optimized batch inventory data fetching with bulk queries"""
+    from django.db.models import Sum, F, Q, FloatField, ExpressionWrapper
+    
+    # Base query for products
     products = ProductMaster.objects.all()
     if search_query:
-        products = products.filter(Q(product_name__icontains=search_query)|Q(product_company__icontains=search_query))
+        products = products.filter(
+            Q(product_name__icontains=search_query) | 
+            Q(product_company__icontains=search_query)
+        )
+    
+    # Get all product IDs
+    product_ids = list(products.values_list('productid', flat=True))
+    
+    if not product_ids:
+        return []
+    
+    # Bulk fetch all purchases with batch info
+    purchases = PurchaseMaster.objects.filter(
+        productid__in=product_ids
+    ).values(
+        'productid', 'product_batch_no', 'product_expiry', 'product_MRP', 'product_free_qty'
+    ).annotate(
+        purchased_qty=Sum('product_quantity'),
+        free_qty_total=Sum('product_free_qty')
+    )
+    
+    # Bulk fetch all sales
+    sales = SalesMaster.objects.filter(
+        productid__in=product_ids
+    ).values('productid', 'product_batch_no').annotate(
+        sold_qty=Sum('sale_quantity')
+    )
+    
+    # Bulk fetch purchase returns
+    purchase_returns = ReturnPurchaseMaster.objects.filter(
+        returnproductid__in=product_ids
+    ).values('returnproductid', 'returnproduct_batch_no').annotate(
+        return_qty=Sum('returnproduct_quantity')
+    )
+    
+    # Bulk fetch sales returns
+    sales_returns = ReturnSalesMaster.objects.filter(
+        return_productid__in=product_ids
+    ).values('return_productid', 'return_product_batch_no').annotate(
+        return_qty=Sum('return_sale_quantity')
+    )
+    
+    # Bulk fetch supplier challans
+    supplier_challans = SupplierChallanMaster.objects.filter(
+        product_id__in=product_ids
+    ).values('product_id', 'product_batch_no').annotate(
+        challan_qty=Sum('product_quantity')
+    )
+    
+    # Bulk fetch customer challans
+    customer_challans = CustomerChallanMaster.objects.filter(
+        product_id__in=product_ids
+    ).values('product_id', 'product_batch_no').annotate(
+        challan_qty=Sum('sale_quantity')
+    )
+    
+    # Bulk fetch stock issues
+    stock_issues = StockIssueDetail.objects.filter(
+        product_id__in=product_ids
+    ).values('product_id', 'batch_no').annotate(
+        issue_qty=Sum('quantity_issued')
+    )
+    
+    # Create lookup dictionaries
+    sales_dict = {}
+    for s in sales:
+        key = (s['productid'], s['product_batch_no'])
+        sales_dict[key] = s['sold_qty'] or 0
+    
+    pr_dict = {}
+    for pr in purchase_returns:
+        key = (pr['returnproductid'], pr['returnproduct_batch_no'])
+        pr_dict[key] = pr['return_qty'] or 0
+    
+    sr_dict = {}
+    for sr in sales_returns:
+        key = (sr['return_productid'], sr['return_product_batch_no'])
+        sr_dict[key] = sr['return_qty'] or 0
+    
+    sc_dict = {}
+    for sc in supplier_challans:
+        key = (sc['product_id'], sc['product_batch_no'])
+        sc_dict[key] = sc['challan_qty'] or 0
+    
+    cc_dict = {}
+    for cc in customer_challans:
+        key = (cc['product_id'], cc['product_batch_no'])
+        cc_dict[key] = cc['challan_qty'] or 0
+    
+    si_dict = {}
+    for si in stock_issues:
+        key = (si['product_id'], si['batch_no'])
+        si_dict[key] = si['issue_qty'] or 0
+    
+    # Create product lookup
+    product_dict = {p.productid: p for p in products}
+    
+    # Build inventory list
     inventory = []
-    for p in products:
-        stock_info = get_stock_status(p.productid)
-        if stock_info.get('current_stock', 0) > 0:
-            inventory.append({'product_id': p.productid, 'product_name': p.product_name, 'product_company': p.product_company, 'product_packing': p.product_packing, 'batch_no': '', 'expiry': '', 'mrp': 0, 'stock': stock_info['current_stock'], 'value': 0})
+    for purchase in purchases:
+        product_id = purchase['productid']
+        batch_no = purchase['product_batch_no']
+        key = (product_id, batch_no)
+        
+        # Calculate stock
+        purchased = purchase['purchased_qty'] or 0
+        sold = sales_dict.get(key, 0)
+        returned_purchase = pr_dict.get(key, 0)
+        returned_sales = sr_dict.get(key, 0)
+        supplier_challan = sc_dict.get(key, 0)
+        customer_challan = cc_dict.get(key, 0)
+        issued = si_dict.get(key, 0)
+        
+        stock = (purchased + returned_sales + supplier_challan) - (sold + returned_purchase + customer_challan + issued)
+        
+        # Only include if stock > 0
+        if stock > 0:
+            product = product_dict.get(product_id)
+            if product:
+                mrp = float(purchase['product_MRP'] or 0)
+                free_qty = float(purchase['free_qty_total'] or 0)
+                value = stock * mrp
+                
+                inventory.append({
+                    'product_id': product_id,
+                    'product_name': product.product_name,
+                    'product_company': product.product_company,
+                    'product_packing': product.product_packing,
+                    'batch_no': batch_no,
+                    'expiry': purchase['product_expiry'] or '',
+                    'mrp': mrp,
+                    'stock': stock,
+                    'free_qty': free_qty,
+                    'value': value
+                })
+    
     return inventory
 
 def get_dateexpiry_inventory_data(search_query=''):
-    return [], 0
+    """Optimized date-wise inventory data fetching with bulk queries"""
+    from django.db.models import Sum, F, Q, FloatField, ExpressionWrapper
+    from datetime import datetime, date
+    from collections import defaultdict
+    
+    # Base query for products
+    products = ProductMaster.objects.all()
+    if search_query:
+        products = products.filter(
+            Q(product_name__icontains=search_query) | 
+            Q(product_company__icontains=search_query)
+        )
+    
+    # Get all product IDs
+    product_ids = list(products.values_list('productid', flat=True))
+    
+    if not product_ids:
+        return [], 0
+    
+    # Bulk fetch all purchases with batch info
+    purchases = PurchaseMaster.objects.filter(
+        productid__in=product_ids
+    ).values(
+        'productid', 'product_batch_no', 'product_expiry', 'product_MRP', 'product_purchase_rate', 'purchase_entry_date'
+    ).annotate(
+        purchased_qty=Sum('product_quantity')
+    )
+    
+    # Bulk fetch all sales
+    sales = SalesMaster.objects.filter(
+        productid__in=product_ids
+    ).values('productid', 'product_batch_no').annotate(
+        sold_qty=Sum('sale_quantity')
+    )
+    
+    # Bulk fetch purchase returns
+    purchase_returns = ReturnPurchaseMaster.objects.filter(
+        returnproductid__in=product_ids
+    ).values('returnproductid', 'returnproduct_batch_no').annotate(
+        return_qty=Sum('returnproduct_quantity')
+    )
+    
+    # Bulk fetch sales returns
+    sales_returns = ReturnSalesMaster.objects.filter(
+        return_productid__in=product_ids
+    ).values('return_productid', 'return_product_batch_no').annotate(
+        return_qty=Sum('return_sale_quantity')
+    )
+    
+    # Bulk fetch supplier challans
+    supplier_challans = SupplierChallanMaster.objects.filter(
+        product_id__in=product_ids
+    ).values('product_id', 'product_batch_no').annotate(
+        challan_qty=Sum('product_quantity')
+    )
+    
+    # Bulk fetch customer challans
+    customer_challans = CustomerChallanMaster.objects.filter(
+        product_id__in=product_ids
+    ).values('product_id', 'product_batch_no').annotate(
+        challan_qty=Sum('sale_quantity')
+    )
+    
+    # Bulk fetch stock issues
+    stock_issues = StockIssueDetail.objects.filter(
+        product_id__in=product_ids
+    ).values('product_id', 'batch_no').annotate(
+        issue_qty=Sum('quantity_issued')
+    )
+    
+    # Create lookup dictionaries
+    sales_dict = {}
+    for s in sales:
+        key = (s['productid'], s['product_batch_no'])
+        sales_dict[key] = s['sold_qty'] or 0
+    
+    pr_dict = {}
+    for pr in purchase_returns:
+        key = (pr['returnproductid'], pr['returnproduct_batch_no'])
+        pr_dict[key] = pr['return_qty'] or 0
+    
+    sr_dict = {}
+    for sr in sales_returns:
+        key = (sr['return_productid'], sr['return_product_batch_no'])
+        sr_dict[key] = sr['return_qty'] or 0
+    
+    sc_dict = {}
+    for sc in supplier_challans:
+        key = (sc['product_id'], sc['product_batch_no'])
+        sc_dict[key] = sc['challan_qty'] or 0
+    
+    cc_dict = {}
+    for cc in customer_challans:
+        key = (cc['product_id'], cc['product_batch_no'])
+        cc_dict[key] = cc['challan_qty'] or 0
+    
+    si_dict = {}
+    for si in stock_issues:
+        key = (si['product_id'], si['batch_no'])
+        si_dict[key] = si['issue_qty'] or 0
+    
+    # Create product lookup
+    product_dict = {p.productid: p for p in products}
+    
+    # Group by entry date
+    date_groups = defaultdict(list)
+    total_value = 0
+    
+    for purchase in purchases:
+        product_id = purchase['productid']
+        batch_no = purchase['product_batch_no']
+        key = (product_id, batch_no)
+        
+        # Calculate stock
+        purchased = purchase['purchased_qty'] or 0
+        sold = sales_dict.get(key, 0)
+        returned_purchase = pr_dict.get(key, 0)
+        returned_sales = sr_dict.get(key, 0)
+        supplier_challan = sc_dict.get(key, 0)
+        customer_challan = cc_dict.get(key, 0)
+        issued = si_dict.get(key, 0)
+        
+        stock = (purchased + returned_sales + supplier_challan) - (sold + returned_purchase + customer_challan + issued)
+        
+        # Only include if stock > 0
+        if stock > 0:
+            product = product_dict.get(product_id)
+            if product:
+                mrp = float(purchase['product_MRP'] or 0)
+                purchase_rate = float(purchase['product_purchase_rate'] or 0)
+                value = stock * mrp
+                total_value += value
+                
+                # Get entry date
+                entry_date = purchase['purchase_entry_date']
+                if isinstance(entry_date, datetime):
+                    entry_date = entry_date.date()
+                
+                date_key = entry_date.strftime('%Y-%m-%d') if entry_date else 'Unknown'
+                
+                date_groups[date_key].append({
+                    'product_name': product.product_name,
+                    'product_company': product.product_company,
+                    'batch_no': batch_no,
+                    'expiry': purchase['product_expiry'] or '',
+                    'purchase_rate': purchase_rate,
+                    'mrp': mrp,
+                    'stock': stock,
+                    'value': value
+                })
+    
+    # Convert to list format with expiry info
+    expiry_data = []
+    for date_key, products_list in sorted(date_groups.items(), reverse=True):
+        group_value = sum(p['value'] for p in products_list)
+        
+        # Calculate days to expiry if available
+        days_to_expiry = None
+        try:
+            entry_date_obj = datetime.strptime(date_key, '%Y-%m-%d').date()
+            days_to_expiry = (entry_date_obj - date.today()).days
+        except:
+            pass
+        
+        expiry_data.append({
+            'expiry_display': date_key,
+            'total_value': group_value,
+            'days_to_expiry': days_to_expiry,
+            'products': products_list
+        })
+    
+    return expiry_data, total_value
 
 
 @login_required
@@ -131,7 +435,7 @@ def export_batch_inventory_pdf(request):
                 key = (item['product_name'], item['product_company'], item['product_packing'])
                 product_groups[key].append(item)
             
-            table_data = [['Product Name', 'Company', 'Packing', 'Batch No', 'Expiry', 'Stock Qty', 'MRP', 'Stock Value']]
+            table_data = [['Product Name', 'Company', 'Packing', 'Batch No', 'Expiry', 'Stock Qty', 'Free Qty', 'MRP', 'Stock Value']]
             
             for (prod_name, prod_company, prod_packing), batches in sorted(product_groups.items()):
                 for idx, item in enumerate(batches):
@@ -157,6 +461,7 @@ def export_batch_inventory_pdf(request):
                             item['batch_no'][:10] + '...' if len(item['batch_no']) > 10 else item['batch_no'],
                             expiry_display,
                             str(int(item['stock'])),
+                            str(int(item.get('free_qty', 0))),
                             f"₹{item['mrp']:.2f}",
                             f"₹{item['value']:.2f}"
                         ])
@@ -169,12 +474,13 @@ def export_batch_inventory_pdf(request):
                             item['batch_no'][:10] + '...' if len(item['batch_no']) > 10 else item['batch_no'],
                             expiry_display,
                             str(int(item['stock'])),
+                            str(int(item.get('free_qty', 0))),
                             f"₹{item['mrp']:.2f}",
                             f"₹{item['value']:.2f}"
                         ])
 
             # Create table with proper column widths for landscape
-            col_widths = [2.2*inch, 1.3*inch, 0.8*inch, 0.8*inch, 0.7*inch, 0.6*inch, 0.7*inch, 0.9*inch]
+            col_widths = [2*inch, 1.2*inch, 0.7*inch, 0.7*inch, 0.6*inch, 0.6*inch, 0.6*inch, 0.7*inch, 0.9*inch]
             inventory_table = Table(table_data, colWidths=col_widths, repeatRows=1)
             
             inventory_table.setStyle(TableStyle([
@@ -339,7 +645,7 @@ def export_batch_inventory_excel(request):
         current_row += 2  # Empty row
         
         # Data table headers
-        headers = ['Product Name', 'Company', 'Packing', 'Batch No', 'Expiry', 'Stock Qty', 'MRP', 'Stock Value']
+        headers = ['Product Name', 'Company', 'Packing', 'Batch No', 'Expiry', 'Stock Qty', 'Free Qty', 'MRP', 'Stock Value']
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=current_row, column=col, value=header)
             cell.font = header_font
@@ -379,6 +685,7 @@ def export_batch_inventory_excel(request):
                         item['batch_no'],
                         expiry_display,
                         int(item['stock']),
+                        int(item.get('free_qty', 0)),
                         f"₹{item['mrp']:.2f}",
                         f"₹{item['value']:.2f}"
                     ]
@@ -391,6 +698,7 @@ def export_batch_inventory_excel(request):
                         item['batch_no'],
                         expiry_display,
                         int(item['stock']),
+                        int(item.get('free_qty', 0)),
                         f"₹{item['mrp']:.2f}",
                         f"₹{item['value']:.2f}"
                     ]
@@ -401,7 +709,7 @@ def export_batch_inventory_excel(request):
                     cell.border = thin_border
                     
                     # Alignment
-                    if col in [6, 7, 8]:  # Numeric columns
+                    if col in [6, 7, 8, 9]:  # Numeric columns
                         cell.alignment = Alignment(horizontal='right')
                     else:
                         cell.alignment = Alignment(horizontal='left')
@@ -413,7 +721,7 @@ def export_batch_inventory_excel(request):
                 current_row += 1
         
         # Auto-adjust column widths
-        column_widths = [30, 20, 15, 15, 12, 12, 12, 15]
+        column_widths = [30, 20, 15, 15, 12, 12, 12, 12, 15]
         for i, width in enumerate(column_widths, 1):
             ws.column_dimensions[get_column_letter(i)].width = width
         
@@ -824,6 +1132,346 @@ def export_dateexpiry_inventory_excel(request):
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
         filename = f"dateexpiry_inventory_report_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        wb.save(response)
+        return response
+        
+    except Exception as e:
+        return HttpResponse(f"Error generating Excel: {str(e)}", status=500)
+
+
+@login_required
+def export_all_product_inventory_pdf(request):
+    """Export all product inventory as PDF"""
+    from django.db.models import Sum
+    from .models import ProductInventoryCache, BatchInventoryCache
+    
+    try:
+        search_query = request.GET.get('search', '').strip()
+        
+        # Get products
+        products = ProductMaster.objects.all()
+        if search_query:
+            products = products.filter(
+                Q(product_name__icontains=search_query) |
+                Q(product_company__icontains=search_query)
+            )
+        
+        products = products.order_by('product_name')
+        
+        # Create PDF buffer
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=landscape(A4),
+            topMargin=0.5*inch,
+            bottomMargin=0.5*inch,
+            leftMargin=0.5*inch,
+            rightMargin=0.5*inch
+        )
+        
+        styles = getSampleStyleSheet()
+        story = []
+        
+        # Get pharmacy details
+        try:
+            pharmacy = Pharmacy_Details.objects.first()
+        except:
+            pharmacy = None
+        
+        # Styles
+        title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=16, spaceAfter=8, alignment=TA_CENTER, textColor=colors.darkblue)
+        info_style = ParagraphStyle('InfoStyle', parent=styles['Normal'], fontSize=9, alignment=TA_CENTER, spaceAfter=4)
+        date_style = ParagraphStyle('DateStyle', parent=styles['Normal'], fontSize=10, alignment=TA_CENTER, spaceAfter=6)
+        
+        # Pharmacy details
+        if pharmacy:
+            if pharmacy.pharmaname:
+                story.append(Paragraph(f"{pharmacy.pharmaname}", title_style))
+            if pharmacy.proprietorname:
+                story.append(Paragraph(f"Proprietor: {pharmacy.proprietorname}", info_style))
+            if pharmacy.proprietorcontact:
+                story.append(Paragraph(f"Contact: {pharmacy.proprietorcontact}", info_style))
+            story.append(Spacer(1, 0.1*inch))
+        
+        story.append(Paragraph("All Products Inventory Report", title_style))
+        story.append(Paragraph(f"Generated on: {datetime.now().strftime('%d %B %Y at %H:%M')}", date_style))
+        
+        if search_query:
+            story.append(Paragraph(f"Search Filter: {search_query}", date_style))
+        
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Collect inventory data
+        inventory_data = []
+        total_stock = 0
+        total_value = 0
+        
+        for product in products:
+            try:
+                cache = ProductInventoryCache.objects.get(product_id=product.productid)
+                # Use total_stock which includes current_stock + current_free_qty
+                current_stock = cache.total_stock
+                stock_value = cache.total_stock_value
+            except ProductInventoryCache.DoesNotExist:
+                current_stock = 0
+                stock_value = 0
+            
+            if current_stock > 0:
+                inventory_data.append({
+                    'product_name': product.product_name,
+                    'product_company': product.product_company,
+                    'product_packing': product.product_packing,
+                    'current_stock': current_stock,
+                    'stock_value': stock_value
+                })
+                
+                total_stock += current_stock
+                total_value += stock_value
+        
+        # Summary
+        summary_data = [
+            ['Total Products', 'Total Stock', 'Total Value'],
+            [str(len(inventory_data)), str(int(total_stock)), f"₹{total_value:,.2f}"]
+        ]
+        
+        summary_table = Table(summary_data, colWidths=[2.5*inch, 2.5*inch, 2.5*inch])
+        summary_table.setStyle(TableStyle([
+            ('FONT', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+        story.append(summary_table)
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Data table
+        if inventory_data:
+            table_data = [['Product Name', 'Company', 'Packing', 'Stock Qty', 'Stock Value']]
+            
+            for item in inventory_data:
+                table_data.append([
+                    item['product_name'][:30] + '...' if len(item['product_name']) > 30 else item['product_name'],
+                    item['product_company'][:20] + '...' if len(item['product_company']) > 20 else item['product_company'],
+                    item['product_packing'][:15] + '...' if len(item['product_packing']) > 15 else item['product_packing'],
+                    str(int(item['current_stock'])),
+                    f"₹{item['stock_value']:.2f}"
+                ])
+            
+            col_widths = [3*inch, 2*inch, 1.5*inch, 1.2*inch, 1.5*inch]
+            inventory_table = Table(table_data, colWidths=col_widths, repeatRows=1)
+            
+            inventory_table.setStyle(TableStyle([
+                ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
+                ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                ('FONT', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('ALIGN', (0, 1), (2, -1), 'LEFT'),
+                ('ALIGN', (3, 1), (-1, -1), 'RIGHT'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+            ]))
+            
+            story.append(inventory_table)
+        else:
+            story.append(Paragraph("No inventory data found.", styles['Normal']))
+        
+        doc.build(story)
+        
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/pdf')
+        filename = f"all_product_inventory_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+        
+    except Exception as e:
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+
+
+@login_required
+def export_all_product_inventory_excel(request):
+    """Export all product inventory as Excel"""
+    from django.db.models import Sum
+    from .models import ProductInventoryCache, BatchInventoryCache
+    
+    try:
+        search_query = request.GET.get('search', '').strip()
+        
+        # Get products
+        products = ProductMaster.objects.all()
+        if search_query:
+            products = products.filter(
+                Q(product_name__icontains=search_query) |
+                Q(product_company__icontains=search_query)
+            )
+        
+        products = products.order_by('product_name')
+        
+        # Create workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "All Products Inventory"
+        
+        # Get pharmacy details
+        try:
+            pharmacy = Pharmacy_Details.objects.first()
+        except:
+            pharmacy = None
+        
+        # Styles
+        title_font = Font(name='Arial', size=14, bold=True, color='1F4E79')
+        header_font = Font(name='Arial', size=11, bold=True, color='FFFFFF')
+        data_font = Font(name='Arial', size=10)
+        
+        header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+        summary_fill = PatternFill(start_color='E7F3FF', end_color='E7F3FF', fill_type='solid')
+        
+        thin_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        current_row = 1
+        info_font = Font(name='Arial', size=10)
+        
+        # Pharmacy details
+        if pharmacy:
+            if pharmacy.pharmaname:
+                ws.merge_cells(f'A{current_row}:F{current_row}')
+                ws[f'A{current_row}'] = pharmacy.pharmaname
+                ws[f'A{current_row}'].font = title_font
+                ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
+                current_row += 1
+            if pharmacy.proprietorname:
+                ws.merge_cells(f'A{current_row}:F{current_row}')
+                ws[f'A{current_row}'] = f"Proprietor: {pharmacy.proprietorname}"
+                ws[f'A{current_row}'].font = info_font
+                ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
+                current_row += 1
+            if pharmacy.proprietorcontact:
+                ws.merge_cells(f'A{current_row}:F{current_row}')
+                ws[f'A{current_row}'] = f"Contact: {pharmacy.proprietorcontact}"
+                ws[f'A{current_row}'].font = info_font
+                ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
+                current_row += 1
+            current_row += 1
+        
+        ws.merge_cells(f'A{current_row}:F{current_row}')
+        ws[f'A{current_row}'] = "All Products Inventory Report"
+        ws[f'A{current_row}'].font = title_font
+        ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
+        current_row += 1
+        
+        ws.merge_cells(f'A{current_row}:F{current_row}')
+        ws[f'A{current_row}'] = f"Generated on: {datetime.now().strftime('%d %B %Y at %H:%M')}"
+        ws[f'A{current_row}'].font = info_font
+        ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
+        current_row += 1
+        
+        if search_query:
+            ws.merge_cells(f'A{current_row}:F{current_row}')
+            ws[f'A{current_row}'] = f"Search Filter: {search_query}"
+            ws[f'A{current_row}'].font = info_font
+            ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
+            current_row += 1
+        
+        current_row += 1
+        
+        # Collect inventory data
+        inventory_data = []
+        total_stock = 0
+        total_value = 0
+        
+        for product in products:
+            try:
+                cache = ProductInventoryCache.objects.get(product_id=product.productid)
+                # Use total_stock which includes current_stock + current_free_qty
+                current_stock = cache.total_stock
+                stock_value = cache.total_stock_value
+            except ProductInventoryCache.DoesNotExist:
+                current_stock = 0
+                stock_value = 0
+            
+            if current_stock > 0:
+                inventory_data.append({
+                    'product_name': product.product_name,
+                    'product_company': product.product_company,
+                    'product_packing': product.product_packing,
+                    'current_stock': current_stock,
+                    'stock_value': stock_value
+                })
+                
+                total_stock += current_stock
+                total_value += stock_value
+        
+        # Summary
+        summary_headers = ['Total Products', 'Total Stock', 'Total Value']
+        summary_values = [len(inventory_data), int(total_stock), f"₹{total_value:,.2f}"]
+        
+        for col, header in enumerate(summary_headers, 1):
+            cell = ws.cell(row=current_row, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = thin_border
+        current_row += 1
+        
+        for col, value in enumerate(summary_values, 1):
+            cell = ws.cell(row=current_row, column=col, value=value)
+            cell.font = data_font
+            cell.fill = summary_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = thin_border
+        current_row += 2
+        
+        # Data headers
+        headers = ['Product Name', 'Company', 'Packing', 'Stock Qty', 'Stock Value']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=current_row, column=col, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = thin_border
+        current_row += 1
+        
+        # Data rows
+        for item in inventory_data:
+            row_data = [
+                item['product_name'],
+                item['product_company'],
+                item['product_packing'],
+                int(item['current_stock']),
+                f"₹{item['stock_value']:.2f}"
+            ]
+            
+            for col, value in enumerate(row_data, 1):
+                cell = ws.cell(row=current_row, column=col, value=value)
+                cell.font = data_font
+                cell.border = thin_border
+                
+                if col in [4, 5]:
+                    cell.alignment = Alignment(horizontal='right')
+                else:
+                    cell.alignment = Alignment(horizontal='left')
+            
+            current_row += 1
+        
+        # Auto-adjust column widths
+        column_widths = [35, 25, 20, 15, 18]
+        for i, width in enumerate(column_widths, 1):
+            ws.column_dimensions[get_column_letter(i)].width = width
+        
+        # Create response
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        filename = f"all_product_inventory_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         
         wb.save(response)

@@ -55,7 +55,7 @@ def inventory_list_cached(request):
         batches_info = [{
             'batch_no': b.batch_no,
             'expiry': b.expiry_date,
-            'stock': b.current_stock,
+            'stock': b.total_stock,
             'mrp': b.mrp,
             'purchase_rate': b.purchase_rate,
             'rates': {'rate_A': b.rate_a, 'rate_B': b.rate_b, 'rate_C': b.rate_c}

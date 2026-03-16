@@ -2,11 +2,23 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.utils import timezone
+from datetime import datetime
 from .models import (
     CustomerMaster, SupplierMaster, SalesInvoiceMaster, SalesMaster,
     SalesInvoicePaid, ReturnSalesInvoiceMaster, InvoiceMaster, InvoicePaid,
     ReturnInvoiceMaster, Pharmacy_Details
 )
+
+def get_financial_year_dates():
+    """Get current financial year start and end dates (April 1 to March 31)"""
+    today = datetime.now().date()
+    if today.month >= 4:  # April to December
+        fy_start = datetime(today.year, 4, 1).date()
+        fy_end = datetime(today.year + 1, 3, 31).date()
+    else:  # January to March
+        fy_start = datetime(today.year - 1, 4, 1).date()
+        fy_end = datetime(today.year, 3, 31).date()
+    return fy_start, fy_end
 
 @login_required
 def ledger_selection(request):
@@ -32,6 +44,12 @@ def customer_ledger(request, customer_id=None):
     customer = get_object_or_404(CustomerMaster, customerid=customer_id)
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
+    
+    # If no date range provided, use current financial year
+    if not start_date or not end_date:
+        fy_start, fy_end = get_financial_year_dates()
+        start_date = str(fy_start)
+        end_date = str(fy_end)
     
     transactions = []
     
@@ -130,6 +148,12 @@ def supplier_ledger(request, supplier_id=None):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
+    # If no date range provided, use current financial year
+    if not start_date or not end_date:
+        fy_start, fy_end = get_financial_year_dates()
+        start_date = str(fy_start)
+        end_date = str(fy_end)
+    
     transactions = []
     
     # Purchase Invoices (Credit)
@@ -219,12 +243,17 @@ def customer_ledger_print(request, customer_id):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
+    # If no date range provided, use current financial year
+    if not start_date or not end_date:
+        fy_start, fy_end = get_financial_year_dates()
+        start_date = str(fy_start)
+        end_date = str(fy_end)
+    
     transactions = []
     
     # Sales Invoices
     sales = SalesInvoiceMaster.objects.filter(customerid=customer).order_by('sales_invoice_date')
-    if start_date and end_date:
-        sales = sales.filter(sales_invoice_date__range=[start_date, end_date])
+    sales = sales.filter(sales_invoice_date__range=[start_date, end_date])
     
     for sale in sales:
         total = SalesMaster.objects.filter(sales_invoice_no=sale.sales_invoice_no).aggregate(
@@ -239,8 +268,7 @@ def customer_ledger_print(request, customer_id):
     
     # Payments
     payments = SalesInvoicePaid.objects.filter(sales_ip_invoice_no__customerid=customer).order_by('sales_payment_date')
-    if start_date and end_date:
-        payments = payments.filter(sales_payment_date__range=[start_date, end_date])
+    payments = payments.filter(sales_payment_date__range=[start_date, end_date])
     
     for payment in payments:
         transactions.append({
@@ -253,8 +281,7 @@ def customer_ledger_print(request, customer_id):
     
     # Sales Returns
     returns = ReturnSalesInvoiceMaster.objects.filter(return_sales_customerid=customer).order_by('return_sales_invoice_date')
-    if start_date and end_date:
-        returns = returns.filter(return_sales_invoice_date__range=[start_date, end_date])
+    returns = returns.filter(return_sales_invoice_date__range=[start_date, end_date])
     
     for ret in returns:
         transactions.append({
@@ -297,12 +324,17 @@ def supplier_ledger_print(request, supplier_id):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
+    # If no date range provided, use current financial year
+    if not start_date or not end_date:
+        fy_start, fy_end = get_financial_year_dates()
+        start_date = str(fy_start)
+        end_date = str(fy_end)
+    
     transactions = []
     
     # Purchase Invoices
     purchases = InvoiceMaster.objects.filter(supplierid=supplier).order_by('invoice_date')
-    if start_date and end_date:
-        purchases = purchases.filter(invoice_date__range=[start_date, end_date])
+    purchases = purchases.filter(invoice_date__range=[start_date, end_date])
     
     for purchase in purchases:
         transactions.append({
@@ -315,8 +347,7 @@ def supplier_ledger_print(request, supplier_id):
     
     # Payments
     payments = InvoicePaid.objects.filter(ip_invoiceid__supplierid=supplier).order_by('payment_date')
-    if start_date and end_date:
-        payments = payments.filter(payment_date__range=[start_date, end_date])
+    payments = payments.filter(payment_date__range=[start_date, end_date])
     
     for payment in payments:
         transactions.append({
@@ -329,8 +360,7 @@ def supplier_ledger_print(request, supplier_id):
     
     # Purchase Returns
     returns = ReturnInvoiceMaster.objects.filter(returnsupplierid=supplier).order_by('returninvoice_date')
-    if start_date and end_date:
-        returns = returns.filter(returninvoice_date__range=[start_date, end_date])
+    returns = returns.filter(returninvoice_date__range=[start_date, end_date])
     
     for ret in returns:
         transactions.append({
@@ -382,13 +412,18 @@ def export_supplier_ledger_pdf(request, supplier_id):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
+    # If no date range provided, use current financial year
+    if not start_date or not end_date:
+        fy_start, fy_end = get_financial_year_dates()
+        start_date = str(fy_start)
+        end_date = str(fy_end)
+    
     # Get transactions (same logic as supplier_ledger view)
     transactions = []
     
     # Purchase Invoices
     purchases = InvoiceMaster.objects.filter(supplierid=supplier).order_by('invoice_date')
-    if start_date and end_date:
-        purchases = purchases.filter(invoice_date__range=[start_date, end_date])
+    purchases = purchases.filter(invoice_date__range=[start_date, end_date])
     
     for purchase in purchases:
         transactions.append({
@@ -401,8 +436,7 @@ def export_supplier_ledger_pdf(request, supplier_id):
     
     # Payments
     payments = InvoicePaid.objects.filter(ip_invoiceid__supplierid=supplier).order_by('payment_date')
-    if start_date and end_date:
-        payments = payments.filter(payment_date__range=[start_date, end_date])
+    payments = payments.filter(payment_date__range=[start_date, end_date])
     
     for payment in payments:
         transactions.append({
@@ -447,6 +481,11 @@ def export_supplier_ledger_pdf(request, supplier_id):
     # Title
     title = Paragraph(f"Supplier Ledger - {supplier.supplier_name}", styles['Title'])
     story.append(title)
+    story.append(Spacer(1, 12))
+    
+    # Date range
+    date_range = Paragraph(f"Period: {start_date} to {end_date}", styles['Normal'])
+    story.append(date_range)
     story.append(Spacer(1, 12))
     
     # Supplier info
@@ -510,13 +549,18 @@ def export_supplier_ledger_excel(request, supplier_id):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
+    # If no date range provided, use current financial year
+    if not start_date or not end_date:
+        fy_start, fy_end = get_financial_year_dates()
+        start_date = str(fy_start)
+        end_date = str(fy_end)
+    
     # Get transactions (same logic as supplier_ledger view)
     transactions = []
     
     # Purchase Invoices
     purchases = InvoiceMaster.objects.filter(supplierid=supplier).order_by('invoice_date')
-    if start_date and end_date:
-        purchases = purchases.filter(invoice_date__range=[start_date, end_date])
+    purchases = purchases.filter(invoice_date__range=[start_date, end_date])
     
     for purchase in purchases:
         transactions.append({
@@ -529,8 +573,7 @@ def export_supplier_ledger_excel(request, supplier_id):
     
     # Payments
     payments = InvoicePaid.objects.filter(ip_invoiceid__supplierid=supplier).order_by('payment_date')
-    if start_date and end_date:
-        payments = payments.filter(payment_date__range=[start_date, end_date])
+    payments = payments.filter(payment_date__range=[start_date, end_date])
     
     for payment in payments:
         transactions.append({
@@ -657,12 +700,17 @@ def export_customer_ledger_pdf(request, customer_id):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
+    # If no date range provided, use current financial year
+    if not start_date or not end_date:
+        fy_start, fy_end = get_financial_year_dates()
+        start_date = str(fy_start)
+        end_date = str(fy_end)
+    
     transactions = []
     
     # Sales Invoices
     sales = SalesInvoiceMaster.objects.filter(customerid=customer).order_by('sales_invoice_date')
-    if start_date and end_date:
-        sales = sales.filter(sales_invoice_date__range=[start_date, end_date])
+    sales = sales.filter(sales_invoice_date__range=[start_date, end_date])
     
     for sale in sales:
         total = SalesMaster.objects.filter(sales_invoice_no=sale.sales_invoice_no).aggregate(

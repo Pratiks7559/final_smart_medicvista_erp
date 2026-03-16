@@ -2,7 +2,9 @@
 {% load custom_filters %}
 {% load static %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{{ title }}
+{% include 'components/add_product_dialog.html' %}
+{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" type="text/css" href="{% static 'css/purchase_return_detail.css' %}">
@@ -84,6 +86,7 @@
                                 <th>Expiry</th>
                                 <th>Rate</th>
                                 <th>Qty</th>
+                                <th>Free Qty</th>
                                 <th>CGST%</th>
                                 <th>SGST%</th>
                                 <th>Total</th>
@@ -102,8 +105,9 @@
                                 </td>
                                 <td>{{ item.returnproduct_batch_no }}</td>
                                 <td>{{ item.returnproduct_expiry|date:"m-Y" }}</td>
-                                <td class="amount-cell">₹{{ item.returnproduct_purchase_rate|floatformat:2 }}</td>
+                                <td>₹{{ item.returnproduct_purchase_rate|floatformat:2 }}</td>
                                 <td class="quantity-cell">{{ item.returnproduct_quantity }}</td>
+                                <td class="quantity-cell">{{ item.returnproduct_free_qty|default:0 }}</td>
                                 <td>{{ item.returnproduct_cgst|default:2.5|floatformat:2 }}%</td>
                                 <td>{{ item.returnproduct_sgst|default:2.5|floatformat:2 }}%</td>
                                 <td class="amount-cell">₹{{ item.returntotal_amount|floatformat:2 }}</td>
@@ -158,12 +162,20 @@
                             </div>
                             <div class="summary-row total-row">
                                 <span class="summary-label">Grand Total:</span>
-                                <span class="summary-value">₹{{ return_invoice.returninvoice_total|floatformat:2 }}</span>
+                                <span class="summary-value rounded-amount" data-actual="{{ return_invoice.returninvoice_total }}">₹{{ return_invoice.returninvoice_total|floatformat:0 }}</span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="summary-label" style="font-size: 11px; color: #666;">Actual Amount:</span>
+                                <span class="summary-value" style="font-size: 11px; color: #666;">₹{{ return_invoice.returninvoice_total|floatformat:2 }}</span>
                             </div>
                             {% else %}
                             <div class="summary-row total-row">
                                 <span class="summary-label">Total Amount:</span>
-                                <span class="summary-value">₹{{ return_invoice.returninvoice_total|floatformat:2 }}</span>
+                                <span class="summary-value rounded-amount" data-actual="{{ return_invoice.returninvoice_total }}">₹{{ return_invoice.returninvoice_total|floatformat:0 }}</span>
+                            </div>
+                            <div class="summary-row">
+                                <span class="summary-label" style="font-size: 11px; color: #666;">Actual Amount:</span>
+                                <span class="summary-value" style="font-size: 11px; color: #666;">₹{{ return_invoice.returninvoice_total|floatformat:2 }}</span>
                             </div>
                             {% endif %}
                             <div class="summary-row">
@@ -255,6 +267,7 @@
                                     <th>MRP</th>
                                     <th>Rate</th>
                                     <th>Qty</th>
+                                    <th>Free Qty</th>
                                     <th>CGST%</th>
                                     <th>SGST%</th>
                                     <th>Reason</th>
@@ -272,6 +285,9 @@
                                             <option value="{{ product.productid }}" {% if product.productid == item.returnproductid.productid %}selected{% endif %}>{{ product.product_name }} - {{ product.product_company }}</option>
                                             {% endfor %}
                                         </select>
+<button type="button" class="btn btn-sm btn-outline-success" onclick="openProductDialog()" style="margin-left: 5px;" title="Add New Product">
+                                <i class="fas fa-plus"></i> Add Product
+                            </button>
                                         <input type="hidden" class="product-id" value="{{ item.returnproductid.productid }}">
                                     </td>
                                     <td><input type="text" class="form-control form-control-sm batch-no" value="{{ item.returnproduct_batch_no }}" required></td>
@@ -279,6 +295,7 @@
                                     <td><input type="number" class="form-control form-control-sm mrp" value="{{ item.returnproduct_MRP }}" step="0.01" required></td>
                                     <td><input type="number" class="form-control form-control-sm return-rate" value="{{ item.returnproduct_purchase_rate }}" step="0.01" onchange="calculateEditReturnRowTotal({{ forloop.counter0 }})" required></td>
                                     <td><input type="number" class="form-control form-control-sm return-qty" value="{{ item.returnproduct_quantity }}" step="0.01" onchange="calculateEditReturnRowTotal({{ forloop.counter0 }})" required></td>
+                                    <td><input type="number" class="form-control form-control-sm return-free-qty" value="{{ item.returnproduct_free_qty|default:0 }}" step="0.01" min="0"></td>
                                     <td><input type="number" class="form-control form-control-sm cgst" value="{{ item.returnproduct_cgst|default:2.5 }}" step="0.01" onchange="calculateEditReturnRowTotal({{ forloop.counter0 }})"></td>
                                     <td><input type="number" class="form-control form-control-sm sgst" value="{{ item.returnproduct_sgst|default:2.5 }}" step="0.01" onchange="calculateEditReturnRowTotal({{ forloop.counter0 }})"></td>
                                     <td>
@@ -579,9 +596,26 @@ function calculateEditReturnTotal() {
     });
     
     const charges = parseFloat(document.getElementById('editReturnCharges').value) || 0;
-    total += charges;
+    const rawTotal = total + charges;
     
-    document.getElementById('editReturnTotal').textContent = total.toFixed(2);
+    // Round off: 10.50 → 11, 10.49 → 10
+    const roundedTotal = Math.round(rawTotal);
+    const roundoffAmount = roundedTotal - rawTotal;
+    
+    // Update display with round-off info
+    let displayHtml = '';
+    if (charges > 0) {
+        displayHtml = `${total.toFixed(2)} + ${charges.toFixed(2)}`;
+    } else {
+        displayHtml = total.toFixed(2);
+    }
+    if (Math.abs(roundoffAmount) > 0.001) {
+        const sign = roundoffAmount > 0 ? '+' : '-';
+        displayHtml += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>${roundedTotal}</strong>`;
+    } else {
+        displayHtml += ` = <strong>${roundedTotal}</strong>`;
+    }
+    document.getElementById('editReturnTotal').innerHTML = displayHtml;
 }
 
 function saveEditPurchaseReturn() {
@@ -619,6 +653,7 @@ function saveEditPurchaseReturn() {
                     mrp: row.querySelector('.mrp').value,
                     return_rate: row.querySelector('.return-rate').value,
                     return_quantity: row.querySelector('.return-qty').value,
+                    return_free_qty: row.querySelector('.return-free-qty')?.value || 0,
                     cgst: row.querySelector('.cgst').value || 2.5,
                     sgst: row.querySelector('.sgst').value || 2.5,
                     reason: row.querySelector('.reason').value || ''
@@ -725,6 +760,7 @@ function openBatchSelectorForEdit(rowIndex) {
                             <div class="batch-details">
                                 <span>Exp: ${batch.expiry}</span>
                                 <span class="${batch.stock <= 10 ? 'text-danger' : 'text-success'}">Stock: ${batch.stock}</span>
+                                <span style=\"color: #28a745; font-weight: 600;\">Free: ${batch.free_qty || 0}</span>
                                 <span>MRP: ₹${batch.mrp}</span>
                             </div>
                         </div>
@@ -807,6 +843,7 @@ function selectBatchForEdit(rowIndex, batchIndex) {
     row.querySelector('.expiry').value = selectedBatch.expiry;
     row.querySelector('.mrp').value = selectedBatch.mrp;
     row.querySelector('.return-rate').value = selectedBatch.mrp;
+      row.querySelector('.return-free-qty').value = selectedBatch.free_qty || '0';
     
     // Show stock info
     const stockInfo = row.querySelector('.stock-info-edit');
@@ -1059,6 +1096,7 @@ function quickSelectEditReturnProduct(productId, productName) {
         <td><input type="number" class="form-control form-control-sm mrp" step="0.01" placeholder="Auto-filled"></td>
         <td><input type="number" class="form-control form-control-sm return-rate" step="0.01" onchange="calculateEditReturnRowTotal(${currentRowIndex})" placeholder="Return rate" required></td>
         <td><input type="number" class="form-control form-control-sm return-qty" value="1" step="0.01" onchange="calculateEditReturnRowTotal(${currentRowIndex})" required></td>
+        <td><input type="number" class="form-control form-control-sm return-free-qty" value="0" step="0.01" min="0" placeholder="Free qty"></td>
         <td><input type="number" class="form-control form-control-sm cgst" value="2.5" step="0.01" onchange="calculateEditReturnRowTotal(${currentRowIndex})"></td>
         <td><input type="number" class="form-control form-control-sm sgst" value="2.5" step="0.01" onchange="calculateEditReturnRowTotal(${currentRowIndex})"></td>
         <td>
@@ -1726,6 +1764,15 @@ document.addEventListener('keydown', function(e) {
         e.preventDefault();
         window.open('{% url "print_gst_purchase_return_invoice" return_id=return_invoice.returninvoiceid %}', '_blank');
     }
+});
+
+// Apply round-off on page load - 10.50 → 11, 10.49 → 10 (UI only, DB saves actual)
+window.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.rounded-amount').forEach(function(element) {
+        var actualAmount = parseFloat(element.getAttribute('data-actual')) || 0;
+        var roundedAmount = Math.round(actualAmount);
+        element.textContent = '₹' + roundedAmount;
+    });
 });
 </script>
 

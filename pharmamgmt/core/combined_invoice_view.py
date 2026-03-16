@@ -10,6 +10,7 @@ from .forms import InvoiceForm
 from .stock_manager import StockManager
 import logging
 from datetime import datetime, timedelta
+from .roundoff_utils import apply_roundoff, calculate_roundoff
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -168,11 +169,30 @@ def add_invoice_with_products(request):
                                 
                                 if int(month) < 1 or int(month) > 12:
                                     raise ValueError("Invalid month")
-                                if int(year) < 2020 or int(year) > 2100:
+                                
+                                # Get current year
+                                current_year = datetime.now().year
+                                
+                                # Validate year range - allow from 2000 to 50 years in future
+                                if int(year) < 2000 or int(year) > (current_year + 50):
                                     raise ValueError("Invalid year")
                                 
+                                # Warn if expiry date is in the past
+                                expiry_date = datetime(int(year), int(month), 1).date()
+                                if expiry_date < datetime.now().date():
+                                    # Add warning but don't stop processing
+                                    warning_msg = f"⚠️ Row {i+1}: Product {product.product_name} has expired (Expiry: {expiry}). Please verify the date."
+                                    messages.warning(request, warning_msg)
+                                    logger.warning(warning_msg)
+                                
                             except (ValueError, IndexError) as e:
-                                errors.append(f"Row {i+1}: Invalid expiry date format for {product.product_name}. Use MM-YYYY format (e.g., 12-2025). Got: '{product_data.get('expiry', '')}'. Error: {str(e)}")
+                                error_detail = str(e)
+                                if "Invalid year" in error_detail:
+                                    errors.append(f"Row {i+1}: Invalid expiry year for {product.product_name}. Year must be between 2000 and {datetime.now().year + 50}. Got: '{product_data.get('expiry', '')}'. Please use MM-YYYY format (e.g., 12-2025).")
+                                elif "Invalid month" in error_detail:
+                                    errors.append(f"Row {i+1}: Invalid expiry month for {product.product_name}. Month must be between 01 and 12. Got: '{product_data.get('expiry', '')}'. Please use MM-YYYY format (e.g., 12-2025).")
+                                else:
+                                    errors.append(f"Row {i+1}: Invalid expiry date format for {product.product_name}. Use MM-YYYY format (e.g., 12-2025). Got: '{product_data.get('expiry', '')}'. Error: {error_detail}")
                                 continue
                             
                             # Convert and validate numeric fields
@@ -180,6 +200,7 @@ def add_invoice_with_products(request):
                                 mrp_val = product_data.get('mrp', 0)
                                 purchase_rate_val = product_data.get('purchase_rate', 0)
                                 quantity_val = product_data.get('quantity', 0)
+                                free_qty_val = product_data.get('free_qty', 0)
                                 scheme_val = product_data.get('scheme', 0)
                                 discount_val = product_data.get('discount', 0)
                                 cgst_val = product_data.get('cgst', 0)
@@ -189,6 +210,7 @@ def add_invoice_with_products(request):
                                 mrp = float(str(mrp_val)) if mrp_val else 0.0
                                 purchase_rate = float(str(purchase_rate_val)) if purchase_rate_val else 0.0
                                 quantity = float(str(quantity_val)) if quantity_val else 0.0
+                                free_qty = float(str(free_qty_val)) if free_qty_val else 0.0
                                 scheme = float(str(scheme_val)) if scheme_val else 0.0
                                 discount = float(str(discount_val)) if discount_val else 0.0
                                 cgst = float(str(cgst_val)) if cgst_val else 0.0
@@ -219,6 +241,7 @@ def add_invoice_with_products(request):
                             purchase.product_MRP = mrp
                             purchase.product_purchase_rate = purchase_rate
                             purchase.product_quantity = quantity
+                            purchase.product_free_qty = free_qty
                             purchase.product_scheme = scheme
                             purchase.product_discount_got = discount
                             purchase.CGST = cgst
@@ -239,7 +262,6 @@ def add_invoice_with_products(request):
                             
                             if challan_date_str and str(challan_date_str).strip():
                                 try:
-                                    from datetime import datetime
                                     date_str = str(challan_date_str).strip()
                                     # Try multiple date formats
                                     for fmt in ['%d-%m-%Y', '%Y-%m-%d', '%d/%m/%Y']:
@@ -278,24 +300,24 @@ def add_invoice_with_products(request):
                                 if float(discount) > total_amount_calc:
                                     errors.append(f"Row {i+1}: Flat discount cannot exceed total amount for {product.product_name}")
                                     continue
-                                purchase.actual_rate_per_qty = float(purchase_rate) - (float(discount) / float(quantity)) if float(quantity) > 0 else float(purchase_rate)
+                                purchase.actual_rate_per_qty = round(float(purchase_rate) - (float(discount) / float(quantity)) if float(quantity) > 0 else float(purchase_rate), 2)
                             else:
                                 if float(discount) > 100.0:
                                     errors.append(f"Row {i+1}: Percentage discount cannot exceed 100% for {product.product_name}")
                                     continue
-                                purchase.actual_rate_per_qty = float(purchase_rate) * (1 - (float(discount) / 100.0))
+                                purchase.actual_rate_per_qty = round(float(purchase_rate) * (1 - (float(discount) / 100.0)), 2)
                             
                             purchase.product_actual_rate = purchase.actual_rate_per_qty
                             
                             # Calculate base amount before tax
-                            base_amount = purchase.product_actual_rate * quantity
+                            base_amount = round(purchase.product_actual_rate * quantity, 2)
                             
                             # Calculate tax amounts
-                            cgst_amount = base_amount * (cgst / 100)
-                            sgst_amount = base_amount * (sgst / 100)
+                            cgst_amount = round(base_amount * (cgst / 100), 2)
+                            sgst_amount = round(base_amount * (sgst / 100), 2)
                             
                             # Total amount including taxes
-                            purchase.total_amount = base_amount + cgst_amount + sgst_amount
+                            purchase.total_amount = round(base_amount + cgst_amount + sgst_amount, 2)
                             purchase.product_transportation_charges = 0  # Will be calculated later
                             
                             total_amount += purchase.total_amount
@@ -304,7 +326,7 @@ def add_invoice_with_products(request):
                             products_added += 1
                             logger.info(f"Product {product.product_name} added to invoice")
                             
-                            logger.info(f"PURCHASE CREATED: {product.product_name}, Batch: {batch_no}, Qty: {quantity}")
+                            logger.info(f"PURCHASE CREATED: {product.product_name}, Batch: {batch_no}, Qty: {quantity}, Free Qty: {free_qty}")
                             
                             # Save sale rates if provided
                             rate_A = product_data.get('rate_a') or product_data.get('rate_A')
@@ -348,10 +370,21 @@ def add_invoice_with_products(request):
                 # Don't distribute transport charges - keep separate
                 transport_charges_val = float(str(invoice.transport_charges)) if invoice.transport_charges else 0.0
                 
-                # Invoice total = products total + transport charges
-                invoice.invoice_total = total_amount + transport_charges_val
+                # Get round-off details from form
+                roundoff_amount_val = request.POST.get('roundoff_amount', '0')
+                roundoff_type_val = request.POST.get('roundoff_type', 'added')
+                
+                try:
+                    roundoff_amount = float(str(roundoff_amount_val)) if roundoff_amount_val else 0.0
+                except (ValueError, TypeError):
+                    roundoff_amount = 0.0
+                
+                # Save actual amount (with decimals) and round-off info
+                invoice.roundoff_amount = roundoff_amount
+                invoice.roundoff_type = roundoff_type_val
                 invoice.save()
-                logger.info(f"Products total: {total_amount}, Transport: {transport_charges_val}, Invoice total: {invoice.invoice_total}")
+                
+                logger.info(f"Saved invoice: Total={invoice.invoice_total}, RoundOff={roundoff_amount} ({roundoff_type_val})")
                 
                 # Move challan entries to SupplierChallanMaster2 if pulled from challan
                 if is_from_challan or is_mixed_mode:
@@ -382,6 +415,7 @@ def add_invoice_with_products(request):
                                         product_mrp=entry.product_mrp,
                                         product_purchase_rate=entry.product_purchase_rate,
                                         product_quantity=entry.product_quantity,
+                                        product_free_qty=entry.product_free_qty,
                                         product_scheme=entry.product_scheme,
                                         product_discount=entry.product_discount,
                                         product_transportation_charges=entry.product_transportation_charges,
@@ -821,12 +855,13 @@ def get_challan_products(request):
                 'product_name': product.product_name or '',
                 'product_company': product.product_company or '',
                 'product_packing': product.product_packing or '',
-                'product_batch_no': product.product_batch_no or '',
-                'product_expiry': product.product_expiry or '',
-                'product_mrp': float(product.product_mrp) if product.product_mrp else 0.0,
-                'product_purchase_rate': float(product.product_purchase_rate) if product.product_purchase_rate else 0.0,
-                'product_quantity': float(product.product_quantity) if product.product_quantity else 0.0,
-                'product_discount': float(product.product_discount) if product.product_discount else 0.0,
+                'batch_no': product.product_batch_no or '',
+                'expiry': product.product_expiry or '',
+                'mrp': float(product.product_mrp) if product.product_mrp else 0.0,
+                'rate': float(product.product_purchase_rate) if product.product_purchase_rate else 0.0,
+                'quantity': float(product.product_quantity) if product.product_quantity else 0.0,
+                'free_qty': float(product.product_free_qty) if product.product_free_qty else 0.0,
+                'discount': float(product.product_discount) if product.product_discount else 0.0,
                 'cgst': float(product.cgst) if product.cgst else 2.5,
                 'sgst': float(product.sgst) if product.sgst else 2.5,
                 'rate_a': rate_a,

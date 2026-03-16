@@ -89,7 +89,7 @@
                         <td>{{ challan.customer_challan_no }}</td>
                         <td>{{ challan.customer_name.customer_name }}</td>
                         <td>{{ challan.customer_challan_date|date:"d M, Y" }}</td>
-                        <td>₹{{ challan.challan_total|floatformat:2 }}</td>
+                        <td>₹{{ challan.challan_total|floatformat:0 }}</td>
                         <td>
                             {% if challan.challan_invoice_paid >= challan.challan_total %}
                                 <span class="cust-badge cust-badge-success">Paid</span>

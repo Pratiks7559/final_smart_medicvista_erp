@@ -22,11 +22,37 @@ def calculate_batch_stock(product_id, batch_no, expiry_date):
         product_expiry=expiry_date
     ).aggregate(total=Sum('product_quantity'))['total'] or 0
     
+    purchased_free = PurchaseMaster.objects.filter(
+        productid=product_id,
+        product_batch_no=batch_no,
+        product_expiry=expiry_date
+    ).aggregate(total=Sum('product_free_qty'))['total'] or 0
+    
+    # CRITICAL FIX: Only count SupplierChallanMaster entries that are NOT already in PurchaseMaster
+    # Get challan numbers that are already invoiced (present in PurchaseMaster)
+    invoiced_challan_nos = PurchaseMaster.objects.filter(
+        productid=product_id,
+        product_batch_no=batch_no,
+        product_expiry=expiry_date,
+        source_challan_no__isnull=False
+    ).values_list('source_challan_no', flat=True).distinct()
+    
+    # Only count challan entries that haven't been invoiced yet
     supplier_challan = SupplierChallanMaster.objects.filter(
         product_id=product_id,
         product_batch_no=batch_no,
         product_expiry=expiry_date
+    ).exclude(
+        product_challan_no__in=invoiced_challan_nos
     ).aggregate(total=Sum('product_quantity'))['total'] or 0
+    
+    supplier_challan_free = SupplierChallanMaster.objects.filter(
+        product_id=product_id,
+        product_batch_no=batch_no,
+        product_expiry=expiry_date
+    ).exclude(
+        product_challan_no__in=invoiced_challan_nos
+    ).aggregate(total=Sum('product_free_qty'))['total'] or 0
     
     sales_returns = ReturnSalesMaster.objects.filter(
         return_productid=product_id,
@@ -34,12 +60,24 @@ def calculate_batch_stock(product_id, batch_no, expiry_date):
         return_product_expiry=expiry_date
     ).aggregate(total=Sum('return_sale_quantity'))['total'] or 0
     
+    sales_returns_free = ReturnSalesMaster.objects.filter(
+        return_productid=product_id,
+        return_product_batch_no=batch_no,
+        return_product_expiry=expiry_date
+    ).aggregate(total=Sum('return_sale_free_qty'))['total'] or 0
+    
     # ⬇️ DECREASE: Sales + Customer Challan + Purchase Return
     sold = SalesMaster.objects.filter(
         productid=product_id,
         product_batch_no=batch_no,
         product_expiry=expiry_date
     ).aggregate(total=Sum('sale_quantity'))['total'] or 0
+    
+    sold_free = SalesMaster.objects.filter(
+        productid=product_id,
+        product_batch_no=batch_no,
+        product_expiry=expiry_date
+    ).aggregate(total=Sum('sale_free_qty'))['total'] or 0
     
     customer_challan = CustomerChallanMaster.objects.filter(
         product_id=product_id,
@@ -52,10 +90,16 @@ def calculate_batch_stock(product_id, batch_no, expiry_date):
         returnproduct_batch_no=batch_no
     ).aggregate(total=Sum('returnproduct_quantity'))['total'] or 0
     
+    purchase_returns_free = ReturnPurchaseMaster.objects.filter(
+        returnproductid=product_id,
+        returnproduct_batch_no=batch_no
+    ).aggregate(total=Sum('returnproduct_free_qty'))['total'] or 0
+    
     # Calculate: INCREASE - DECREASE
     current_stock = (purchased + supplier_challan + sales_returns) - (sold + customer_challan + purchase_returns)
+    current_free_qty = (purchased_free + supplier_challan_free + sales_returns_free) - (sold_free + purchase_returns_free)
     
-    return max(0, current_stock)
+    return max(0, current_stock), max(0, current_free_qty)
 
 
 def check_expiry_status(expiry_str):
@@ -90,8 +134,8 @@ def check_expiry_status(expiry_str):
 def update_batch_cache(product_id, batch_no, expiry_date):
     """Update cache for a specific batch"""
     try:
-        # Calculate stock
-        current_stock = calculate_batch_stock(product_id, batch_no, expiry_date)
+        # Calculate stock and free qty
+        current_stock, current_free_qty = calculate_batch_stock(product_id, batch_no, expiry_date)
         
         # If no stock and no source records exist, delete the cache entry
         if current_stock <= 0:
@@ -167,6 +211,9 @@ def update_batch_cache(product_id, batch_no, expiry_date):
         # Check expiry status
         expiry_status, is_expired = check_expiry_status(expiry_date)
         
+        # Calculate total stock
+        total_stock = current_stock + current_free_qty
+        
         # Update or create batch cache
         batch_cache, created = BatchInventoryCache.objects.update_or_create(
             product_id=product_id,
@@ -174,6 +221,8 @@ def update_batch_cache(product_id, batch_no, expiry_date):
             expiry_date=expiry_date,
             defaults={
                 'current_stock': current_stock,
+                'current_free_qty': current_free_qty,
+                'total_stock': total_stock,
                 'mrp': mrp,
                 'purchase_rate': purchase_rate,
                 'rate_a': rate_a,
@@ -196,15 +245,15 @@ def update_product_cache(product_id):
         # OLD: Multiple queries and Python loops (SLOW)
         # NEW: Single query with aggregation (FAST)
         
-        # Get active batches only (stock > 0)
+        # Get active batches only (total_stock > 0)
         active_batches = BatchInventoryCache.objects.filter(
             product_id=product_id,
-            current_stock__gt=0
-        ).only('current_stock', 'mrp', 'purchase_rate', 'is_expired')
+            total_stock__gt=0
+        ).only('total_stock', 'current_stock', 'mrp', 'purchase_rate', 'is_expired')
         
         # Single aggregation query for all stats
         stats = active_batches.aggregate(
-            total_stock=Sum('current_stock'),
+            total_stock=Sum('total_stock'),
             total_batches=Count('id'),
             avg_mrp=Avg('mrp'),
             avg_purchase_rate=Avg('purchase_rate')
@@ -216,7 +265,7 @@ def update_product_cache(product_id):
         avg_purchase_rate = stats['avg_purchase_rate'] or 0
         
         # Calculate stock value (optimized with list comprehension)
-        total_stock_value = sum(b.current_stock * b.mrp for b in active_batches)
+        total_stock_value = sum(b.total_stock * b.mrp for b in active_batches)
         
         # ✅ AUTO-DELETE: If all values are zero, delete the product cache row
         if (total_stock == 0 and total_batches == 0 and 

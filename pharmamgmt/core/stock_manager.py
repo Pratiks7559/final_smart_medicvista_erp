@@ -269,22 +269,22 @@ class StockManager:
     @staticmethod
     def _get_batch_stock_with_expiry(product_id, batch_no, expiry_date):
         """
-        Get stock information for a specific batch + expiry date combination
+        Get stock information for a specific batch + expiry date combination with free quantity
         Prevents double counting when challans are pulled into invoices
         """
         try:
             from .models import CustomerChallanMaster
             
-            # Skip expiry date filtering to avoid MM-YYYY format issues
-            # Calculate stock for batch only (all expiry dates combined)
-            
             # Get batch purchased from invoices (excluding challan-sourced ones)
-            purchased_invoice = PurchaseMaster.objects.filter(
+            purchased_data = PurchaseMaster.objects.filter(
                 productid=product_id,
                 product_batch_no=batch_no
             ).exclude(
                 product_invoice_no__icontains='from challan'
-            ).aggregate(total=Sum('product_quantity'))['total'] or 0
+            ).aggregate(total=Sum('product_quantity'), free=Sum('product_free_qty'))
+            
+            purchased_invoice = purchased_data['total'] or 0
+            purchased_invoice_free = purchased_data['free'] or 0
             
             # Get batch purchased from non-invoiced challans only
             from .models import Challan1
@@ -292,73 +292,109 @@ class StockManager:
                 is_invoiced=False
             ).values_list('challan_id', flat=True)
             
-            purchased_challan = SupplierChallanMaster.objects.filter(
+            challan_data = SupplierChallanMaster.objects.filter(
                 product_id=product_id,
                 product_batch_no=batch_no,
                 product_challan_id__in=non_invoiced_challan_ids
-            ).aggregate(total=Sum('product_quantity'))['total'] or 0
+            ).aggregate(total=Sum('product_quantity'), free=Sum('product_free_qty'))
+            
+            purchased_challan = challan_data['total'] or 0
+            purchased_challan_free = challan_data['free'] or 0
             
             # Get challan-sourced invoice purchases
-            challan_sourced_invoice = PurchaseMaster.objects.filter(
+            challan_sourced_data = PurchaseMaster.objects.filter(
                 productid=product_id,
                 product_batch_no=batch_no,
                 product_invoice_no__icontains='from challan'
-            ).aggregate(total=Sum('product_quantity'))['total'] or 0
+            ).aggregate(total=Sum('product_quantity'), free=Sum('product_free_qty'))
+            
+            challan_sourced_invoice = challan_sourced_data['total'] or 0
+            challan_sourced_invoice_free = challan_sourced_data['free'] or 0
             
             purchased = purchased_invoice + purchased_challan + challan_sourced_invoice
+            purchased_free = purchased_invoice_free + purchased_challan_free + challan_sourced_invoice_free
             
             # Get batch sold quantity from sales invoices
-            sold = SalesMaster.objects.filter(
+            sold_data = SalesMaster.objects.filter(
                 productid=product_id,
                 product_batch_no=batch_no
-            ).aggregate(total=Sum('sale_quantity'))['total'] or 0
+            ).aggregate(total=Sum('sale_quantity'), free=Sum('sale_free_qty'))
+            
+            sold = sold_data['total'] or 0
+            sold_free = sold_data['free'] or 0
             
             # Get batch sold quantity from customer challans
-            challan_sold = CustomerChallanMaster.objects.filter(
+            challan_sold_data = CustomerChallanMaster.objects.filter(
                 product_id=product_id,
                 product_batch_no=batch_no
-            ).aggregate(total=Sum('sale_quantity'))['total'] or 0
+            ).aggregate(total=Sum('sale_quantity'), free=Sum('sale_free_qty'))
+            
+            challan_sold = challan_sold_data['total'] or 0
+            challan_sold_free = challan_sold_data['free'] or 0
             
             total_sold = sold + challan_sold
+            total_sold_free = sold_free + challan_sold_free
             
             # Get batch purchase returns (reduces stock)
-            purchase_returns = ReturnPurchaseMaster.objects.filter(
+            pr_data = ReturnPurchaseMaster.objects.filter(
                 returnproductid=product_id,
                 returnproduct_batch_no=batch_no
-            ).aggregate(total=Sum('returnproduct_quantity'))['total'] or 0
+            ).aggregate(total=Sum('returnproduct_quantity'), free=Sum('returnproduct_free_qty'))
+            
+            purchase_returns = pr_data['total'] or 0
+            purchase_returns_free = pr_data['free'] or 0
             
             # Get batch sales returns (increases stock)
-            sales_returns = ReturnSalesMaster.objects.filter(
+            sr_data = ReturnSalesMaster.objects.filter(
                 return_productid=product_id,
                 return_product_batch_no=batch_no
-            ).aggregate(total=Sum('return_sale_quantity'))['total'] or 0
+            ).aggregate(total=Sum('return_sale_quantity'), free=Sum('return_sale_free_qty'))
+            
+            sales_returns = sr_data['total'] or 0
+            sales_returns_free = sr_data['free'] or 0
             
             # Calculate batch stock
             batch_stock = purchased - total_sold - purchase_returns + sales_returns
+            batch_stock_free = purchased_free - total_sold_free - purchase_returns_free + sales_returns_free
             
             return {
                 'batch_stock': batch_stock,
+                'free_qty': batch_stock_free,
                 'purchased': purchased,
+                'purchased_free': purchased_free,
                 'sold': sold,
+                'sold_free': sold_free,
                 'purchase_returns': purchase_returns,
-                'sales_returns': sales_returns
+                'purchase_returns_free': purchase_returns_free,
+                'sales_returns': sales_returns,
+                'sales_returns_free': sales_returns_free
             }
         except Exception as e:
             # Silently handle MM-YYYY format validation errors
             if "invalid date format" in str(e).lower():
                 return {
                     'batch_stock': 0,
+                    'free_qty': 0,
                     'purchased': 0,
+                    'purchased_free': 0,
                     'sold': 0,
+                    'sold_free': 0,
                     'purchase_returns': 0,
-                    'sales_returns': 0
+                    'purchase_returns_free': 0,
+                    'sales_returns': 0,
+                    'sales_returns_free': 0
                 }
             return {
                 'batch_stock': 0,
+                'free_qty': 0,
                 'purchased': 0,
+                'purchased_free': 0,
                 'sold': 0,
+                'sold_free': 0,
                 'purchase_returns': 0,
-                'sales_returns': 0
+                'purchase_returns_free': 0,
+                'sales_returns': 0,
+                'sales_returns_free': 0
             }
     
     @staticmethod

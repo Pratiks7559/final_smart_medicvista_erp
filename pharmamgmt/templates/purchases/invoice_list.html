@@ -90,10 +90,10 @@
                         </td>
                         <td class="purchase-invoice-cell purchase-date-cell">{{ invoice.invoice_date|date:"d M, Y" }}</td>
                         <td class="purchase-invoice-cell purchase-supplier-cell">{{ invoice.supplierid.supplier_name }}</td>
-                        <td class="purchase-invoice-cell purchase-total-cell purchase-amount-display">{{ invoice.invoice_total|currency }}</td>
+                        <td class="purchase-invoice-cell purchase-total-cell purchase-amount-display">₹{{ invoice.invoice_total|floatformat:0 }}</td>
                         <td class="purchase-invoice-cell purchase-paid-cell purchase-amount-small">{{ invoice.invoice_paid|currency }}</td>
                         <td class="purchase-invoice-cell purchase-balance-cell {% if invoice.balance_due > 0 %}purchase-amount-small{% else %}purchase-amount-display{% endif %}">
-                            {{ invoice.balance_due|currency }}
+                            ₹{{ invoice.balance_due|floatformat:0 }}
                         </td>
                         <td class="purchase-invoice-cell purchase-status-cell">
                             {% if invoice.payment_status == 'paid' %}

@@ -54,7 +54,7 @@ def inventory_list(request):
                 'batch_no': batch_cache.batch_no,
                 'expiry': batch_cache.expiry_date,
                 'mrp': batch_cache.mrp,
-                'stock': batch_cache.current_stock,
+                'stock': batch_cache.total_stock,
                 'rates': type('obj', (object,), {
                     'rate_A': batch_cache.rate_a,
                     'rate_B': batch_cache.rate_b,

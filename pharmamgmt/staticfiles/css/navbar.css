@@ -11,7 +11,6 @@
     position: sticky;
     top: 0;
     z-index: 1000;
-    overflow-x: hidden;
 }
 
 /* Left Section */
@@ -766,17 +765,111 @@
     animation: fadeInDown 0.3s ease;
 }
 
-/* Focus states for accessibility */
-.pharma-sidebar-toggle:focus,
-.pharma-navbar-button:focus,
-.pharma-user-dropdown-button:focus,
-.pharma-login-button:focus {
-    outline: 2px solid rgba(255,255,255,0.5);
-    outline-offset: 2px;
+/* Year Filter Styles */
+.year-filter-dropdown {
+    position: relative;
+    margin-right: 20px;
+    z-index: 10001 !important;
 }
 
-.pharma-dropdown-item:focus {
-    background: #f8f9fa;
-    color: #667eea;
-    outline: none;
+.year-filter-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    position: relative;
+    z-index: 10001 !important;
+}
+
+.year-filter-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.year-text {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.year-arrow {
+    font-size: 12px;
+    transition: transform 0.3s ease;
+}
+
+.year-filter-button.active .year-arrow {
+    transform: rotate(180deg);
+}
+
+.year-dropdown-menu {
+    position: fixed !important;
+    top: 60px !important;
+    right: auto !important;
+    left: auto !important;
+    background: white !important;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    min-width: 150px;
+    max-height: 400px;
+    overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 99999 !important;
+}
+
+.year-dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.year-option {
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    background: white;
+    color: #333;
+    text-align: left;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.year-option:hover {
+    background: #f5f5f5;
+}
+
+.year-option.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .year-filter-dropdown {
+        margin-right: 10px;
+    }
+    
+    .year-filter-button {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+    
+    .year-text {
+        font-size: 14px;
+    }
+    
+    .year-dropdown-menu {
+        min-width: 130px;
+    }
 }

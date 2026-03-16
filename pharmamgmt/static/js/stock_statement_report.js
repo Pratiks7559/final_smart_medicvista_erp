@@ -227,12 +227,17 @@ function printReport() {
 function viewBatchDetails(productId) {
     showLoading();
     
-    fetch(`/reports/stock-statement/batch-details/${productId}/`, {
+    // Get the base URL from window location
+    const baseUrl = window.location.origin;
+    const url = `${baseUrl}/reports/stock-statement/batch-details/${productId}/`;
+    
+    fetch(url, {
         method: 'GET',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'same-origin'
     })
     .then(response => {
         if (!response.ok) {
@@ -259,6 +264,13 @@ function viewBatchDetails(productId) {
 function displayBatchDetails(data) {
     const modalBody = document.getElementById('batchModalBody');
     
+    // Debug: Log the data to console
+    console.log('Batch Details Data:', data);
+    console.log('Number of batches:', data.batches ? data.batches.length : 0);
+    if (data.batches && data.batches.length > 0) {
+        console.log('First batch details:', data.batches[0]);
+    }
+    
     let html = `
         <div class="batch-details">
             <div class="product-header">
@@ -273,9 +285,11 @@ function displayBatchDetails(data) {
                             <th>Batch No</th>
                             <th>Expiry</th>
                             <th>Stock</th>
-                            <th>Purchased</th>
-                            <th>Sold</th>
-                            <th>Returns</th>
+                            <th>Free Qty</th>
+                            <th>Total</th>
+                            <th>Purchased<br><small>(Qty+Free)</small></th>
+                            <th>Sold<br><small>(Qty+Free)</small></th>
+                            <th>Returns<br><small>(In/Out)</small></th>
                             <th>MRP</th>
                             <th>Rate A</th>
                             <th>Rate B</th>
@@ -287,6 +301,11 @@ function displayBatchDetails(data) {
     
     if (data.batches && data.batches.length > 0) {
         data.batches.forEach(batch => {
+            const purchasedText = batch.purchased_free > 0 ? `${batch.purchased} + ${batch.purchased_free}F` : batch.purchased;
+            const soldText = batch.sold_free > 0 ? `${batch.sold} + ${batch.sold_free}F` : batch.sold;
+            
+            console.log(`Batch ${batch.batch_no}: stock=${batch.stock}, free_qty=${batch.free_qty}, total=${batch.total_stock}`);
+            
             html += `
                 <tr>
                     <td class="batch-no">${batch.batch_no || 'N/A'}</td>
@@ -294,11 +313,20 @@ function displayBatchDetails(data) {
                     <td class="stock ${batch.stock <= 0 ? 'zero' : batch.stock < 10 ? 'low' : 'normal'}">
                         ${batch.stock}
                     </td>
-                    <td class="purchased">${batch.purchased}</td>
-                    <td class="sold">${batch.sold}</td>
+                    <td class="free-qty ${batch.free_qty > 0 ? 'text-success' : ''}">
+                        ${batch.free_qty || 0}
+                    </td>
+                    <td class="total-stock ${batch.total_stock <= 0 ? 'zero' : batch.total_stock < 10 ? 'low' : 'normal'}">
+                        <strong>${batch.total_stock}</strong>
+                    </td>
+                    <td class="purchased">${purchasedText}</td>
+                    <td class="sold">${soldText}</td>
                     <td class="returns">
                         <span class="return-in">+${batch.sales_returns}</span>
+                        ${batch.sales_returns_free > 0 ? `<small class="text-success">(+${batch.sales_returns_free}F)</small>` : ''}
+                        <br>
                         <span class="return-out">-${batch.purchase_returns}</span>
+                        ${batch.purchase_returns_free > 0 ? `<small class="text-danger">(-${batch.purchase_returns_free}F)</small>` : ''}
                     </td>
                     <td class="mrp">₹${parseFloat(batch.mrp || 0).toFixed(2)}</td>
                     <td class="rate">₹${parseFloat(batch.rate_A || 0).toFixed(2)}</td>
@@ -310,7 +338,7 @@ function displayBatchDetails(data) {
     } else {
         html += `
             <tr>
-                <td colspan="10" class="no-batches">
+                <td colspan="12" class="no-batches">
                     <div class="no-data-message">
                         <i class="fas fa-box-open"></i>
                         <p>No batch information available</p>
@@ -369,10 +397,32 @@ function displayBatchDetails(data) {
                 white-space: nowrap;
             }
             
+            .batch-table th small {
+                display: block;
+                font-size: 0.7rem;
+                font-weight: normal;
+                color: var(--text-secondary);
+                margin-top: 2px;
+            }
+            
             .batch-table td {
                 padding: 0.75rem 0.5rem;
                 border-bottom: 1px solid var(--border-light);
                 vertical-align: middle;
+            }
+            
+            .batch-table td small {
+                display: block;
+                font-size: 0.75rem;
+                margin-top: 2px;
+            }
+            
+            .text-success {
+                color: #10b981;
+            }
+            
+            .text-danger {
+                color: #ef4444;
             }
             
             .batch-table tr:hover {
@@ -401,7 +451,8 @@ function displayBatchDetails(data) {
             
             .returns {
                 display: flex;
-                gap: 0.5rem;
+                flex-direction: column;
+                gap: 0.25rem;
                 font-size: 0.8rem;
             }
             

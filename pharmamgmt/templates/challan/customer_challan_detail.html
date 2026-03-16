@@ -3,6 +3,8 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/customer_challan_detail.css' %}">
+
+{% include 'components/add_product_dialog.html' %}
 {% endblock %}
 
 {% block content %}
@@ -72,6 +74,7 @@
                                 <th>MRP</th>
                                 <th>Rate</th>
                                 <th>Qty</th>
+                                <th>Free Qty</th>
                                 <th>Discount</th>
                                 <th>CGST%</th>
                                 <th>SGST%</th>
@@ -89,6 +92,7 @@
                                 <td>₹{{ item.product_mrp|floatformat:2 }}</td>
                                 <td>₹{{ item.sale_rate|floatformat:2 }}</td>
                                 <td>{{ item.sale_quantity|floatformat:2 }}</td>
+                                <td>{{ item.sale_free_qty|floatformat:2 }}</td>
                                 <td>₹{{ item.sale_discount|floatformat:2 }}</td>
                                 <td>{{ item.sale_cgst|floatformat:2 }}%</td>
                                 <td>{{ item.sale_sgst|floatformat:2 }}%</td>
@@ -96,28 +100,36 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="12" class="no-data">No products found</td>
+                                <td colspan="13" class="no-data">No products found</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                         <tfoot>
                             {% if challan.customer_transport_charges > 0 %}
                             <tr class="subtotal-row">
-                                <td colspan="11" class="subtotal-label">Subtotal:</td>
+                                <td colspan="12" class="subtotal-label">Subtotal:</td>
                                 <td class="subtotal-value">₹{{ grand_total|floatformat:2 }}</td>
                             </tr>
                             <tr class="transport-row">
-                                <td colspan="11" class="transport-label">Transport Charges:</td>
+                                <td colspan="12" class="transport-label">Transport Charges:</td>
                                 <td class="transport-value">₹{{ challan.customer_transport_charges|floatformat:2 }}</td>
                             </tr>
                             <tr class="total-row">
-                                <td colspan="11" class="total-label">Grand Total:</td>
-                                <td class="grand-total">₹{{ final_total|floatformat:2 }}</td>
+                                <td colspan="12" class="total-label">Grand Total:</td>
+                                <td class="grand-total">₹{{ final_total|floatformat:0 }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="12" style="text-align: right; color: #6c757d; font-size: 0.9em;">Actual Amount:</td>
+                                <td style="color: #6c757d; font-size: 0.9em;">₹{{ final_total|floatformat:2 }}</td>
                             </tr>
                             {% else %}
                             <tr class="total-row">
-                                <td colspan="11" class="total-label">Grand Total:</td>
-                                <td class="grand-total">₹{{ grand_total|floatformat:2 }}</td>
+                                <td colspan="12" class="total-label">Grand Total:</td>
+                                <td class="grand-total">₹{{ grand_total|floatformat:0 }}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="12" style="text-align: right; color: #6c757d; font-size: 0.9em;">Actual Amount:</td>
+                                <td style="color: #6c757d; font-size: 0.9em;">₹{{ grand_total|floatformat:2 }}</td>
                             </tr>
                             {% endif %}
                         </tfoot>
@@ -180,6 +192,33 @@
 <script>
 let productCounter = 0;
 let customerRateType = 'A'; // Default rate type
+
+// Global product cache for search
+window.productCache = [];
+
+// Function to refresh product cache when new product is added
+window.refreshProductCache = function(newProduct) {
+    console.log('Refreshing product cache with new product:', newProduct);
+    
+    if (newProduct && newProduct.id) {
+        window.productCache.push({
+            id: newProduct.id,
+            name: newProduct.name,
+            company: newProduct.company
+        });
+        console.log('✅ Product added to cache. Total products:', window.productCache.length);
+    }
+};
+
+// Initialize product cache on page load
+window.initializeProductCache = function() {
+    window.productCache = [{% for product in products %}{
+        id: {{ product.productid }},
+        name: '{{ product.product_name|escapejs }}',
+        company: '{{ product.product_company|escapejs }}'
+    },{% endfor %}];
+    console.log('Product cache initialized with', window.productCache.length, 'products');
+};
 
 function openEditChallanModal() {
     document.getElementById('editChallanModal').style.display = 'block';
@@ -248,6 +287,7 @@ function loadExistingProducts() {
         product_mrp: {{ item.product_mrp }},
         sale_rate: {{ item.sale_rate }},
         sale_quantity: {{ item.sale_quantity }},
+        sale_free_qty: {{ item.sale_free_qty }},
         sale_discount: {{ item.sale_discount }},
         sale_cgst: {{ item.sale_cgst }},
         sale_sgst: {{ item.sale_sgst }}
@@ -300,6 +340,10 @@ function addProductRow(data = {}) {
                 <input type="number" name="products[${productId}][quantity]" value="${data.sale_quantity || ''}" step="0.01">
             </div>
             <div class="form-group">
+                <label>Free Qty:</label>
+                <input type="number" name="products[${productId}][free_qty]" value="${data.sale_free_qty || '0'}" step="0.01">
+            </div>
+            <div class="form-group">
                 <label>Discount:</label>
                 <input type="number" name="products[${productId}][discount]" value="${data.sale_discount || ''}" step="0.01">
             </div>
@@ -327,6 +371,9 @@ function removeProduct(button) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize product cache
+    window.initializeProductCache();
+    
     const editForm = document.getElementById('editChallanForm');
     if (editForm) {
         editForm.addEventListener('submit', function(e) {
@@ -343,6 +390,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const mrpInput = row.querySelector('input[name*="[mrp]"]');
                 const rateInput = row.querySelector('input[name*="[rate]"]');
                 const qtyInput = row.querySelector('input[name*="[quantity]"]');
+                const freeQtyInput = row.querySelector('input[name*="[free_qty]"]');
                 const discountInput = row.querySelector('input[name*="[discount]"]');
                 const cgstInput = row.querySelector('input[name*="[cgst]"]');
                 const sgstInput = row.querySelector('input[name*="[sgst]"]');
@@ -355,6 +403,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         mrp: mrpInput ? parseFloat(mrpInput.value) || 0 : 0,
                         rate: rateInput ? parseFloat(rateInput.value) || 0 : 0,
                         quantity: qtyInput ? parseFloat(qtyInput.value) || 0 : 0,
+                        free_qty: freeQtyInput ? parseFloat(freeQtyInput.value) || 0 : 0,
                         discount: discountInput ? parseFloat(discountInput.value) || 0 : 0,
                         cgst: cgstInput ? parseFloat(cgstInput.value) || 0 : 0,
                         sgst: sgstInput ? parseFloat(sgstInput.value) || 0 : 0
@@ -501,7 +550,8 @@ function quickSearchProducts(e) {
         company: '{{ product.product_company|escapejs }}'
     },{% endfor %}];
     
-    const filtered = products.filter(p => 
+    // Use cached products or fallback to template data
+    const filtered = (window.productCache.length > 0 ? window.productCache : products).filter(p => 
         p.name.toLowerCase().startsWith(searchTerm) || 
         p.company.toLowerCase().startsWith(searchTerm)
     ).sort((a, b) => a.name.localeCompare(b.name));
@@ -648,6 +698,7 @@ function createBatchSelectionModal(batches, row) {
                                     <div class="batch-details">
                                         <span>Exp: ${batch.expiry}</span>
                                         <span>Stock: ${batch.stock}</span>
+                                        <span style="color: #28a745; font-weight: 600;">Free: ${batch.free_qty || 0}</span>
                                         <span>MRP: ₹${batch.mrp}</span>
                                     </div>
                                 </div>
@@ -777,6 +828,7 @@ function selectBatch(element) {
         targetRow.querySelector('input[name*="[mrp]"]').value = batchData.mrp;
         targetRow.querySelector('input[name*="[rate]"]').value = selectedRate; // Customer-specific rate
         targetRow.querySelector('input[name*="[quantity]"]').value = '1';
+        targetRow.querySelector('input[name*="[free_qty]"]').value = batchData.free_qty || '0';
         targetRow.querySelector('input[name*="[discount]"]').value = '0';
         targetRow.querySelector('input[name*="[cgst]"]').value = '2.5';
         targetRow.querySelector('input[name*="[sgst]"]').value = '2.5';

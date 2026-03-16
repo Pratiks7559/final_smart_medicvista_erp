@@ -1,5 +1,6 @@
 from django.urls import path, include
 from . import views
+from .product_api import add_product_api
 from .gst_invoice_view import print_gst_purchase_invoice, print_gst_sales_invoice, print_gst_purchase_return_invoice, print_gst_sales_return_invoice
 from .challan_views import (
     supplier_challan_list, add_supplier_challan, view_supplier_challan, delete_supplier_challan,
@@ -319,6 +320,9 @@ urlpatterns = [
     
     # API for supplier selection
     path('api/get-suppliers/', views.get_suppliers_api, name='get_suppliers_api'),
+    
+    # API for adding product from any form
+    path('api/add-product/', add_product_api, name='add_product_api'),
     
     path('bulk-upload-invoices/', bulk_upload_invoices, name='bulk_upload_invoices'),
     path('api/get-suppliers-with-invoices/', views.get_suppliers_with_invoices, name='get_suppliers_with_invoices'),

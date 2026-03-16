@@ -180,6 +180,8 @@ def add_invoice_with_products(request):
                                 mrp_val = product_data.get('mrp', 0)
                                 purchase_rate_val = product_data.get('purchase_rate', 0)
                                 quantity_val = product_data.get('quantity', 0)
+                                free_qty_val = product_data.get('free_qty', 0)
+                                print(f"DEBUG: free_qty_val from form = {free_qty_val}, type = {type(free_qty_val)}")
                                 scheme_val = product_data.get('scheme', 0)
                                 discount_val = product_data.get('discount', 0)
                                 cgst_val = product_data.get('cgst', 0)
@@ -189,6 +191,7 @@ def add_invoice_with_products(request):
                                 mrp = float(str(mrp_val)) if mrp_val else 0.0
                                 purchase_rate = float(str(purchase_rate_val)) if purchase_rate_val else 0.0
                                 quantity = float(str(quantity_val)) if quantity_val else 0.0
+                                free_qty = float(str(free_qty_val)) if free_qty_val else 0.0
                                 scheme = float(str(scheme_val)) if scheme_val else 0.0
                                 discount = float(str(discount_val)) if discount_val else 0.0
                                 cgst = float(str(cgst_val)) if cgst_val else 0.0
@@ -219,6 +222,8 @@ def add_invoice_with_products(request):
                             purchase.product_MRP = mrp
                             purchase.product_purchase_rate = purchase_rate
                             purchase.product_quantity = quantity
+                            purchase.product_free_qty = free_qty
+                            print(f"DEBUG: Saving purchase with free_qty = {free_qty}")
                             purchase.product_scheme = scheme
                             purchase.product_discount_got = discount
                             purchase.CGST = cgst
@@ -272,9 +277,9 @@ def add_invoice_with_products(request):
                                 purchase.rate_b = 0.0
                                 purchase.rate_c = 0.0
                             
-                            # Calculate actual rate
+                            # Calculate actual rate - only paid quantity for billing
                             if purchase.purchase_calculation_mode == 'flat':
-                                total_amount_calc = float(purchase_rate) * float(quantity)
+                                total_amount_calc = float(purchase_rate) * float(quantity)  # Only paid quantity
                                 if float(discount) > total_amount_calc:
                                     errors.append(f"Row {i+1}: Flat discount cannot exceed total amount for {product.product_name}")
                                     continue
@@ -287,24 +292,26 @@ def add_invoice_with_products(request):
                             
                             purchase.product_actual_rate = purchase.actual_rate_per_qty
                             
-                            # Calculate base amount before tax
-                            base_amount = purchase.product_actual_rate * quantity
+                            # Calculate base amount before tax - only paid quantity for billing
+                            base_amount = purchase.product_actual_rate * quantity  # Only paid quantity
                             
                             # Calculate tax amounts
                             cgst_amount = base_amount * (cgst / 100)
                             sgst_amount = base_amount * (sgst / 100)
                             
-                            # Total amount including taxes
+                            # Total amount including taxes - only for paid quantity
                             purchase.total_amount = base_amount + cgst_amount + sgst_amount
                             purchase.product_transportation_charges = 0  # Will be calculated later
                             
                             total_amount += purchase.total_amount
                             logger.info(f"Product {product.product_name}: Base={base_amount}, CGST={cgst_amount}, SGST={sgst_amount}, Total={purchase.total_amount}")
                             purchase.save()
+                            print(f"DEBUG: Purchase saved successfully with ID: {purchase.purchaseid}")
+                            print(f"DEBUG: Checking saved value - free_qty in DB: {purchase.product_free_qty}")
                             products_added += 1
                             logger.info(f"Product {product.product_name} added to invoice")
                             
-                            logger.info(f"PURCHASE CREATED: {product.product_name}, Batch: {batch_no}, Qty: {quantity}")
+                            logger.info(f"PURCHASE CREATED: {product.product_name}, Batch: {batch_no}, Qty: {quantity}, Free Qty: {free_qty}")
                             
                             # Save sale rates if provided
                             rate_A = product_data.get('rate_a') or product_data.get('rate_A')
@@ -382,6 +389,7 @@ def add_invoice_with_products(request):
                                         product_mrp=entry.product_mrp,
                                         product_purchase_rate=entry.product_purchase_rate,
                                         product_quantity=entry.product_quantity,
+                                        product_free_qty=entry.product_free_qty,
                                         product_scheme=entry.product_scheme,
                                         product_discount=entry.product_discount,
                                         product_transportation_charges=entry.product_transportation_charges,
@@ -826,6 +834,7 @@ def get_challan_products(request):
                 'product_mrp': float(product.product_mrp) if product.product_mrp else 0.0,
                 'product_purchase_rate': float(product.product_purchase_rate) if product.product_purchase_rate else 0.0,
                 'product_quantity': float(product.product_quantity) if product.product_quantity else 0.0,
+                'product_free_qty': float(product.product_free_qty) if hasattr(product, 'product_free_qty') and product.product_free_qty else 0.0,
                 'product_discount': float(product.product_discount) if product.product_discount else 0.0,
                 'cgst': float(product.cgst) if product.cgst else 2.5,
                 'sgst': float(product.sgst) if product.sgst else 2.5,

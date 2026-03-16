@@ -4,6 +4,8 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/customer_challan_form.css' %}">
 <link rel="stylesheet" href="{% static 'css/customer_challan_modals.css' %}">
+
+{% include 'components/add_product_dialog.html' %}
 {% endblock %}
 
 {% block content %}
@@ -84,6 +86,7 @@
                                         <th>MRP</th>
                                         <th>Rate</th>
                                         <th>Qty</th>
+                                        <th>Free Qty</th>
                                         <th>Discount</th>
                                         <th>CGST%</th>
                                         <th>SGST%</th>
@@ -120,13 +123,53 @@
 let productRowIndex = 0;
 let selectedCustomerRateType = 'A';
 
+// Global product cache for search
+window.productCache = [];
+
+// Function to refresh product cache when new product is added
+window.refreshProductCache = function(newProduct) {
+    console.log('Refreshing product cache with new product:', newProduct);
+    
+    if (newProduct && newProduct.id) {
+        window.productCache.push({
+            id: newProduct.id,
+            name: newProduct.name,
+            company: newProduct.company
+        });
+        console.log('✅ Product added to cache. Total products:', window.productCache.length);
+    }
+};
+
+// Initialize product cache on page load
+window.initializeProductCache = function() {
+    window.productCache = [{% for product in products %}{
+        id: {{ product.productid }},
+        name: '{{ product.product_name|escapejs }}',
+        company: '{{ product.product_company|escapejs }}'
+    },{% endfor %}];
+    console.log('Product cache initialized with', window.productCache.length, 'products');
+};
+
 // Set current date
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize product cache
+    window.initializeProductCache();
+    
     const dateField = document.getElementById('challan_date');
     if (dateField) {
         const today = new Date();
         dateField.value = today.toISOString().split('T')[0];
     }
+    
+    // Auto-select first challan series
+    const seriesSelect = document.getElementById('challan_series');
+    if (seriesSelect && seriesSelect.options.length > 1) {
+        // Select first option after "Select Series"
+        seriesSelect.selectedIndex = 1;
+        updateChallanPreview();
+        console.log('✅ Auto-selected challan series:', seriesSelect.options[1].text);
+    }
+    
     addProductRow();
 });
 
@@ -220,7 +263,10 @@ function addProductRow() {
             {% for product in products %}
             <option value="{{ product.productid }}">{{ product.product_name }} - {{ product.product_company }}</option>
             {% endfor %}
-        </select></td>
+        </select>
+<button type="button" class="btn btn-sm btn-outline-success" onclick="openProductDialog()" style="margin-left: 5px;" title="Add New Product">
+                                <i class="fas fa-plus"></i> Add Product
+                            </button></td>
         <td><input type="text" class="cust-chal-batch-no" placeholder="Batch" required></td>
         <td><input type="text" class="cust-chal-expiry" placeholder="MM-YYYY" required></td>
         <td><input type="number" class="cust-chal-mrp" step="0.01" placeholder="0.00" required></td>
@@ -232,6 +278,7 @@ function addProductRow() {
             <input type="number" class="cust-chal-quantity" step="0.01" placeholder="0" onchange="calculateRowTotal(${productRowIndex})" required>
             <div class="stock-info-display" style="display:none;"></div>
         </td>
+        <td><input type="number" class="cust-chal-free-qty" step="0.01" placeholder="0" value="0"></td>
         <td><input type="number" class="cust-chal-discount" step="0.01" placeholder="0.00" value="0" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="cust-chal-cgst" step="0.01" placeholder="2.5" value="2.5" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="cust-chal-sgst" step="0.01" placeholder="2.5" value="2.5" onchange="calculateRowTotal(${productRowIndex})"></td>
@@ -277,12 +324,25 @@ function calculateGrandTotal() {
     });
     
     const transportCharges = parseFloat(document.getElementById('transport_charges').value) || 0;
-    const finalTotal = grandTotal + transportCharges;
+    const rawTotal = grandTotal + transportCharges;
+    const roundedTotal = Math.round(rawTotal);
+    const roundoffAmount = roundedTotal - rawTotal;
     
+    // Display rounded total with actual amount
     if (transportCharges > 0) {
-        document.getElementById('grandTotal').innerHTML = `${grandTotal.toFixed(2)} + ${transportCharges.toFixed(2)} = <strong>${finalTotal.toFixed(2)}</strong>`;
+        if (Math.abs(roundoffAmount) > 0.001) {
+            const sign = roundoffAmount > 0 ? '+' : '-';
+            document.getElementById('grandTotal').innerHTML = `${grandTotal.toFixed(2)} + ${transportCharges.toFixed(2)} ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>₹${roundedTotal}</strong> <small style="color: #6c757d;">(₹${rawTotal.toFixed(2)})</small>`;
+        } else {
+            document.getElementById('grandTotal').innerHTML = `${grandTotal.toFixed(2)} + ${transportCharges.toFixed(2)} = <strong>₹${roundedTotal}</strong> <small style="color: #6c757d;">(₹${rawTotal.toFixed(2)})</small>`;
+        }
     } else {
-        document.getElementById('grandTotal').textContent = grandTotal.toFixed(2);
+        if (Math.abs(roundoffAmount) > 0.001) {
+            const sign = roundoffAmount > 0 ? '+' : '-';
+            document.getElementById('grandTotal').innerHTML = `${grandTotal.toFixed(2)} ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>₹${roundedTotal}</strong> <small style="color: #6c757d;">(₹${rawTotal.toFixed(2)})</small>`;
+        } else {
+            document.getElementById('grandTotal').innerHTML = `<strong>₹${roundedTotal}</strong> <small style="color: #6c757d;">(₹${rawTotal.toFixed(2)})</small>`;
+        }
     }
 }
 
@@ -507,8 +567,8 @@ function quickSearchProducts(event) {
         company: '{{ product.product_company|escapejs }}'
     },{% endfor %}];
     
-    // Filter products that START with the search term (first 2+ letters)
-    const filtered = products.filter(p => {
+    // Use cached products or fallback to template data
+    const filtered = (window.productCache.length > 0 ? window.productCache : products).filter(p => {
         // Primary filter: starts with search term (case-sensitive first, then case-insensitive)
         const exactStartsName = p.name.startsWith(originalSearchTerm);
         const exactStartsCompany = p.company.startsWith(originalSearchTerm);
@@ -635,6 +695,7 @@ function createBatchModal(batches, rowIndex) {
                                 <strong class="batch-number">${batch.batch_no}</strong>
                                 <span class="batch-expiry">Exp: ${batch.expiry}</span>
                                 <span class="batch-stock">Stock: ${batch.stock}</span>
+                                <span class="batch-free" style="color: #28a745; font-weight: 600;">Free: ${batch.free_qty || 0}</span>
                                 <span class="batch-mrp">MRP: ₹${batch.mrp}</span>
                             </div>
                             <div class="batch-rates">
@@ -753,6 +814,7 @@ function selectBatch(batchNo, rowIndex, batchData) {
         
         row.querySelector('.cust-chal-rate').value = selectedRate;
         row.querySelector('.cust-chal-quantity').value = '1';
+        row.querySelector('.cust-chal-free-qty').value = batchData.free_qty || '0';
         
         // Show rate info below rate input
         const rateInfoDiv = row.querySelector('.rate-info-display');
@@ -803,6 +865,7 @@ document.getElementById('custChallanForm').addEventListener('submit', function(e
                 mrp: parseFloat(row.querySelector('.cust-chal-mrp').value) || 0,
                 sale_rate: parseFloat(row.querySelector('.cust-chal-rate').value) || 0,
                 quantity: parseFloat(row.querySelector('.cust-chal-quantity').value) || 0,
+                free_qty: parseFloat(row.querySelector('.cust-chal-free-qty').value) || 0,
                 discount: parseFloat(row.querySelector('.cust-chal-discount').value) || 0,
                 cgst: parseFloat(row.querySelector('.cust-chal-cgst').value) || 0,
                 sgst: parseFloat(row.querySelector('.cust-chal-sgst').value) || 0,
@@ -932,6 +995,7 @@ function saveSeries() {
             closeSeriesDialog();
             alert(data.message);
             updateChallanPreview();
+            console.log('✅ New series added and auto-selected:', data.series_name);
         } else {
             alert('Error: ' + data.error);
         }

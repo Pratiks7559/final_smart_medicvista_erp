@@ -976,7 +976,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         Invoice: ${result.invoice_no} | Date: ${result.invoice_date}
                     </div>
                     <div style="font-size: 0.75rem; color: var(--success-color); font-weight: 600;">
-                        Balance: Rs.${result.balance_amount.toFixed(2)}
+                        Balance: Rs.<span class="rounded-balance">${Math.round(result.balance_amount)}</span>
+                        <small style="font-size: 0.65rem; color: #666;">(${result.balance_amount.toFixed(2)})</small>
                     </div>
                 `;
                 
@@ -1031,9 +1032,9 @@ document.addEventListener('DOMContentLoaded', function() {
             invoiceDetails.innerHTML = `
                 <p><strong>${entityLabel}:</strong> ${entityName}</p>
                 <p><strong>Invoice:</strong> ${invoice.invoice_no} (${invoice.invoice_date})</p>
-                <p><strong>Total:</strong> Rs.${invoice.total_amount.toFixed(2)}</p>
-                <p><strong>Paid:</strong> Rs.${invoice.paid_amount.toFixed(2)}</p>
-                <p><strong>Balance:</strong> <span style="color: var(--success-color); font-weight: 600;">Rs.${invoice.balance_amount.toFixed(2)}</span></p>
+                <p><strong>Total:</strong> Rs.<span class="rounded-amount">${Math.round(invoice.total_amount)}</span> <small style="font-size: 0.75rem; color: #666;">(${invoice.total_amount.toFixed(2)})</small></p>
+                <p><strong>Paid:</strong> Rs.<span class="rounded-amount">${Math.round(invoice.paid_amount)}</span> <small style="font-size: 0.75rem; color: #666;">(${invoice.paid_amount.toFixed(2)})</small></p>
+                <p><strong>Balance:</strong> <span style="color: var(--success-color); font-weight: 600;">Rs.<span class="rounded-amount">${Math.round(invoice.balance_amount)}</span></span> <small style="font-size: 0.75rem; color: #666;">(${invoice.balance_amount.toFixed(2)})</small></p>
             `;
         }
         

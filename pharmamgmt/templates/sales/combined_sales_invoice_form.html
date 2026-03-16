@@ -104,6 +104,7 @@
                                                 <th class="mrp-col">MRP</th>
                                                 <th class="rate-col">Rate</th>
                                                 <th class="qty-col">Qty</th>
+                                                <th class="free-qty-col">Free Qty</th>
                                                 <th class="discount-col">Discount</th>
                                                 <th class="cgst-col">CGST%</th>
                                                 <th class="sgst-col">SGST%</th>
@@ -120,6 +121,7 @@
                                     <div class="total-wrapper">
                                         <div class="grand-total">
                                             <strong class="total-label">Grand Total: ₹<span id="grandTotal" class="total-amount">0.00</span></strong>
+                            <small style="color: #6c757d; margin-left: 8px;">(₹<span id="actualTotal">0.00</span>)</small>
                                         </div>
                                     </div>
                                 </div>
@@ -843,6 +845,33 @@
 let productRowIndex = 0;
 let selectedCustomerRateType = 'A'; // Default rate type
 
+// Global product cache for search
+window.productCache = [];
+
+// Function to refresh product cache when new product is added
+window.refreshProductCache = function(newProduct) {
+    console.log('Refreshing product cache with new product:', newProduct);
+    
+    if (newProduct && newProduct.id) {
+        window.productCache.push({
+            id: newProduct.id,
+            name: newProduct.name,
+            company: newProduct.company
+        });
+        console.log('✓ Product added to cache. Total products:', window.productCache.length);
+    }
+};
+
+// Initialize product cache on page load
+window.initializeProductCache = function() {
+    window.productCache = [{% for product in products %}{
+        id: {{ product.productid }},
+        name: '{{ product.product_name|escapejs }}',
+        company: '{{ product.product_company|escapejs }}'
+    },{% endfor %}];
+    console.log('Product cache initialized with', window.productCache.length, 'products');
+};
+
 // Function to normalize expiry date format for display
 function normalizeExpiryDate(expiryInput) {
     if (!expiryInput) return '';
@@ -911,14 +940,12 @@ function addProductRow() {
     row.id = `productRow_${productRowIndex}`;
     
     row.innerHTML = `
-        <td class="product-cell">
-            <select class="product-select form-control" onchange="loadProductDetails(this, ${productRowIndex})" required>
-                <option value="">Select Product</option>
-                {% for product in products %}
-                <option value="{{ product.productid }}">{{ product.product_name }} - {{ product.product_company }}</option>
-                {% endfor %}
-            </select>
-        </td>
+        <td><select class="product-select form-control" onchange="loadProductDetails(this, ${productRowIndex})" required>
+            <option value="">Select Product</option>
+            {% for product in products %}
+            <option value="{{ product.productid }}">{{ product.product_name }} - {{ product.product_company }}</option>
+            {% endfor %}
+        </select></td>
         <td class="batch-cell"><input type="text" class="batch-no form-control" placeholder="Enter Batch Number" required></td>
         <td class="expiry-cell"><input type="text" class="expiry form-control" placeholder="MM-YYYY" title="Expiry in MM-YYYY format" required></td>
         <td class="mrp-cell"><input type="number" class="mrp form-control" step="any" placeholder="0.00" min="0" required></td>
@@ -930,6 +957,7 @@ function addProductRow() {
                    onblur="validateStockAndCalculate(${productRowIndex})" required>
             <div class="stock-error" style="display: none; color: #dc3545; font-size: 0.75rem; margin-top: 4px; padding: 2px 4px; background: #f8d7da; border-radius: 3px; border-left: 3px solid #dc3545;"></div>
         </td>
+        <td class="free-qty-cell"><input type="number" class="free-qty form-control" step="any" placeholder="0" min="0" value="0"></td>
         <td class="discount-cell"><input type="number" class="discount form-control" step="any" placeholder="0.00" min="0" onchange="calculateRowTotal(${productRowIndex})" value="0"></td>
         <td class="cgst-cell"><input type="number" class="cgst form-control" step="any" placeholder="0.00" min="0" max="100" onchange="calculateRowTotal(${productRowIndex})" value="2.5"></td>
         <td class="sgst-cell"><input type="number" class="sgst form-control" step="any" placeholder="0.00" min="0" max="100" onchange="calculateRowTotal(${productRowIndex})" value="2.5"></td>
@@ -1214,7 +1242,27 @@ function calculateGrandTotal() {
         const amount = parseFloat(span.textContent.replace('₹', '')) || 0;
         grandTotal += amount;
     });
-    document.getElementById('grandTotal').textContent = grandTotal.toFixed(2);
+    
+    const transportCharges = parseFloat(document.querySelector('[name="sales_transport_charges"]').value) || 0;
+    const rawTotal = grandTotal + transportCharges;
+    const roundedTotal = Math.round(rawTotal);
+    const roundoffAmount = roundedTotal - rawTotal;
+    
+    // Update display with round-off info
+    let displayHtml = '';
+    if (transportCharges > 0) {
+        displayHtml = `${grandTotal.toFixed(2)} + ${transportCharges.toFixed(2)}`;
+    } else {
+        displayHtml = grandTotal.toFixed(2);
+    }
+    if (Math.abs(roundoffAmount) > 0.001) {
+        const sign = roundoffAmount > 0 ? '+' : '-';
+        displayHtml += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>${roundedTotal}</strong>`;
+    } else {
+        displayHtml += ` = <strong>${roundedTotal}</strong>`;
+    }
+    document.getElementById('grandTotal').innerHTML = displayHtml;
+    document.getElementById('actualTotal').textContent = rawTotal.toFixed(2);
 }
 
 function validateExpiryDate(dateString) {
@@ -1306,6 +1354,7 @@ document.getElementById('combinedSalesInvoiceForm').addEventListener('submit', f
                 mrp: parseFloat(mrpInput ? mrpInput.value : 0) || 0,
                 sale_rate: rate,
                 quantity: quantity,
+                free_qty: parseFloat(row.querySelector('.free-qty') ? row.querySelector('.free-qty').value : 0) || 0,
                 discount: parseFloat(discountInput ? discountInput.value : 0) || 0,
                 cgst: parseFloat(cgstInput ? cgstInput.value : 0) || 0,
                 sgst: parseFloat(sgstInput ? sgstInput.value : 0) || 0,
@@ -1369,24 +1418,7 @@ document.getElementById('combinedSalesInvoiceForm').addEventListener('submit', f
 
 
 
-function calculateGrandTotal() {
-    let grandTotal = 0;
-    document.querySelectorAll('.row-total').forEach(span => {
-        const value = span.textContent.replace('₹', '');
-        grandTotal += parseFloat(value) || 0;
-    });
-    
-    // Update transport charges if any
-    const transportCharges = parseFloat(document.querySelector('[name="sales_transport_charges"]').value) || 0;
-    const finalTotal = grandTotal + transportCharges;
-    
-    // Show final total if transport charges exist
-    if (transportCharges > 0) {
-        document.getElementById('grandTotal').innerHTML = `${grandTotal.toFixed(2)} + ${transportCharges.toFixed(2)} = <strong>${finalTotal.toFixed(2)}</strong>`;
-    } else {
-        document.getElementById('grandTotal').textContent = finalTotal.toFixed(2);
-    }
-}
+
 
 function collectProductsData() {
     const products = [];
@@ -1535,6 +1567,29 @@ document.getElementById('combinedSalesInvoiceForm').addEventListener('submit', f
     
     // Enhanced keyboard shortcuts
     document.addEventListener('keydown', function(e) {
+        // Prevent Enter key from triggering unwanted actions
+        if (e.key === 'Enter') {
+            // Allow Enter only in specific cases
+            const activeElement = document.activeElement;
+            const tagName = activeElement.tagName.toLowerCase();
+            
+            // Allow Enter in textarea
+            if (tagName === 'textarea') {
+                return;
+            }
+            
+            // Allow Enter on submit button
+            if (activeElement.type === 'submit') {
+                return;
+            }
+            
+            // Prevent Enter in all input fields and selects to avoid form submission
+            if (tagName === 'input' || tagName === 'select') {
+                e.preventDefault();
+                return;
+            }
+        }
+        
         // Ctrl + Enter to add new product row
         if (e.ctrlKey && e.key === 'Enter') {
             e.preventDefault();
@@ -1715,14 +1770,21 @@ function fillBatchDetails(data, rowIndex) {
     
     // Show detailed info with rate source (use available_stock or stock field)
     const stockValue = data.available_stock !== undefined ? data.available_stock : (data.stock || 0);
+    const freeQty = data.free_qty || 0;
     const stockInfo = document.createElement('small');
     stockInfo.className = 'text-success stock-info';
-    stockInfo.innerHTML = `<i class="fas fa-info-circle"></i> Stock: ${stockValue} | Applied: ${rateSource} = ₹${selectedRate}`;
+    stockInfo.innerHTML = `<i class="fas fa-info-circle"></i> Stock: ${stockValue} | Free: ${freeQty} | Applied: ${rateSource} = ₹${selectedRate}`;
     
     const existingInfo = row.querySelector('.stock-info');
     if (existingInfo) existingInfo.remove();
     
     row.querySelector('.quantity').parentNode.appendChild(stockInfo);
+    
+    // Auto-fill free qty
+    const freeQtyInput = row.querySelector('.free-qty');
+    if (freeQtyInput) {
+        freeQtyInput.value = freeQty;
+    }
     
     // Trigger calculation and stock validation
     calculateRowTotal(rowIndex);
@@ -1825,6 +1887,7 @@ function createBatchSelectionModal(batches, rowIndex) {
                                     <div class="batch-details">
                                         <span class="batch-expiry">Exp: ${batch.expiry}</span>
                                         <span class="batch-stock">Stock: ${batch.stock}</span>
+                                        <span class="batch-free">Free: ${batch.free_qty || 0}</span>
                                         <span class="batch-mrp">MRP: ₹${batch.mrp}</span>
                                     </div>
                                     <div class="batch-rates">
@@ -2026,12 +2089,19 @@ function selectBatch(batchNo, rowIndex, batchData) {
         // Show stock info with rate info (use correct format for validation)
         const stockInfo = document.createElement('small');
         stockInfo.className = 'text-success stock-info';
-        stockInfo.innerHTML = `<i class="fas fa-info-circle"></i> Stock: ${batchData.stock} | Rate ${selectedCustomerRateType}: ₹${selectedRate}`;
+        const freeQty = batchData.free_qty || 0;
+        stockInfo.innerHTML = `<i class="fas fa-info-circle"></i> Stock: ${batchData.stock} | Free: ${freeQty} | Rate ${selectedCustomerRateType}: ₹${selectedRate}`;
         
         const existingInfo = row.querySelector('.stock-info');
         if (existingInfo) existingInfo.remove();
         
         row.querySelector('.quantity').parentNode.appendChild(stockInfo);
+        
+        // Auto-fill free qty
+        const freeQtyInput = row.querySelector('.free-qty');
+        if (freeQtyInput) {
+            freeQtyInput.value = freeQty;
+        }
     }
     
     closeBatchModal();
@@ -2338,7 +2408,8 @@ function quickSearchProducts(event) {
     },{% endfor %}];
     
     // Filter products that START with the search term (first 2+ letters)
-    const filtered = products.filter(p => {
+    // Use cached products or fallback to template data
+    const filtered = (window.productCache.length > 0 ? window.productCache : products).filter(p => {
         // Primary filter: starts with search term (case-sensitive first, then case-insensitive)
         const exactStartsName = p.name.startsWith(originalSearchTerm);
         const exactStartsCompany = p.company.startsWith(originalSearchTerm);
@@ -2772,13 +2843,14 @@ function loadInvoiceSeries() {
                     seriesSelect.appendChild(option);
                 });
                 
-                // Auto-select ABC if available
-                if (seriesSelect.options && seriesSelect.options.length > 0) {
-                    const abcOption = Array.from(seriesSelect.options).find(opt => opt.textContent === 'ABC');
-                    if (abcOption) {
-                        abcOption.selected = true;
-                        updateInvoicePreview();
-                    }
+                // Auto-select first available series
+                if (data.series.length > 0) {
+                    const firstSeries = data.series[0];
+                    seriesSelect.value = firstSeries.series_id;
+                    document.getElementById('selectedSeriesText').textContent = firstSeries.series_name;
+                    document.getElementById('invoice_series').value = firstSeries.series_id;
+                    updateInvoicePreview();
+                    console.log('✅ Auto-selected invoice series:', firstSeries.series_name);
                 }
             }
         })
@@ -3062,6 +3134,7 @@ function fillChallanProducts(products) {
         lastRow.querySelector('.mrp').value = product.mrp;
         lastRow.querySelector('.rate').value = product.rate;
         lastRow.querySelector('.quantity').value = product.quantity;
+        lastRow.querySelector('.free-qty').value = product.free_qty || 0;
         lastRow.querySelector('.discount').value = product.discount || 0;
         lastRow.querySelector('.cgst').value = product.cgst || 2.5;
         lastRow.querySelector('.sgst').value = product.sgst || 2.5;
@@ -3097,6 +3170,9 @@ document.addEventListener('keydown', function(e) {
 // Initialize page with single product row and current date
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Page loaded, initializing...');
+    
+    // Initialize product cache
+    window.initializeProductCache();
     
     // Auto-fill current date
     setCurrentDate();

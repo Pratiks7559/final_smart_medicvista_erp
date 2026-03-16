@@ -3,7 +3,7 @@ from core.year_filter_utils import get_current_financial_year
 def year_context(request):
     """Add financial year context to all templates"""
     current_fy = get_current_financial_year()
-    year_range = range(2012, current_fy + 1)
+    year_range = range(2011, max(current_fy, 2025) + 2)
     selected_year = request.session.get('selected_year', current_fy)
     
     return {
