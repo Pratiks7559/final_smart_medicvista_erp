@@ -8,7 +8,7 @@ import csv
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
-from .models import SalesMaster, PurchaseMaster, ProductMaster, SupplierChallanMaster, CustomerChallanMaster
+from .models import SalesMaster, PurchaseMaster, ProductMaster, SupplierChallanMaster, CustomerChallanMaster, ReturnSalesMaster, ReturnPurchaseMaster
 
 @login_required
 def financial_report(request):
@@ -24,6 +24,8 @@ def financial_report(request):
     purchase_query = PurchaseMaster.objects.select_related('productid', 'product_invoiceid', 'product_supplierid').order_by('-purchase_entry_date')
     supplier_challan_query = SupplierChallanMaster.objects.select_related('product_id', 'product_suppliername', 'product_challan_id').filter(product_challan_id__is_invoiced=False).order_by('-challan_entry_date')
     customer_challan_query = CustomerChallanMaster.objects.select_related('product_id', 'customer_name', 'customer_challan_id').order_by('-sales_entry_date')
+    sales_return_query = ReturnSalesMaster.objects.select_related('return_productid', 'return_sales_invoice_no', 'return_customerid').order_by('-return_sale_entry_date')
+    purchase_return_query = ReturnPurchaseMaster.objects.select_related('returnproductid', 'returninvoiceid', 'returnproduct_supplierid').order_by('-returnpurchase_entry_date')
     
     # Apply date filters
     if start_date:
@@ -32,6 +34,8 @@ def financial_report(request):
             purchase_query = purchase_query.filter(purchase_entry_date__date__gte=start_date)
             supplier_challan_query = supplier_challan_query.filter(challan_entry_date__date__gte=start_date)
             customer_challan_query = customer_challan_query.filter(sales_entry_date__date__gte=start_date)
+            sales_return_query = sales_return_query.filter(return_sale_entry_date__date__gte=start_date)
+            purchase_return_query = purchase_return_query.filter(returnpurchase_entry_date__gte=start_date)
         except:
             pass
     if end_date:
@@ -40,6 +44,8 @@ def financial_report(request):
             purchase_query = purchase_query.filter(purchase_entry_date__date__lte=end_date)
             supplier_challan_query = supplier_challan_query.filter(challan_entry_date__date__lte=end_date)
             customer_challan_query = customer_challan_query.filter(sales_entry_date__date__lte=end_date)
+            sales_return_query = sales_return_query.filter(return_sale_entry_date__date__lte=end_date)
+            purchase_return_query = purchase_return_query.filter(returnpurchase_entry_date__lte=end_date)
         except:
             pass
     
@@ -51,6 +57,8 @@ def financial_report(request):
             purchase_query = purchase_query.filter(productid_id=pid)
             supplier_challan_query = supplier_challan_query.filter(product_id=pid)
             customer_challan_query = customer_challan_query.filter(product_id=pid)
+            sales_return_query = sales_return_query.filter(return_productid_id=pid)
+            purchase_return_query = purchase_return_query.filter(returnproductid_id=pid)
         except:
             if product_search and product_search.strip():
                 search_term = product_search.strip()
@@ -58,12 +66,16 @@ def financial_report(request):
                 purchase_query = purchase_query.filter(product_name__icontains=search_term)
                 supplier_challan_query = supplier_challan_query.filter(product_name__icontains=search_term)
                 customer_challan_query = customer_challan_query.filter(product_name__icontains=search_term)
+                sales_return_query = sales_return_query.filter(return_product_name__icontains=search_term)
+                purchase_return_query = purchase_return_query.filter(returnproductid__product_name__icontains=search_term)
     elif product_search and product_search.strip():
         search_term = product_search.strip()
         sales_query = sales_query.filter(product_name__icontains=search_term)
         purchase_query = purchase_query.filter(product_name__icontains=search_term)
         supplier_challan_query = supplier_challan_query.filter(product_name__icontains=search_term)
         customer_challan_query = customer_challan_query.filter(product_name__icontains=search_term)
+        sales_return_query = sales_return_query.filter(return_product_name__icontains=search_term)
+        purchase_return_query = purchase_return_query.filter(returnproductid__product_name__icontains=search_term)
     
     # Limit data if no date filter
     if not (start_date and end_date):
@@ -71,12 +83,16 @@ def financial_report(request):
         purchase_query = purchase_query[:500]
         customer_challan_query = customer_challan_query[:500]
         supplier_challan_query = supplier_challan_query[:500]
+        sales_return_query = sales_return_query[:500]
+        purchase_return_query = purchase_return_query[:500]
     
     # Fetch data
     sales_list = list(sales_query)
     purchase_list = list(purchase_query)
     customer_challan_list = list(customer_challan_query)
     supplier_challan_list = list(supplier_challan_query)
+    sales_return_list = list(sales_return_query)
+    purchase_return_list = list(purchase_return_query)
     
     # Build batch lookup (single query)
     batch_keys = set()
@@ -84,6 +100,8 @@ def financial_report(request):
         batch_keys.add((sale.productid_id, sale.product_batch_no))
     for challan in customer_challan_list:
         batch_keys.add((challan.product_id_id, challan.product_batch_no))
+    for sale_return in sales_return_list:
+        batch_keys.add((sale_return.return_productid_id, sale_return.return_product_batch_no))
     
     purchase_lookup = {}
     if batch_keys:
@@ -251,6 +269,81 @@ def financial_report(request):
         total_profit -= purchase_cost
         total_gst += gst_amount
     
+    # Process Sales Returns
+    for sale_return in sales_return_list:
+        purchase_rate = purchase_lookup.get((sale_return.return_productid_id, sale_return.return_product_batch_no), 0.0)
+        quantity = float(sale_return.return_sale_quantity)
+        sale_rate = float(sale_return.return_sale_rate)
+        cgst = float(sale_return.return_sale_cgst)
+        sgst = float(sale_return.return_sale_sgst)
+        
+        purchase_cost = purchase_rate * quantity
+        sales_value = sale_rate * quantity
+        gst_amount = sales_value * (cgst + sgst) / 100
+        profit = -(sales_value - purchase_cost)  # Negative because it's a return
+        
+        financial_data.append({
+            'type': 'Sales Return',
+            'date': sale_return.return_sale_entry_date,
+            'invoice_no': sale_return.return_sales_invoice_no.return_sales_invoice_no,
+            'customer': sale_return.return_customerid.customer_name,
+            'product_name': sale_return.return_product_name,
+            'company': sale_return.return_product_company,
+            'batch_no': sale_return.return_product_batch_no,
+            'quantity': -quantity,  # Negative to show return
+            'mrp': float(sale_return.return_product_MRP),
+            'purchase_rate': purchase_rate,
+            'sale_rate': sale_rate,
+            'cgst': cgst,
+            'sgst': sgst,
+            'gst_amount': -gst_amount,  # Negative GST
+            'purchase_cost': -purchase_cost,
+            'sales_value': -sales_value,  # Negative sales
+            'profit': profit,
+            'profit_percentage': (profit / sales_value * 100) if sales_value > 0 else 0
+        })
+        
+        total_sales_value -= sales_value
+        total_purchase_cost -= purchase_cost
+        total_profit += profit
+        total_gst -= gst_amount
+    
+    # Process Purchase Returns
+    for purchase_return in purchase_return_list:
+        quantity = float(purchase_return.returnproduct_quantity)
+        purchase_rate = float(purchase_return.returnproduct_purchase_rate)
+        cgst = float(purchase_return.returnproduct_cgst)
+        sgst = float(purchase_return.returnproduct_sgst)
+        
+        purchase_cost = purchase_rate * quantity
+        gst_amount = purchase_cost * (cgst + sgst) / 100
+        profit = purchase_cost  # Positive because we're returning purchase
+        
+        financial_data.append({
+            'type': 'Purchase Return',
+            'date': purchase_return.returnpurchase_entry_date,
+            'invoice_no': purchase_return.returninvoiceid.returninvoiceid,
+            'customer': purchase_return.returnproduct_supplierid.supplier_name,
+            'product_name': purchase_return.returnproductid.product_name,
+            'company': purchase_return.returnproductid.product_company,
+            'batch_no': purchase_return.returnproduct_batch_no,
+            'quantity': -quantity,  # Negative to show return
+            'mrp': float(purchase_return.returnproduct_MRP),
+            'purchase_rate': purchase_rate,
+            'sale_rate': 0.0,
+            'cgst': cgst,
+            'sgst': sgst,
+            'gst_amount': -gst_amount,  # Negative GST
+            'purchase_cost': -purchase_cost,  # Negative cost
+            'sales_value': 0.0,
+            'profit': profit,
+            'profit_percentage': 0.0
+        })
+        
+        total_purchase_cost -= purchase_cost
+        total_profit += profit
+        total_gst -= gst_amount
+    
     # Stock valuation removed for performance
     stock_valuation = 0.0
     
@@ -298,33 +391,54 @@ def export_financial_pdf(request):
     end_date = request.GET.get('end_date')
     product_id = request.GET.get('product_id')
     
-    # Get data
-    sales_query = SalesMaster.objects.select_related('productid', 'sales_invoice_no', 'customerid')
-    supplier_challan_query = SupplierChallanMaster.objects.select_related('product_id', 'product_suppliername', 'product_challan_id')
-    customer_challan_query = CustomerChallanMaster.objects.select_related('product_id', 'customer_name', 'customer_challan_id')
+    # Get data with ordering
+    sales_query = SalesMaster.objects.select_related('productid', 'sales_invoice_no', 'customerid').order_by('-sale_entry_date')
+    purchase_query = PurchaseMaster.objects.select_related('productid', 'product_invoiceid', 'product_supplierid').order_by('-purchase_entry_date')
+    supplier_challan_query = SupplierChallanMaster.objects.select_related('product_id', 'product_suppliername', 'product_challan_id').order_by('-challan_entry_date')
+    customer_challan_query = CustomerChallanMaster.objects.select_related('product_id', 'customer_name', 'customer_challan_id').order_by('-sales_entry_date')
+    sales_return_query = ReturnSalesMaster.objects.select_related('return_productid', 'return_sales_invoice_no', 'return_customerid').order_by('-return_sale_entry_date')
+    purchase_return_query = ReturnPurchaseMaster.objects.select_related('returnproductid', 'returninvoiceid', 'returnproduct_supplierid').order_by('-returnpurchase_entry_date')
     
     if start_date:
         try:
             sales_query = sales_query.filter(sale_entry_date__date__gte=start_date)
+            purchase_query = purchase_query.filter(purchase_entry_date__date__gte=start_date)
             supplier_challan_query = supplier_challan_query.filter(challan_entry_date__date__gte=start_date)
             customer_challan_query = customer_challan_query.filter(sales_entry_date__date__gte=start_date)
+            sales_return_query = sales_return_query.filter(return_sale_entry_date__date__gte=start_date)
+            purchase_return_query = purchase_return_query.filter(returnpurchase_entry_date__gte=start_date)
         except:
             pass
     if end_date:
         try:
             sales_query = sales_query.filter(sale_entry_date__date__lte=end_date)
+            purchase_query = purchase_query.filter(purchase_entry_date__date__lte=end_date)
             supplier_challan_query = supplier_challan_query.filter(challan_entry_date__date__lte=end_date)
             customer_challan_query = customer_challan_query.filter(sales_entry_date__date__lte=end_date)
+            sales_return_query = sales_return_query.filter(return_sale_entry_date__date__lte=end_date)
+            purchase_return_query = purchase_return_query.filter(returnpurchase_entry_date__lte=end_date)
         except:
             pass
-    if product_id and product_id.strip():
+    if product_id and str(product_id).strip():
         try:
             pid = int(product_id)
             sales_query = sales_query.filter(productid_id=pid)
+            purchase_query = purchase_query.filter(productid_id=pid)
             supplier_challan_query = supplier_challan_query.filter(product_id=pid)
             customer_challan_query = customer_challan_query.filter(product_id=pid)
+            sales_return_query = sales_return_query.filter(return_productid_id=pid)
+            purchase_return_query = purchase_return_query.filter(returnproductid_id=pid)
         except:
             pass
+    
+    # Limit to 500 records if no date filter
+    if not start_date and not end_date:
+        sales_query = sales_query[:500]
+        purchase_query = purchase_query[:500]
+        supplier_challan_query = supplier_challan_query[:500]
+        customer_challan_query = customer_challan_query[:500]
+        sales_return_query = sales_return_query[:500]
+        purchase_return_query = purchase_return_query[:500]
     
     # Create PDF
     buffer = BytesIO()
@@ -350,61 +464,134 @@ def export_financial_pdf(request):
     total_sales = 0.0
     all_txns = []
     
-    # Collect all transactions
+    # Collect Sales transactions
     for sale in sales_query:
-        purchase = PurchaseMaster.objects.filter(productid=sale.productid, product_batch_no=sale.product_batch_no).first()
-        purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
-        quantity = float(sale.sale_quantity)
-        sale_rate = float(sale.sale_rate)
-        sales_value = sale_rate * quantity
-        gst_amount = sales_value * (float(sale.sale_cgst) + float(sale.sale_sgst)) / 100
-        purchase_cost = purchase_rate * quantity
-        profit = sales_value - purchase_cost
-        all_txns.append({
-            'date': sale.sale_entry_date, 'type': 'Sale', 'invoice': sale.sales_invoice_no.sales_invoice_no,
-            'party': sale.customerid.customer_name, 'product': sale.product_name[:15], 'batch': sale.product_batch_no,
-            'qty': quantity, 'p_rate': purchase_rate, 's_rate': sale_rate, 'gst': gst_amount, 'profit': profit, 'sales': sales_value
-        })
+        try:
+            purchase = PurchaseMaster.objects.filter(productid=sale.productid, product_batch_no=sale.product_batch_no).first()
+            purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
+            quantity = float(sale.sale_quantity)
+            sale_rate = float(sale.sale_rate)
+            purchase_cost = purchase_rate * quantity
+            sales_value = sale_rate * quantity
+            gst_amount = sales_value * (float(sale.sale_cgst) + float(sale.sale_sgst)) / 100
+            profit = sales_value - purchase_cost
+            all_txns.append({
+                'date': sale.sale_entry_date, 'type': 'Sale', 'invoice': sale.sales_invoice_no.sales_invoice_no,
+                'party': sale.customerid.customer_name, 'product': sale.product_name[:15], 'batch': sale.product_batch_no,
+                'qty': quantity, 'p_rate': purchase_rate, 's_rate': sale_rate, 'gst': gst_amount, 'profit': profit, 'sales': sales_value
+            })
+        except Exception as e:
+            continue
     
+    # Collect Customer Challan transactions
     for challan in customer_challan_query:
-        purchase = PurchaseMaster.objects.filter(productid=challan.product_id, product_batch_no=challan.product_batch_no).first()
-        purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
-        quantity = float(challan.sale_quantity)
-        sale_rate = float(challan.sale_rate)
-        sales_value = sale_rate * quantity
-        gst_amount = sales_value * (float(challan.sale_cgst) + float(challan.sale_sgst)) / 100
-        purchase_cost = purchase_rate * quantity
-        profit = sales_value - purchase_cost
-        all_txns.append({
-            'date': challan.sales_entry_date, 'type': 'C.Challan', 'invoice': challan.customer_challan_no,
-            'party': challan.customer_name.customer_name, 'product': challan.product_name[:15], 'batch': challan.product_batch_no,
-            'qty': quantity, 'p_rate': purchase_rate, 's_rate': sale_rate, 'gst': gst_amount, 'profit': profit, 'sales': sales_value
-        })
+        try:
+            purchase = PurchaseMaster.objects.filter(productid=challan.product_id, product_batch_no=challan.product_batch_no).first()
+            purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
+            quantity = float(challan.sale_quantity)
+            sale_rate = float(challan.sale_rate)
+            purchase_cost = purchase_rate * quantity
+            sales_value = sale_rate * quantity
+            gst_amount = sales_value * (float(challan.sale_cgst) + float(challan.sale_sgst)) / 100
+            profit = sales_value - purchase_cost
+            all_txns.append({
+                'date': challan.sales_entry_date, 'type': 'C.Challan', 'invoice': challan.customer_challan_no,
+                'party': challan.customer_name.customer_name, 'product': challan.product_name[:15], 'batch': challan.product_batch_no,
+                'qty': quantity, 'p_rate': purchase_rate, 's_rate': sale_rate, 'gst': gst_amount, 'profit': profit, 'sales': sales_value
+            })
+        except Exception as e:
+            continue
     
+    # Collect Purchase transactions
+    for purchase in purchase_query:
+        try:
+            quantity = float(purchase.product_quantity)
+            purchase_rate = float(purchase.product_purchase_rate)
+            purchase_cost = purchase_rate * quantity
+            gst_amount = purchase_cost * (float(purchase.CGST) + float(purchase.SGST)) / 100
+            profit = -purchase_cost
+            all_txns.append({
+                'date': purchase.purchase_entry_date, 'type': 'Purchase', 'invoice': purchase.product_invoice_no,
+                'party': purchase.product_supplierid.supplier_name, 'product': purchase.product_name[:15], 'batch': purchase.product_batch_no,
+                'qty': quantity, 'p_rate': purchase_rate, 's_rate': 0, 'gst': gst_amount, 'profit': profit, 'sales': 0
+            })
+        except Exception as e:
+            continue
+    
+    # Collect Supplier Challan transactions
     for challan in supplier_challan_query:
-        quantity = float(challan.product_quantity)
-        purchase_rate = float(challan.product_purchase_rate)
-        purchase_cost = purchase_rate * quantity
-        gst_amount = purchase_cost * (float(challan.cgst) + float(challan.sgst)) / 100
-        profit = -purchase_cost
-        all_txns.append({
-            'date': challan.challan_entry_date, 'type': 'S.Challan', 'invoice': challan.product_challan_no,
-            'party': challan.product_suppliername.supplier_name, 'product': challan.product_name[:15], 'batch': challan.product_batch_no,
-            'qty': quantity, 'p_rate': purchase_rate, 's_rate': 0, 'gst': gst_amount, 'profit': profit, 'sales': 0
-        })
+        try:
+            quantity = float(challan.product_quantity)
+            purchase_rate = float(challan.product_purchase_rate)
+            purchase_cost = purchase_rate * quantity
+            gst_amount = purchase_cost * (float(challan.cgst) + float(challan.sgst)) / 100
+            profit = -purchase_cost
+            all_txns.append({
+                'date': challan.challan_entry_date, 'type': 'S.Challan', 'invoice': challan.product_challan_no,
+                'party': challan.product_suppliername.supplier_name, 'product': challan.product_name[:15], 'batch': challan.product_batch_no,
+                'qty': quantity, 'p_rate': purchase_rate, 's_rate': 0, 'gst': gst_amount, 'profit': profit, 'sales': 0
+            })
+        except Exception as e:
+            continue
     
-    # Sort and limit
-    all_txns.sort(key=lambda x: x['date'], reverse=True)
-    for txn in all_txns[:100]:
-        data.append([
-            txn['date'].strftime('%d-%m-%Y'), txn['type'], txn['invoice'], txn['party'], txn['product'], txn['batch'],
-            f"{txn['qty']:.0f}", f"₹{txn['p_rate']:.2f}", f"₹{txn['s_rate']:.2f}", f"₹{txn['gst']:.2f}", f"₹{txn['profit']:.2f}"
-        ])
-        total_profit += txn['profit']
-        total_sales += txn['sales']
+    # Collect Sales Return transactions
+    for sale_return in sales_return_query:
+        try:
+            purchase = PurchaseMaster.objects.filter(productid=sale_return.return_productid, product_batch_no=sale_return.return_product_batch_no).first()
+            purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
+            quantity = float(sale_return.return_sale_quantity)
+            sale_rate = float(sale_return.return_sale_rate)
+            purchase_cost = purchase_rate * quantity
+            sales_value = sale_rate * quantity
+            gst_amount = sales_value * (float(sale_return.return_sale_cgst) + float(sale_return.return_sale_sgst)) / 100
+            profit = -(sales_value - purchase_cost)
+            all_txns.append({
+                'date': sale_return.return_sale_entry_date, 'type': 'S.Return', 'invoice': sale_return.return_sales_invoice_no.return_sales_invoice_no,
+                'party': sale_return.return_customerid.customer_name, 'product': sale_return.return_product_name[:15], 'batch': sale_return.return_product_batch_no,
+                'qty': -quantity, 'p_rate': purchase_rate, 's_rate': sale_rate, 'gst': -gst_amount, 'profit': profit, 'sales': -sales_value
+            })
+        except Exception as e:
+            continue
+    
+    # Collect Purchase Return transactions
+    for purchase_return in purchase_return_query:
+        try:
+            quantity = float(purchase_return.returnproduct_quantity)
+            purchase_rate = float(purchase_return.returnproduct_purchase_rate)
+            purchase_cost = purchase_rate * quantity
+            gst_amount = purchase_cost * (float(purchase_return.returnproduct_cgst) + float(purchase_return.returnproduct_sgst)) / 100
+            profit = purchase_cost
+            all_txns.append({
+                'date': purchase_return.returnpurchase_entry_date, 'type': 'P.Return', 'invoice': purchase_return.returninvoiceid.returninvoiceid,
+                'party': purchase_return.returnproduct_supplierid.supplier_name, 'product': purchase_return.returnproductid.product_name[:15], 'batch': purchase_return.returnproduct_batch_no,
+                'qty': -quantity, 'p_rate': purchase_rate, 's_rate': 0, 'gst': -gst_amount, 'profit': profit, 'sales': 0
+            })
+        except Exception as e:
+            continue
+    
+    # Sort and add ALL transactions to table (not just first 100)
+    if all_txns:
+        all_txns.sort(key=lambda x: x['date'], reverse=True)
+        # Include all transactions, not just [:100]
+        for txn in all_txns:
+            data.append([
+                txn['date'].strftime('%d-%m-%Y'),
+                txn['type'],
+                str(txn['invoice'])[:10],
+                str(txn['party'])[:15],
+                str(txn['product'])[:12],
+                str(txn['batch'])[:8],
+                f"{txn['qty']:.1f}",
+                f"{txn['p_rate']:.2f}",
+                f"{txn['s_rate']:.2f}",
+                f"{txn['gst']:.2f}",
+                f"{txn['profit']:.2f}"
+            ])
+            total_profit += txn['profit']
+            total_sales += txn['sales']
     
     # Add summary row
-    data.append(['', '', '', '', '', '', '', '', '', 'TOTAL:', f'₹{total_profit:.2f}'])
+    data.append(['', '', '', '', '', '', '', '', '', 'TOTAL:', f'{total_profit:.2f}'])
     
     # Create table
     table = Table(data, repeatRows=1)
@@ -413,7 +600,8 @@ def export_financial_pdf(request):
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('FONTSIZE', (0, 0), (-1, 0), 9),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
         ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e8eaf6')),
         ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
@@ -437,33 +625,55 @@ def export_financial_excel(request):
     end_date = request.GET.get('end_date')
     product_id = request.GET.get('product_id')
     
-    # Get data
-    sales_query = SalesMaster.objects.select_related('productid', 'sales_invoice_no', 'customerid')
-    supplier_challan_query = SupplierChallanMaster.objects.select_related('product_id', 'product_suppliername', 'product_challan_id')
-    customer_challan_query = CustomerChallanMaster.objects.select_related('product_id', 'customer_name', 'customer_challan_id')
+    # Get data - NO SLICING YET
+    sales_query = SalesMaster.objects.select_related('productid', 'sales_invoice_no', 'customerid').order_by('-sale_entry_date')
+    purchase_query = PurchaseMaster.objects.select_related('productid', 'product_invoiceid', 'product_supplierid').order_by('-purchase_entry_date')
+    supplier_challan_query = SupplierChallanMaster.objects.select_related('product_id', 'product_suppliername', 'product_challan_id').order_by('-challan_entry_date')
+    customer_challan_query = CustomerChallanMaster.objects.select_related('product_id', 'customer_name', 'customer_challan_id').order_by('-sales_entry_date')
+    sales_return_query = ReturnSalesMaster.objects.select_related('return_productid', 'return_sales_invoice_no', 'return_customerid').order_by('-return_sale_entry_date')
+    purchase_return_query = ReturnPurchaseMaster.objects.select_related('returnproductid', 'returninvoiceid', 'returnproduct_supplierid').order_by('-returnpurchase_entry_date')
     
+    # Apply filters
     if start_date:
         try:
             sales_query = sales_query.filter(sale_entry_date__date__gte=start_date)
+            purchase_query = purchase_query.filter(purchase_entry_date__date__gte=start_date)
             supplier_challan_query = supplier_challan_query.filter(challan_entry_date__date__gte=start_date)
             customer_challan_query = customer_challan_query.filter(sales_entry_date__date__gte=start_date)
+            sales_return_query = sales_return_query.filter(return_sale_entry_date__date__gte=start_date)
+            purchase_return_query = purchase_return_query.filter(returnpurchase_entry_date__gte=start_date)
         except:
             pass
     if end_date:
         try:
             sales_query = sales_query.filter(sale_entry_date__date__lte=end_date)
+            purchase_query = purchase_query.filter(purchase_entry_date__date__lte=end_date)
             supplier_challan_query = supplier_challan_query.filter(challan_entry_date__date__lte=end_date)
             customer_challan_query = customer_challan_query.filter(sales_entry_date__date__lte=end_date)
+            sales_return_query = sales_return_query.filter(return_sale_entry_date__date__lte=end_date)
+            purchase_return_query = purchase_return_query.filter(returnpurchase_entry_date__lte=end_date)
         except:
             pass
-    if product_id and product_id.strip():
+    if product_id and str(product_id).strip():
         try:
             pid = int(product_id)
             sales_query = sales_query.filter(productid_id=pid)
+            purchase_query = purchase_query.filter(productid_id=pid)
             supplier_challan_query = supplier_challan_query.filter(product_id=pid)
             customer_challan_query = customer_challan_query.filter(product_id=pid)
+            sales_return_query = sales_return_query.filter(return_productid_id=pid)
+            purchase_return_query = purchase_return_query.filter(returnproductid_id=pid)
         except:
             pass
+    
+    # Limit to 500 records if no date filter - APPLY AT END
+    if not start_date and not end_date:
+        sales_query = sales_query[:500]
+        purchase_query = purchase_query[:500]
+        supplier_challan_query = supplier_challan_query[:500]
+        customer_challan_query = customer_challan_query[:500]
+        sales_return_query = sales_return_query[:500]
+        purchase_return_query = purchase_return_query[:500]
     
     # Create workbook
     wb = Workbook()
@@ -502,94 +712,198 @@ def export_financial_excel(request):
     
     # Process Sales
     for sale in sales_query:
-        purchase = PurchaseMaster.objects.filter(productid=sale.productid, product_batch_no=sale.product_batch_no).first()
-        purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
-        quantity = float(sale.sale_quantity)
-        sale_rate = float(sale.sale_rate)
-        sales_value = sale_rate * quantity
-        gst_amount = sales_value * (float(sale.sale_cgst) + float(sale.sale_sgst)) / 100
-        purchase_cost = purchase_rate * quantity
-        profit = sales_value - purchase_cost
-        profit_pct = (profit / sales_value * 100) if sales_value > 0 else 0
-        
-        row_data = [
-            sale.sale_entry_date.strftime('%d-%m-%Y'), 'Sale', sale.sales_invoice_no.sales_invoice_no,
-            sale.customerid.customer_name, sale.product_name, sale.product_company, sale.product_batch_no,
-            quantity, float(sale.product_MRP), purchase_rate, sale_rate, float(sale.sale_cgst), float(sale.sale_sgst),
-            gst_amount, purchase_cost, sales_value, profit, profit_pct
-        ]
-        
-        for col_num, value in enumerate(row_data, 1):
-            cell = ws.cell(row=row_num, column=col_num)
-            cell.value = value
-            cell.border = border
-            if col_num >= 8:
-                cell.alignment = Alignment(horizontal='right')
-        
-        total_sales_value += sales_value
-        total_purchase_cost += purchase_cost
-        total_profit += profit
-        total_gst += gst_amount
-        row_num += 1
+        try:
+            purchase = PurchaseMaster.objects.filter(productid=sale.productid, product_batch_no=sale.product_batch_no).first()
+            purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
+            quantity = float(sale.sale_quantity)
+            sale_rate = float(sale.sale_rate)
+            purchase_cost = purchase_rate * quantity
+            sales_value = sale_rate * quantity
+            gst_amount = sales_value * (float(sale.sale_cgst) + float(sale.sale_sgst)) / 100
+            profit = sales_value - purchase_cost
+            profit_pct = (profit / sales_value * 100) if sales_value > 0 else 0
+            
+            row_data = [
+                sale.sale_entry_date.strftime('%d-%m-%Y'), 'Sale', sale.sales_invoice_no.sales_invoice_no,
+                sale.customerid.customer_name, sale.product_name, sale.product_company, sale.product_batch_no,
+                quantity, float(sale.product_MRP), purchase_rate, sale_rate, float(sale.sale_cgst), float(sale.sale_sgst),
+                gst_amount, purchase_cost, sales_value, profit, profit_pct
+            ]
+            
+            for col_num, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.value = value
+                cell.border = border
+                if col_num >= 8:
+                    cell.alignment = Alignment(horizontal='right')
+            
+            total_sales_value += sales_value
+            total_purchase_cost += purchase_cost
+            total_profit += profit
+            total_gst += gst_amount
+            row_num += 1
+        except Exception as e:
+            continue
     
     # Process Customer Challans
     for challan in customer_challan_query:
-        purchase = PurchaseMaster.objects.filter(productid=challan.product_id, product_batch_no=challan.product_batch_no).first()
-        purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
-        quantity = float(challan.sale_quantity)
-        sale_rate = float(challan.sale_rate)
-        sales_value = sale_rate * quantity
-        gst_amount = sales_value * (float(challan.sale_cgst) + float(challan.sale_sgst)) / 100
-        purchase_cost = purchase_rate * quantity
-        profit = sales_value - purchase_cost
-        profit_pct = (profit / sales_value * 100) if sales_value > 0 else 0
-        
-        row_data = [
-            challan.sales_entry_date.strftime('%d-%m-%Y'), 'Customer Challan', challan.customer_challan_no,
-            challan.customer_name.customer_name, challan.product_name, challan.product_company, challan.product_batch_no,
-            quantity, float(challan.product_mrp), purchase_rate, sale_rate, float(challan.sale_cgst), float(challan.sale_sgst),
-            gst_amount, purchase_cost, sales_value, profit, profit_pct
-        ]
-        
-        for col_num, value in enumerate(row_data, 1):
-            cell = ws.cell(row=row_num, column=col_num)
-            cell.value = value
-            cell.border = border
-            if col_num >= 8:
-                cell.alignment = Alignment(horizontal='right')
-        
-        total_sales_value += sales_value
-        total_purchase_cost += purchase_cost
-        total_profit += profit
-        total_gst += gst_amount
-        row_num += 1
+        try:
+            purchase = PurchaseMaster.objects.filter(productid=challan.product_id, product_batch_no=challan.product_batch_no).first()
+            purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
+            quantity = float(challan.sale_quantity)
+            sale_rate = float(challan.sale_rate)
+            purchase_cost = purchase_rate * quantity
+            sales_value = sale_rate * quantity
+            gst_amount = sales_value * (float(challan.sale_cgst) + float(challan.sale_sgst)) / 100
+            profit = sales_value - purchase_cost
+            profit_pct = (profit / sales_value * 100) if sales_value > 0 else 0
+            
+            row_data = [
+                challan.sales_entry_date.strftime('%d-%m-%Y'), 'Customer Challan', challan.customer_challan_no,
+                challan.customer_name.customer_name, challan.product_name, challan.product_company, challan.product_batch_no,
+                quantity, float(challan.product_mrp), purchase_rate, sale_rate, float(challan.sale_cgst), float(challan.sale_sgst),
+                gst_amount, purchase_cost, sales_value, profit, profit_pct
+            ]
+            
+            for col_num, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.value = value
+                cell.border = border
+                if col_num >= 8:
+                    cell.alignment = Alignment(horizontal='right')
+            
+            total_sales_value += sales_value
+            total_purchase_cost += purchase_cost
+            total_profit += profit
+            total_gst += gst_amount
+            row_num += 1
+        except Exception as e:
+            continue
+    
+    # Process Purchases
+    for purchase in purchase_query:
+        try:
+            quantity = float(purchase.product_quantity)
+            purchase_rate = float(purchase.product_purchase_rate)
+            purchase_cost = purchase_rate * quantity
+            gst_amount = purchase_cost * (float(purchase.CGST) + float(purchase.SGST)) / 100
+            profit = -purchase_cost
+            
+            row_data = [
+                purchase.purchase_entry_date.strftime('%d-%m-%Y'), 'Purchase', purchase.product_invoice_no,
+                purchase.product_supplierid.supplier_name, purchase.product_name, purchase.product_company, purchase.product_batch_no,
+                quantity, float(purchase.product_MRP), purchase_rate, 0, float(purchase.CGST), float(purchase.SGST),
+                gst_amount, purchase_cost, 0, profit, 0
+            ]
+            
+            for col_num, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.value = value
+                cell.border = border
+                if col_num >= 8:
+                    cell.alignment = Alignment(horizontal='right')
+            
+            total_purchase_cost += purchase_cost
+            total_profit -= purchase_cost
+            total_gst += gst_amount
+            row_num += 1
+        except Exception as e:
+            continue
     
     # Process Supplier Challans
     for challan in supplier_challan_query:
-        quantity = float(challan.product_quantity)
-        purchase_rate = float(challan.product_purchase_rate)
-        purchase_cost = purchase_rate * quantity
-        gst_amount = purchase_cost * (float(challan.cgst) + float(challan.sgst)) / 100
-        profit = -purchase_cost
-        
-        row_data = [
-            challan.challan_entry_date.strftime('%d-%m-%Y'), 'Supplier Challan', challan.product_challan_no,
-            challan.product_suppliername.supplier_name, challan.product_name, challan.product_company, challan.product_batch_no,
-            quantity, float(challan.product_mrp), purchase_rate, 0, float(challan.cgst), float(challan.sgst),
-            gst_amount, purchase_cost, 0, profit, 0
-        ]
-        
-        for col_num, value in enumerate(row_data, 1):
-            cell = ws.cell(row=row_num, column=col_num)
-            cell.value = value
-            cell.border = border
-            if col_num >= 8:
-                cell.alignment = Alignment(horizontal='right')
-        
-        total_purchase_cost += purchase_cost
-        total_profit -= purchase_cost
-        total_gst += gst_amount
-        row_num += 1
+        try:
+            quantity = float(challan.product_quantity)
+            purchase_rate = float(challan.product_purchase_rate)
+            purchase_cost = purchase_rate * quantity
+            gst_amount = purchase_cost * (float(challan.cgst) + float(challan.sgst)) / 100
+            profit = -purchase_cost
+            
+            row_data = [
+                challan.challan_entry_date.strftime('%d-%m-%Y'), 'Supplier Challan', challan.product_challan_no,
+                challan.product_suppliername.supplier_name, challan.product_name, challan.product_company, challan.product_batch_no,
+                quantity, float(challan.product_mrp), purchase_rate, 0, float(challan.cgst), float(challan.sgst),
+                gst_amount, purchase_cost, 0, profit, 0
+            ]
+            
+            for col_num, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.value = value
+                cell.border = border
+                if col_num >= 8:
+                    cell.alignment = Alignment(horizontal='right')
+            
+            total_purchase_cost += purchase_cost
+            total_profit -= purchase_cost
+            total_gst += gst_amount
+            row_num += 1
+        except Exception as e:
+            continue
+    
+    # Process Sales Returns
+    for sale_return in sales_return_query:
+        try:
+            purchase = PurchaseMaster.objects.filter(productid=sale_return.return_productid, product_batch_no=sale_return.return_product_batch_no).first()
+            purchase_rate = float(purchase.product_purchase_rate) if purchase else 0.0
+            quantity = float(sale_return.return_sale_quantity)
+            sale_rate = float(sale_return.return_sale_rate)
+            purchase_cost = purchase_rate * quantity
+            sales_value = sale_rate * quantity
+            gst_amount = sales_value * (float(sale_return.return_sale_cgst) + float(sale_return.return_sale_sgst)) / 100
+            profit = -(sales_value - purchase_cost)
+            profit_pct = (profit / sales_value * 100) if sales_value > 0 else 0
+            
+            row_data = [
+                sale_return.return_sale_entry_date.strftime('%d-%m-%Y'), 'Sales Return', sale_return.return_sales_invoice_no.return_sales_invoice_no,
+                sale_return.return_customerid.customer_name, sale_return.return_product_name, sale_return.return_product_company, sale_return.return_product_batch_no,
+                -quantity, float(sale_return.return_product_MRP), purchase_rate, sale_rate, float(sale_return.return_sale_cgst), float(sale_return.return_sale_sgst),
+                -gst_amount, -purchase_cost, -sales_value, profit, profit_pct
+            ]
+            
+            for col_num, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.value = value
+                cell.border = border
+                if col_num >= 8:
+                    cell.alignment = Alignment(horizontal='right')
+            
+            total_sales_value -= sales_value
+            total_purchase_cost -= purchase_cost
+            total_profit += profit
+            total_gst -= gst_amount
+            row_num += 1
+        except Exception as e:
+            continue
+    
+    # Process Purchase Returns
+    for purchase_return in purchase_return_query:
+        try:
+            quantity = float(purchase_return.returnproduct_quantity)
+            purchase_rate = float(purchase_return.returnproduct_purchase_rate)
+            purchase_cost = purchase_rate * quantity
+            gst_amount = purchase_cost * (float(purchase_return.returnproduct_cgst) + float(purchase_return.returnproduct_sgst)) / 100
+            profit = purchase_cost
+            
+            row_data = [
+                purchase_return.returnpurchase_entry_date.strftime('%d-%m-%Y'), 'Purchase Return', purchase_return.returninvoiceid.returninvoiceid,
+                purchase_return.returnproduct_supplierid.supplier_name, purchase_return.returnproductid.product_name, purchase_return.returnproductid.product_company, purchase_return.returnproduct_batch_no,
+                -quantity, float(purchase_return.returnproduct_MRP), purchase_rate, 0, float(purchase_return.returnproduct_cgst), float(purchase_return.returnproduct_sgst),
+                -gst_amount, -purchase_cost, 0, profit, 0
+            ]
+            
+            for col_num, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_num, column=col_num)
+                cell.value = value
+                cell.border = border
+                if col_num >= 8:
+                    cell.alignment = Alignment(horizontal='right')
+            
+            total_purchase_cost -= purchase_cost
+            total_profit += profit
+            total_gst -= gst_amount
+            row_num += 1
+        except Exception as e:
+            continue
     
     # Summary row
     summary_fill = PatternFill(start_color="e8eaf6", end_color="e8eaf6", fill_type="solid")
