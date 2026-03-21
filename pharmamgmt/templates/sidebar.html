@@ -190,6 +190,12 @@
                                 <span class="nav-text">All Products Inventory</span>
                             </a>
                         </li>
+                        <li role="none">
+                            <a href="{% url 'inventory_list2' %}" class="nav-submenu-link" role="menuitem" style="text-decoration: none; color: #a8e6cf;" id="allInventory2Link">
+                                <i class="fas fa-list-alt"></i>
+                                <span class="nav-text">All Products Inventory 2</span>
+                            </a>
+                        </li>
                         <li role="none" style="display: none;">
                             <a href="{% url 'low_stock_update' %}" class="nav-submenu-link" role="menuitem" style="text-decoration: none; color: #e7cba1;">
                                 <i class="fas fa-plus-circle"></i>
@@ -520,6 +526,11 @@
                 } else if (e2.key.toLowerCase() === 'a') {
                     e2.preventDefault();
                     const link = document.getElementById('allInventoryLink');
+                    if (link) link.click();
+                    document.removeEventListener('keydown', nextKeyHandler);
+                } else if (e2.key === '2') {
+                    e2.preventDefault();
+                    const link = document.getElementById('allInventory2Link');
                     if (link) link.click();
                     document.removeEventListener('keydown', nextKeyHandler);
                 } else if (e2.key.toLowerCase() === 'b') {

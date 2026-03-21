@@ -233,6 +233,9 @@
             <a href="{% url 'dateexpiry_inventory_report' %}" class="datewise-inventory-report-link">
                 <i class="fas fa-calendar-alt fa-sm"></i> Date-wise Report
             </a>
+            <button id="refreshCacheBtn" class="refresh-cache-btn" style="background: #10b981; color: white; padding: 8px 16px; border-radius: 4px; border: none; cursor: pointer; margin-right: 10px;">
+                <i class="fas fa-sync-alt fa-sm"></i> Refresh Cache
+            </button>
             <div class="export-buttons no-print">
                 <a href="{% url 'export_inventory_pdf' %}" class="export-btn export-pdf">
                     <i class="fas fa-file-pdf"></i> PDF(Ctrl+Q)
@@ -498,6 +501,38 @@
 {% block extra_js %}
 <script>
     $(document).ready(function() {
+        // Refresh Cache Button
+        $('#refreshCacheBtn').on('click', function() {
+            const btn = $(this);
+            btn.prop('disabled', true);
+            btn.html('<i class="fas fa-spinner fa-spin"></i> Refreshing...');
+            
+            $.ajax({
+                url: '{% url "refresh_inventory_cache" %}',
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        btn.html('<i class="fas fa-check"></i> Refreshed!');
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        alert('Error: ' + (response.error || 'Unknown error'));
+                        btn.html('<i class="fas fa-sync-alt"></i> Refresh Cache');
+                        btn.prop('disabled', false);
+                    }
+                },
+                error: function() {
+                    alert('Failed to refresh cache');
+                    btn.html('<i class="fas fa-sync-alt"></i> Refresh Cache');
+                    btn.prop('disabled', false);
+                }
+            });
+        });
+        
         // Autocomplete search suggestions with keyboard navigation
         let searchTimeout, selectedIndex = -1;
         

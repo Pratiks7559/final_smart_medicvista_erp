@@ -11935,12 +11935,3 @@ def print_gst_purchase_invoice(request, invoice_id):
     }
     
     return render(request, 'purchases/gst_purchase_invoice.html', context)
-
-
-
-
-
-
-
-
-

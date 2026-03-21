@@ -34,15 +34,20 @@ class Pharmacy_Details(models.Model):
 
 class ProductMaster(models.Model):
     productid=models.BigAutoField(primary_key=True, auto_created=True)
-    product_name=models.CharField(max_length=200)
-    product_company=models.CharField(max_length=200)
+    product_name=models.CharField(max_length=200, db_index=True)
+    product_company=models.CharField(max_length=200, db_index=True)
     product_packing=models.CharField(max_length=20)
     product_image=models.ImageField(upload_to='images/',default='images/medicine_default.png', null=True)
-    product_salt=models.CharField(max_length=300, default=None)
-    product_category=models.CharField(max_length=30, default=None)
+    product_salt=models.CharField(max_length=300, default=None, db_index=True)
+    product_category=models.CharField(max_length=30, default=None, db_index=True)
     product_hsn=models.CharField(max_length=20, default=None)
     product_hsn_percent=models.CharField(max_length=20, default=None)
     product_barcode=models.CharField(max_length=50, blank=True, null=True, unique=True, help_text="Product barcode for scanning")
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['product_name', 'product_company'], name='idx_prod_name_company'),
+        ]
     
     def __str__(self):
         return f"{self.product_name} ({self.product_company})"
@@ -337,8 +342,8 @@ class ReturnSalesMaster(models.Model):
         return f"Sales Return: {self.return_product_name} - {self.return_product_batch_no} - {self.return_sale_quantity}"
 
 class SaleRateMaster(models.Model):
-    productid=models.ForeignKey(ProductMaster, on_delete=models.CASCADE)
-    product_batch_no=models.CharField(max_length=20)
+    productid=models.ForeignKey(ProductMaster, on_delete=models.CASCADE, db_index=True)
+    product_batch_no=models.CharField(max_length=20, db_index=True)
     rate_A=models.FloatField(default=0.0)
     rate_B=models.FloatField(default=0.0)
     rate_C=models.FloatField(default=0.0)
@@ -346,6 +351,9 @@ class SaleRateMaster(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['productid', 'product_batch_no'], name='unique_productid_product_batch_no')
+        ]
+        indexes = [
+            models.Index(fields=['productid', 'product_batch_no'], name='idx_rate_prod_batch'),
         ]
         
     def __str__(self):
@@ -792,4 +800,129 @@ class BatchInventoryCache(models.Model):
         return f"{self.product.product_name} - Batch: {self.batch_no} - Stock: {self.current_stock}"
 # ============================================
 # INVENTORY CACHE TABLES - END
+# ============================================
+
+# ============================================
+# INVENTORY TRANSACTION TABLE - START
+# ============================================
+class InventoryTransaction(models.Model):
+    """Single source of truth for all inventory movements"""
+    
+    TRANSACTION_TYPES = [
+        ('PURCHASE', 'Purchase'),
+        ('SALE', 'Sale'),
+        ('PURCHASE_RETURN', 'Purchase Return'),
+        ('SALES_RETURN', 'Sales Return'),
+        ('SUPPLIER_CHALLAN', 'Supplier Challan'),
+        ('CUSTOMER_CHALLAN', 'Customer Challan'),
+        ('STOCK_ISSUE', 'Stock Issue'),
+    ]
+    
+    REFERENCE_TYPES = [
+        ('INVOICE', 'Invoice'),
+        ('CHALLAN', 'Challan'),
+        ('ISSUE', 'Stock Issue'),
+    ]
+    
+    # Primary Key
+    transaction_id = models.BigAutoField(primary_key=True, auto_created=True)
+    
+    # Product & Batch Info
+    product = models.ForeignKey(ProductMaster, on_delete=models.CASCADE, db_index=True)
+    batch_no = models.CharField(max_length=20, db_index=True)
+    expiry_date = models.CharField(max_length=7, help_text="Format: MM-YYYY")
+    
+    # Transaction Details
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES, db_index=True)
+    quantity = models.DecimalField(max_digits=10, decimal_places=2, help_text="Positive for IN, Negative for OUT")
+    free_quantity = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Free quantity")
+    transaction_date = models.DateTimeField(default=timezone.now, db_index=True)
+    
+    # Reference Info
+    reference_type = models.CharField(max_length=20, choices=REFERENCE_TYPES)
+    reference_id = models.BigIntegerField(help_text="ID of source transaction")
+    reference_number = models.CharField(max_length=50, help_text="Invoice/Challan/Issue number")
+    
+    # Financial Info
+    rate = models.DecimalField(max_digits=10, decimal_places=2, help_text="Purchase/Sale rate per unit")
+    mrp = models.DecimalField(max_digits=10, decimal_places=2)
+    total_value = models.DecimalField(max_digits=12, decimal_places=2, help_text="quantity × rate")
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(Web_User, on_delete=models.SET_NULL, null=True, blank=True)
+    remarks = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        db_table = 'inventory_transaction'
+        ordering = ['-transaction_date', '-transaction_id']
+        indexes = [
+            models.Index(fields=['product', 'batch_no'], name='idx_inv_product_batch'),
+            models.Index(fields=['transaction_date'], name='idx_inv_date'),
+            models.Index(fields=['transaction_type'], name='idx_inv_type'),
+            models.Index(fields=['product', 'transaction_date'], name='idx_inv_product_date'),
+            models.Index(fields=['reference_type', 'reference_id'], name='idx_inv_reference'),
+            models.Index(fields=['product', 'batch_no', 'expiry_date'], name='idx_inv_prod_batch_exp'),
+            models.Index(fields=['batch_no', 'expiry_date'], name='idx_inv_batch_expiry'),
+            models.Index(fields=['product', 'quantity'], name='idx_inv_product_qty'),
+        ]
+    
+    def __str__(self):
+        return f"{self.transaction_type} - {self.product.product_name} - Batch: {self.batch_no} - Qty: {self.quantity}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-calculate total_value
+        if self.quantity and self.rate:
+            self.total_value = abs(self.quantity) * self.rate
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_batch_stock(cls, product_id, batch_no):
+        """Get current stock for a specific batch"""
+        from django.db.models import Sum
+        result = cls.objects.filter(
+            product_id=product_id,
+            batch_no=batch_no
+        ).aggregate(
+            total_qty=Sum('quantity'),
+            total_free_qty=Sum('free_quantity')
+        )
+        return {
+            'stock': result['total_qty'] or 0,
+            'free_stock': result['total_free_qty'] or 0,
+            'total_stock': (result['total_qty'] or 0) + (result['total_free_qty'] or 0)
+        }
+    
+    @classmethod
+    def get_product_stock(cls, product_id):
+        """Get total stock for a product across all batches"""
+        from django.db.models import Sum
+        result = cls.objects.filter(
+            product_id=product_id
+        ).aggregate(
+            total_qty=Sum('quantity'),
+            total_free_qty=Sum('free_quantity')
+        )
+        return {
+            'stock': result['total_qty'] or 0,
+            'free_stock': result['total_free_qty'] or 0,
+            'total_stock': (result['total_qty'] or 0) + (result['total_free_qty'] or 0)
+        }
+    
+    @classmethod
+    def get_batch_wise_stock(cls, product_id):
+        """Get batch-wise stock for a product"""
+        from django.db.models import Sum, Max
+        return cls.objects.filter(
+            product_id=product_id
+        ).values(
+            'batch_no', 'expiry_date', 'mrp'
+        ).annotate(
+            total_qty=Sum('quantity'),
+            total_free_qty=Sum('free_quantity'),
+            last_rate=Max('rate')
+        ).order_by('expiry_date', 'batch_no')
+
+# ============================================
+# INVENTORY TRANSACTION TABLE - END
 # ============================================

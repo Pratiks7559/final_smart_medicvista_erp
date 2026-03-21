@@ -30,6 +30,12 @@ from .financial_views import financial_report, export_financial_pdf, export_fina
 from .backup_views import backup_list, create_backup, restore_backup, download_backup, delete_backup
 from .return_receipt_views import print_purchase_return_receipt, print_sales_return_receipt
 from .cached_inventory_views import inventory_list_cached
+from .refresh_cache_view import refresh_inventory_cache
+from .sync_inventory_view import sync_old_inventory_data
+# ============================================
+# INVENTORY TRANSACTION SYSTEM - IMPORTS
+# ============================================
+from .inventory_list2_views import inventory_list2, inventory_batches, inventory_transaction_history, inventory_dashboard, export_inventory2_pdf, export_inventory2_excel
 # ============================================
 # CONTRA ENTRY MODULE - IMPORTS
 # ============================================
@@ -197,6 +203,19 @@ urlpatterns = [
     # Inventory (Cache will auto-populate via signals)
     path('inventory/', inventory_list_cached, name='inventory_list'),
     path('api/inventory-search-suggestions/', views.inventory_search_suggestions, name='inventory_search_suggestions'),
+    path('api/refresh-inventory-cache/', refresh_inventory_cache, name='refresh_inventory_cache'),
+    path('api/sync-old-inventory-data/', sync_old_inventory_data, name='sync_old_inventory_data'),
+    
+    # ============================================
+    # INVENTORY TRANSACTION SYSTEM - URLS
+    # ============================================
+    path('inventory2/', inventory_list2, name='inventory_list2'),
+    path('export/inventory2/pdf/', export_inventory2_pdf, name='export_inventory2_pdf'),
+    path('export/inventory2/excel/', export_inventory2_excel, name='export_inventory2_excel'),
+    path('inventory2/dashboard/', inventory_dashboard, name='inventory_dashboard'),
+    path('inventory2/batches/<int:product_id>/', inventory_batches, name='inventory_batches'),
+    path('inventory2/history/<int:product_id>/', inventory_transaction_history, name='inventory_transaction_history'),
+    # ============================================
     
     # Reports
     path('reports/inventory/batch/', views.batch_inventory_report, name='batch_inventory_report'),

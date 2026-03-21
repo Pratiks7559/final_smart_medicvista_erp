@@ -7,3 +7,4 @@ class CoreConfig(AppConfig):
     
     def ready(self):
         import core.signals
+        import core.inventory_signals  # Import inventory transaction signals

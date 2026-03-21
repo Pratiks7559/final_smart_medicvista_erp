@@ -1,0 +1,343 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Transaction History - {{ product.product_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.txn-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.txn-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+.txn-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.txn-subtitle {
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+.txn-back-btn {
+    background: rgba(255,255,255,0.2);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-block;
+    margin-top: 15px;
+    transition: all 0.3s;
+}
+
+.txn-back-btn:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+.txn-table-container {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.txn-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.txn-table thead {
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.txn-table th {
+    padding: 15px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    color: #374151;
+    text-transform: uppercase;
+}
+
+.txn-table td {
+    padding: 15px;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 14px;
+}
+
+.txn-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.txn-type-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.txn-type-badge.purchase {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.txn-type-badge.sale {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.txn-type-badge.return {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.txn-type-badge.challan {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.txn-type-badge.issue {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.txn-qty-in {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.txn-qty-out {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.txn-balance {
+    font-weight: 700;
+    color: #111827;
+}
+
+/* Pagination Styles */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 20px;
+    gap: 10px;
+}
+
+.pagination-info {
+    color: #6b7280;
+    font-size: 14px;
+    margin-right: 20px;
+}
+
+.pagination-btn {
+    padding: 8px 16px;
+    border: 1px solid #e5e7eb;
+    background: white;
+    color: #374151;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.pagination-btn:hover:not(.disabled) {
+    background: #f9fafb;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.pagination-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.pagination-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.page-numbers {
+    display: flex;
+    gap: 5px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="txn-container">
+    <div class="txn-header">
+        <h1 class="txn-title">
+            <i class="fas fa-history"></i> Transaction History
+        </h1>
+        <div class="txn-subtitle">
+            <strong>Product:</strong> {{ product.product_name }} ({{ product.product_company }})
+            {% if batch_no %}
+            <br><strong>Batch:</strong> {{ batch_no }}
+            {% endif %}
+        </div>
+        <a href="{% url 'inventory_list2' %}" class="txn-back-btn">
+            <i class="fas fa-arrow-left"></i> Back to Inventory
+        </a>
+    </div>
+
+    <div class="txn-table-container">
+        {% if transactions %}
+        <table class="txn-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Batch</th>
+                    <th>Reference</th>
+                    <th>Quantity</th>
+                    <th>Free Qty</th>
+                    <th>Rate</th>
+                    <th>Value</th>
+                    <th>Balance</th>
+                    <th>Remarks</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in transactions %}
+                <tr>
+                    <td>{{ item.transaction.transaction_date|date:"d-m-Y H:i" }}</td>
+                    <td>
+                        <span class="txn-type-badge 
+                            {% if 'PURCHASE' in item.transaction.transaction_type %}purchase
+                            {% elif 'SALE' in item.transaction.transaction_type %}sale
+                            {% elif 'RETURN' in item.transaction.transaction_type %}return
+                            {% elif 'CHALLAN' in item.transaction.transaction_type %}challan
+                            {% else %}issue{% endif %}">
+                            {{ item.transaction.get_transaction_type_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <strong>{{ item.transaction.batch_no }}</strong>
+                        <div style="font-size: 11px; color: #6b7280;">
+                            Exp: {{ item.transaction.expiry_date }}
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-size: 12px;">
+                            {{ item.transaction.reference_number }}
+                        </div>
+                        <div style="font-size: 11px; color: #6b7280;">
+                            {{ item.transaction.get_reference_type_display }}
+                        </div>
+                    </td>
+                    <td>
+                        {% if item.transaction.quantity >= 0 %}
+                        <span class="txn-qty-in">+{{ item.transaction.quantity }}</span>
+                        {% else %}
+                        <span class="txn-qty-out">{{ item.transaction.quantity }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.transaction.free_quantity is not None and item.transaction.free_quantity != 0 %}
+                            {% if item.transaction.free_quantity > 0 %}
+                            <span class="txn-qty-in">+{{ item.transaction.free_quantity }}</span>
+                            {% else %}
+                            <span class="txn-qty-out">{{ item.transaction.free_quantity }}</span>
+                            {% endif %}
+                        {% elif item.transaction.free_quantity == 0 %}
+                        <span style="color: #9ca3af;">0</span>
+                        {% else %}
+                        <span style="color: #9ca3af;">-</span>
+                        {% endif %}
+                    </td>
+                    <td>₹{{ item.transaction.rate|floatformat:2 }}</td>
+                    <td>₹{{ item.transaction.total_value|floatformat:2 }}</td>
+                    <td>
+                        <span class="txn-balance">{{ item.balance|floatformat:0 }}</span>
+                    </td>
+                    <td style="font-size: 12px; color: #6b7280;">
+                        {{ item.transaction.remarks|default:"-" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Pagination Controls -->
+        {% if paginator.num_pages > 1 %}
+        <div class="pagination-container">
+            <div class="pagination-info">
+                Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ paginator.count }} transactions
+            </div>
+            
+            <!-- Previous Button -->
+            {% if page_obj.has_previous %}
+            <a href="?page=1{% if batch_no %}&batch_no={{ batch_no }}{% endif %}" class="pagination-btn">
+                <i class="fas fa-angle-double-left"></i> First
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if batch_no %}&batch_no={{ batch_no }}{% endif %}" class="pagination-btn">
+                <i class="fas fa-angle-left"></i> Previous
+            </a>
+            {% else %}
+            <span class="pagination-btn disabled">
+                <i class="fas fa-angle-double-left"></i> First
+            </span>
+            <span class="pagination-btn disabled">
+                <i class="fas fa-angle-left"></i> Previous
+            </span>
+            {% endif %}
+            
+            <!-- Page Numbers -->
+            <div class="page-numbers">
+                {% for num in paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <span class="pagination-btn active">{{ num }}</span>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}{% if batch_no %}&batch_no={{ batch_no }}{% endif %}" class="pagination-btn">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            <!-- Next Button -->
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if batch_no %}&batch_no={{ batch_no }}{% endif %}" class="pagination-btn">
+                Next <i class="fas fa-angle-right"></i>
+            </a>
+            <a href="?page={{ paginator.num_pages }}{% if batch_no %}&batch_no={{ batch_no }}{% endif %}" class="pagination-btn">
+                Last <i class="fas fa-angle-double-right"></i>
+            </a>
+            {% else %}
+            <span class="pagination-btn disabled">
+                Next <i class="fas fa-angle-right"></i>
+            </span>
+            <span class="pagination-btn disabled">
+                Last <i class="fas fa-angle-double-right"></i>
+            </span>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div style="text-align: center; padding: 60px 20px; color: #6b7280;">
+            <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 15px; opacity: 0.3;"></i>
+            <p>No transactions found for this product.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

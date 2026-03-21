@@ -1,0 +1,206 @@
+================================================================================
+PHARMAMGMT SIDEBAR - KEYBOARD SHORTCUTS SUMMARY
+================================================================================
+
+📋 GENERAL SHORTCUTS:
+--------------------
+Alt + L          → Logout
+
+
+🛒 PURCHASE SECTION:
+--------------------
+Alt + P          → Purchase Challan
+Alt + P + R      → Purchase Return
+Alt + S + U      → Suppliers
+
+Ctrl + P + I     → New Purchase Invoice
+Ctrl + P + L     → Purchase Invoice List
+Ctrl + P + Y     → Purchase Payment
+
+
+💰 SALES SECTION:
+-----------------
+Alt + S          → Sales Challan
+Alt + S + R      → Sales Return
+Alt + C          → Customers
+Alt + I          → Stock Issues
+
+Ctrl + S + I     → New Sales Invoice (Quick Invoice)
+Ctrl + S + L     → Sales Invoice List
+Ctrl + S + Y     → Sales Receipt
+
+
+📦 INVENTORY SECTION:
+---------------------
+Ctrl + I + P     → Product List
+Ctrl + I + A     → All Products Inventory
+Ctrl + I + 2     → All Products Inventory 2 (Real-time)
+Ctrl + I + B     → Batch-wise Report
+Ctrl + I + D     → Date-wise Report
+Ctrl + I + S     → Stock Statement
+
+
+⚙️ ADMIN SECTION (Admin Only):
+-------------------------------
+Ctrl + A + D     → Dashboard
+Ctrl + A + U     → Add User
+Ctrl + A + P     → Pharmacy Details
+Ctrl + A + B     → Database Backup
+Ctrl + A + C     → Contra Entry
+
+
+================================================================================
+SHORTCUT PATTERNS:
+================================================================================
+
+1. SINGLE KEY SHORTCUTS (Alt + Key):
+   - Alt + L → Logout
+   - Alt + P → Purchase Challan
+   - Alt + S → Sales Challan
+   - Alt + C → Customers
+   - Alt + I → Stock Issues
+
+2. SEQUENCE SHORTCUTS (Alt + Key1 + Key2):
+   - Alt + P + R → Purchase Return
+   - Alt + S + U → Suppliers
+   - Alt + S + R → Sales Return
+
+3. CTRL SHORTCUTS (Ctrl + Section + Action):
+   
+   PURCHASE (Ctrl + P + ...):
+   - I → New Invoice
+   - L → Invoice List
+   - Y → Payment
+   
+   SALES (Ctrl + S + ...):
+   - I → New Invoice
+   - L → Invoice List
+   - Y → Receipt
+   
+   INVENTORY (Ctrl + I + ...):
+   - P → Product List
+   - A → All Inventory
+   - 2 → All Inventory 2 (Real-time)
+   - B → Batch Report
+   - D → Date Report
+   - S → Stock Statement
+   
+   ADMIN (Ctrl + A + ...):
+   - D → Dashboard
+   - U → Add User
+   - P → Pharmacy Details
+   - B → Backup
+   - C → Contra Entry
+
+
+================================================================================
+SIDEBAR MENU STRUCTURE:
+================================================================================
+
+📁 PURCHASES
+   ├── Purchase Challan (Alt+P)
+   ├── New Invoice (Ctrl+P+I)
+   ├── Invoices (Ctrl+P+L)
+   ├── Suppliers (Alt+S+U)
+   ├── Purchase Return (Alt+P+R)
+   └── Payment (Ctrl+P+Y)
+
+📁 SALES
+   ├── Sales Challan (Alt+S)
+   ├── New Invoice (Ctrl+S+I)
+   ├── Invoices (Ctrl+S+L)
+   ├── Customers (Alt+C)
+   ├── Sales Return (Alt+S+R)
+   ├── Receipt (Ctrl+S+Y)
+   └── Stock Issues (Alt+I)
+
+📁 INVENTORY
+   ├── Product List (Ctrl+I+P)
+   ├── All Products Inventory (Ctrl+I+A)
+   ├── All Products Inventory 2 (Ctrl+I+2) [Real-time]
+   ├── Batch-wise Report (Ctrl+I+B)
+   ├── Date-wise Report (Ctrl+I+D)
+   └── Stock Statement (Ctrl+I+S)
+
+📁 REPORTS
+   ├── Sales
+   ├── Customer Wise Sales
+   ├── Purchases
+   ├── Financial
+   └── Ledger
+
+📁 ADMIN (Admin Only)
+   ├── Dashboard (Ctrl+A+D)
+   ├── Add User (Ctrl+A+U)
+   ├── User List
+   ├── Pharmacy Details (Ctrl+A+P)
+   ├── Database Backup (Ctrl+A+B)
+   ├── Bulk Payment
+   └── Contra Entry (Ctrl+A+C)
+
+
+================================================================================
+QUICK REFERENCE CARD:
+================================================================================
+
+MOST USED SHORTCUTS:
+--------------------
+Ctrl + P + I     → New Purchase Invoice
+Ctrl + S + I     → New Sales Invoice
+Alt + C          → Customers
+Alt + P          → Purchase Challan
+Alt + S          → Sales Challan
+Ctrl + I + A     → All Inventory
+Ctrl + I + 2     → All Inventory 2 (Real-time)
+Alt + L          → Logout
+
+
+TIPS:
+-----
+1. All Alt shortcuts are single or double key combinations
+2. All Ctrl shortcuts follow pattern: Ctrl + Section + Action
+3. Sequence shortcuts have 800-1000ms timeout
+4. Shortcuts work from any page in the application
+5. No need to focus on sidebar - shortcuts work globally
+
+
+================================================================================
+COLOR CODING IN SIDEBAR:
+================================================================================
+
+🟢 Green Tint:
+   - Purchase Payment
+   - Sales Receipt
+   - Database Backup
+
+🟡 Yellow Tint:
+   - Contra Entry
+
+🔴 Red Tint:
+   - Stock Issues
+
+
+================================================================================
+IMPLEMENTATION DETAILS:
+================================================================================
+
+Files:
+------
+- Template: pharmamgmt/templates/sidebar.html
+- CSS: static/css/sidebar.css
+- JS: static/js/sidebar.js
+
+Features:
+---------
+✓ Keyboard shortcuts with Alt and Ctrl modifiers
+✓ Sequential key combinations
+✓ Timeout-based sequence detection
+✓ Event prevention to avoid browser conflicts
+✓ Dynamic submenu toggling
+✓ Responsive design
+✓ User role-based menu items (Admin section)
+✓ Visual feedback on hover
+✓ Gradient background with glassmorphism effect
+
+
+================================================================================

@@ -3329,3 +3329,58 @@ django.db.transaction.TransactionManagementError: An error occurred in the curre
 2026-03-16 11:05:14,488 - core.combined_invoice_view - INFO - PURCHASE CREATED: 1ST AID TRANSPORE TAPE .5"", Batch: 22, Qty: 1.0, Free Qty: 1.0
 2026-03-16 11:05:14,497 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
 2026-03-16 11:05:14,498 - core.combined_invoice_view - INFO - Invoice 1101010 created successfully with 1 products
+2026-03-21 12:52:51,445 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['kINwooH326EABf3vUbZFETGUENDaNrBVaaq7OAjUId7ozFh9ooxaz6kc5InE920w'], 'invoice_no': ['1345645653'], 'invoice_date': ['2026-03-21'], 'supplierid': ['861'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"3377","batch_no":"2345","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-21 12:52:51,479 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"2345","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-21 12:52:51,481 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-21 12:52:51,522 - core.combined_invoice_view - INFO - Invoice created with ID: 135036
+2026-03-21 12:52:51,528 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-21 12:52:51,529 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=2.0, C=3.0
+2026-03-21 12:52:51,530 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-21 12:52:51,749 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-21 12:52:51,750 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 2345, Qty: 1.0, Free Qty: 1.0
+2026-03-21 12:52:51,770 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-03-21 12:52:51,771 - core.combined_invoice_view - INFO - Invoice 1345645653 created successfully with 1 products
+2026-03-21 13:02:42,840 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['PHd8vyo8ZJFw5X9Khfmhd8XifL22aL3FF9QJVK0ZFQ8k3nnoLsUM8lBAGGMwwmsg'], 'invoice_no': ['23455'], 'invoice_date': ['2026-03-21'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"2572","batch_no":"111","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-21 13:02:42,870 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2572","batch_no":"111","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-21 13:02:42,871 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-21 13:02:42,878 - core.combined_invoice_view - INFO - Invoice created with ID: 135037
+2026-03-21 13:02:42,886 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-21 13:02:42,887 - core.combined_invoice_view - INFO - Setting rates for PRICON 10ML 100: A=1.0, B=2.0, C=3.0
+2026-03-21 13:02:42,889 - core.combined_invoice_view - INFO - Product PRICON 10ML 100: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-21 13:02:43,226 - core.combined_invoice_view - INFO - Product PRICON 10ML 100 added to invoice
+2026-03-21 13:02:43,228 - core.combined_invoice_view - INFO - PURCHASE CREATED: PRICON 10ML 100, Batch: 111, Qty: 1.0, Free Qty: 1.0
+2026-03-21 13:02:43,249 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-03-21 13:02:43,251 - core.combined_invoice_view - INFO - Invoice 23455 created successfully with 1 products
+2026-03-21 18:32:27,027 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['yWeYdntgHkWY8UNvJ3qHvPRsgAbuk15BuSvfBjLok8TaQizjSO5BseQvmo6zjcoT'], 'invoice_no': ['25764'], 'invoice_date': ['2026-03-21'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"3377","batch_no":"3444","expiry":"12-2023","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"3","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-21 18:32:27,055 - core.combined_invoice_view - INFO - Products data received: [{"productid":"3377","batch_no":"3444","expiry":"12-2023","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"3","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-21 18:32:27,057 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-21 18:32:27,064 - core.combined_invoice_view - INFO - Invoice created with ID: 135038
+2026-03-21 18:32:27,324 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-21 18:32:27,325 - core.combined_invoice_view - INFO - Setting rates for paracetamol: A=1.0, B=3.0, C=3.0
+2026-03-21 18:32:27,326 - core.combined_invoice_view - INFO - Product paracetamol: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-21 18:32:27,607 - core.combined_invoice_view - INFO - Product paracetamol added to invoice
+2026-03-21 18:32:27,608 - core.combined_invoice_view - INFO - PURCHASE CREATED: paracetamol, Batch: 3444, Qty: 1.0, Free Qty: 1.0
+2026-03-21 18:32:27,623 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-03-21 18:32:27,624 - core.combined_invoice_view - INFO - Invoice 25764 created successfully with 1 products
+2026-03-21 19:13:15,493 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['UBhGo8Ltmmfjfnc0CwsHQZzG4NVx0bp6waG82KIzFswJSX3JKJYdbMa8EwXI2SKz'], 'invoice_no': ['0'], 'invoice_date': ['2026-03-21'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"2755","batch_no":"123","expiry":"12-2033","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-21 19:13:15,518 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2755","batch_no":"123","expiry":"12-2033","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-21 19:13:15,520 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-21 19:13:15,531 - core.combined_invoice_view - INFO - Invoice created with ID: 135039
+2026-03-21 19:13:15,539 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-21 19:13:15,541 - core.combined_invoice_view - INFO - Setting rates for RESTUSS SYP 100ML: A=1.0, B=2.0, C=3.0
+2026-03-21 19:13:15,541 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-21 19:13:15,700 - core.combined_invoice_view - INFO - Product RESTUSS SYP 100ML added to invoice
+2026-03-21 19:13:15,702 - core.combined_invoice_view - INFO - PURCHASE CREATED: RESTUSS SYP 100ML, Batch: 123, Qty: 1.0, Free Qty: 1.0
+2026-03-21 19:13:15,719 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-03-21 19:13:15,720 - core.combined_invoice_view - INFO - Invoice 0 created successfully with 1 products
+2026-03-21 19:39:14,937 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['ZPmIykQINR1wpnhjptny3Zq56nxRnt8QBoLacWNO6XiW2X82xGT4oM1xG6z2patj'], 'invoice_no': ['44'], 'invoice_date': ['2026-03-21'], 'supplierid': ['210'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"4003","batch_no":"2222","expiry":"12-2033","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"0","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-03-21 19:39:14,962 - core.combined_invoice_view - INFO - Products data received: [{"productid":"4003","batch_no":"2222","expiry":"12-2033","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"0","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-03-21 19:39:14,964 - core.combined_invoice_view - INFO - Challan flag: false
+2026-03-21 19:39:14,971 - core.combined_invoice_view - INFO - Invoice created with ID: 135041
+2026-03-21 19:39:14,980 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-03-21 19:39:14,982 - core.combined_invoice_view - INFO - Setting rates for Asdfg: A=1.0, B=2.0, C=3.0
+2026-03-21 19:39:14,983 - core.combined_invoice_view - INFO - Product Asdfg: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-03-21 19:39:15,238 - core.combined_invoice_view - INFO - Product Asdfg added to invoice
+2026-03-21 19:39:15,239 - core.combined_invoice_view - INFO - PURCHASE CREATED: Asdfg, Batch: 2222, Qty: 1.0, Free Qty: 0.0
+2026-03-21 19:39:15,257 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-03-21 19:39:15,258 - core.combined_invoice_view - INFO - Invoice 44 created successfully with 1 products
