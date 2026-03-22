@@ -453,7 +453,7 @@ body.select2-open {
         <div class="pull-challan-dialog-footer">
             <div class="selected-summary">
                 <span id="selectedChallanCount">0 challans selected</span>
-                <span id="selectedChallanTotal">Total: â‚¹0.00</span>
+                <span id="selectedChallanTotal">Total: ₹0.00</span>
             </div>
             <div class="dialog-buttons">
                 <button type="button" class="pull-challan-btn-secondary" onclick="closePullChallanDialog()">Cancel</button>
@@ -1986,7 +1986,7 @@ function createBatchSelectionModal(batches, rowIndex, productId) {
                                     <div class="batch-details">
                                         <span>Exp: ${batch.expiry}</span>
                                         <span class="${batch.stock <= 10 ? 'text-danger' : 'text-success'}">Stock: ${batch.stock}</span>
-                                        <span>MRP: â‚¹${batch.mrp}</span>
+                                        <span>MRP: ₹${batch.mrp}</span>
                                     </div>
                                 </div>
 
@@ -2618,7 +2618,7 @@ function displayChallans(challans) {
             </td>
             <td>${challan.challan_no}</td>
             <td>${new Date(challan.challan_date).toLocaleDateString('en-GB')}</td>
-            <td>â‚¹${parseFloat(challan.challan_total).toFixed(2)}</td>
+            <td>₹${parseFloat(challan.challan_total).toFixed(2)}</td>
             <td><span class="challan-status ${statusClass}">${statusText}</span></td>
         `;
         
@@ -2678,7 +2678,7 @@ function updateSelectedChallanSummary() {
     });
     
     document.getElementById('selectedChallanCount').textContent = `${count} challan${count !== 1 ? 's' : ''} selected`;
-    document.getElementById('selectedChallanTotal').textContent = `Total: â‚¹${total.toFixed(2)}`;
+    document.getElementById('selectedChallanTotal').textContent = `Total: ₹${total.toFixed(2)}`;
     
     // Enable/disable pull button
     const pullBtn = document.getElementById('pullSelectedBtn');

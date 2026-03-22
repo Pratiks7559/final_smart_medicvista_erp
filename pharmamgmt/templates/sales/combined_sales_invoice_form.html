@@ -3121,7 +3121,16 @@ function pullSelectedChallans() {
 }
 
 function fillChallanProducts(products) {
-    // Add all products first
+    // Clear existing rows first to avoid duplicates
+    const tbody = document.getElementById('productRows');
+    if (tbody) {
+        tbody.innerHTML = '';
+    }
+    
+    // Reset row index
+    productRowIndex = 0;
+    
+    // Add all products
     products.forEach(product => {
         addProductRow();
         const rows = document.querySelectorAll('#productRows tr');
