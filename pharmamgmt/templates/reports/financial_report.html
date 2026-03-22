@@ -1,0 +1,364 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Financial Report - Profit Analysis{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/financial_report.css' %}">
+<style>
+@media print {
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; }
+    body * { visibility: hidden; }
+    .fin-container, .fin-container * { visibility: visible; }
+    .fin-container { position: absolute; left: 0; top: 0; width: 100%; }
+    .fin-filter-section, .fin-export-buttons, .fin-pagination, .fin-pagination-bottom,
+    .sidebar-container, .navbar, button, .no-print { display: none !important; }
+    .fin-header { background: linear-gradient(135deg, #1a237e, #283593) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; color: white !important; padding: 12px 15px !important; margin-bottom: 10px !important; }
+    .fin-title { font-size: 18px !important; margin: 0 !important; color: white !important; text-align: center !important; }
+    .fin-summary-cards { display: grid !important; grid-template-columns: repeat(6, 1fr) !important; gap: 6px !important; margin-bottom: 10px !important; page-break-inside: avoid; }
+    .fin-summary-card { border: 1px solid #e5e7eb !important; border-radius: 4px !important; padding: 6px 8px !important; background: white !important; }
+    .fin-summary-label { font-size: 8px !important; font-weight: 600 !important; color: #6b7280 !important; }
+    .fin-summary-value { font-size: 12px !important; font-weight: bold !important; color: #111827 !important; }
+    .fin-table { width: 100% !important; border-collapse: collapse !important; font-size: 7px !important; }
+    .fin-table thead { background: #1a237e !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .fin-table th { padding: 4px 2px !important; font-size: 8px !important; border: 1px solid #1a237e !important; }
+    .fin-table td { padding: 3px 2px !important; font-size: 7px !important; border: 1px solid #e5e7eb !important; }
+    .fin-table tbody tr:nth-child(even) { background: #f9fafb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .fin-type-badge { padding: 2px 4px !important; border-radius: 2px !important; font-size: 7px !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .fin-profit-positive { color: #10b981 !important; }
+    .fin-profit-negative { color: #ef4444 !important; }
+    @page { margin: 0.3in 0.25in; size: A4 landscape; }
+    .print-footer { margin-top: 10px !important; text-align: center !important; font-size: 8px !important; color: #6b7280 !important; padding: 6px !important; border-top: 1px solid #e5e7eb !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="fin-container">
+    <div class="fin-card">
+        <div class="fin-header">
+            <h1 class="fin-title">
+                <i class="fas fa-chart-line"></i> Financial Report - Profit Analysis
+            </h1>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="fin-filter-section">
+            <form method="GET" action="{% url 'financial_report' %}">
+                <div class="fin-filter-row">
+                    <div class="fin-filter-group">
+                        <label for="start_date" class="fin-filter-label">
+                            <i class="fas fa-calendar-alt"></i> Start Date
+                        </label>
+                        <input type="date" id="start_date" name="start_date" value="{{ start_date|default:'' }}" class="fin-filter-input">
+                    </div>
+                    <div class="fin-filter-group">
+                        <label for="end_date" class="fin-filter-label">
+                            <i class="fas fa-calendar-alt"></i> End Date
+                        </label>
+                        <input type="date" id="end_date" name="end_date" value="{{ end_date|default:'' }}" class="fin-filter-input">
+                    </div>
+                    <div class="fin-filter-group">
+                        <label for="product_search" class="fin-filter-label">
+                            <i class="fas fa-pills"></i> Product
+                        </label>
+                        <input type="text" id="product_search" name="product_search" placeholder="Search product..." value="{{ product_search }}" autocomplete="off" class="fin-filter-input">
+                        <input type="hidden" id="product_id" name="product_id" value="{{ selected_product }}">
+                        <div id="product_suggestions" class="fin-suggestions"></div>
+                    </div>
+                    <div class="fin-filter-group">
+                        <button type="submit" class="fin-btn-filter">
+                            <i class="fas fa-filter"></i> Apply Filter
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="fin-summary-cards">
+            <div class="fin-summary-card">
+                <div class="fin-summary-label">Total Sales Value</div>
+                <div class="fin-summary-value">₹{{ summary.total_sales_value|floatformat:2 }}</div>
+            </div>
+            <div class="fin-summary-card warning">
+                <div class="fin-summary-label">Total Purchase Cost</div>
+                <div class="fin-summary-value">₹{{ summary.total_purchase_cost|floatformat:2 }}</div>
+            </div>
+            <div class="fin-summary-card info">
+                <div class="fin-summary-label">Total GST</div>
+                <div class="fin-summary-value">₹{{ summary.total_gst|floatformat:2 }}</div>
+            </div>
+            <div class="fin-summary-card success">
+                <div class="fin-summary-label">Total Profit</div>
+                <div class="fin-summary-value">₹{{ summary.total_profit|floatformat:2 }}</div>
+            </div>
+            <div class="fin-summary-card">
+                <div class="fin-summary-label">Profit Margin</div>
+                <div class="fin-summary-value">{{ summary.profit_percentage|floatformat:2 }}%</div>
+            </div>
+            <div class="fin-summary-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                <div class="fin-summary-label">Stock Valuation</div>
+                <div class="fin-summary-value">₹{{ summary.stock_valuation|floatformat:2 }}</div>
+            </div>
+            <div class="fin-summary-card info">
+                <div class="fin-summary-label">Total Transactions</div>
+                <div class="fin-summary-value">{{ summary.total_transactions }}</div>
+            </div>
+        </div>
+
+        <!-- Export Buttons -->
+        <div class="fin-export-buttons">
+            <!-- Print button hidden as per requirement -->
+            <!-- <button onclick="printReport()" class="fin-btn-export" style="background: #2e7d32; border-color: #2e7d32; display:none;">
+                <i class="fas fa-print"></i> Print
+            </button> -->
+            <button onclick="exportPDF()" class="fin-btn-export fin-btn-pdf">
+                <i class="fas fa-file-pdf"></i> Export PDF
+            </button>
+            <a href="{% url 'export_financial_excel' %}?{{ request.GET.urlencode }}" class="fin-btn-export fin-btn-excel">
+                <i class="fas fa-file-excel"></i> Export Excel
+            </a>
+        </div>
+
+        <!-- Data Table -->
+        <div class="fin-table-container">
+            {% if financial_data %}    
+            <!-- Pagination Top -->
+            {% if financial_data.has_other_pages %}
+            <div class="fin-pagination">
+                <div class="fin-pagination-info">
+                    Page {{ financial_data.number }} of {{ financial_data.paginator.num_pages }} ({{ financial_data.paginator.count }} total records)
+                </div>
+                <div class="fin-pagination-controls">
+                    {% if financial_data.has_previous %}
+                    <a href="?page=1&start_date={{ start_date }}&end_date={{ end_date }}&product_id={{ selected_product }}&product_search={{ product_search }}" class="fin-pagination-btn">First</a>
+                    <a href="?page={{ financial_data.previous_page_number }}&start_date={{ start_date }}&end_date={{ end_date }}&product_id={{ selected_product }}&product_search={{ product_search }}" class="fin-pagination-btn">Previous</a>
+                    {% endif %}
+                    <span class="fin-pagination-current">{{ financial_data.number }}</span>
+                    {% if financial_data.has_next %}
+                    <a href="?page={{ financial_data.next_page_number }}&start_date={{ start_date }}&end_date={{ end_date }}&product_id={{ selected_product }}&product_search={{ product_search }}" class="fin-pagination-btn">Next</a>
+                    <a href="?page={{ financial_data.paginator.num_pages }}&start_date={{ start_date }}&end_date={{ end_date }}&product_id={{ selected_product }}&product_search={{ product_search }}" class="fin-pagination-btn">Last</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <table class="fin-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Invoice</th>
+                        <th>Party</th>
+                        <th>Product</th>
+                        <th>Batch</th>
+                        <th class="fin-text-center">Qty</th>
+                        <th class="fin-text-right">MRP</th>
+                        <th class="fin-text-right">Purchase Rate</th>
+                        <th class="fin-text-right">Sale Rate</th>
+                        <th class="fin-text-right">GST</th>
+                        <th class="fin-text-right">Purchase Cost</th>
+                        <th class="fin-text-right">Sales Value</th>
+                        <th class="fin-text-right">Profit</th>
+                        <th class="fin-text-right">Profit %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in financial_data %}
+                    <tr>
+                        <td>{{ item.date|date:"d-m-Y" }}</td>
+                        <td>
+                            <span class="fin-type-badge {% if item.type == 'Sale' %}fin-type-sale{% elif item.type == 'Customer Challan' %}fin-type-customer{% else %}fin-type-supplier{% endif %}">
+                                {{ item.type }}
+                            </span>
+                        </td>
+                        <td>{{ item.invoice_no }}</td>
+                        <td>{{ item.customer }}</td>
+                        <td>
+                            <div class="fin-product-name">{{ item.product_name }}</div>
+                            <div class="fin-product-company">{{ item.company }}</div>
+                        </td>
+                        <td>{{ item.batch_no }}</td>
+                        <td class="fin-text-center">{{ item.quantity|floatformat:0 }}</td>
+                        <td class="fin-text-right">₹{{ item.mrp|floatformat:2 }}</td>
+                        <td class="fin-text-right">₹{{ item.purchase_rate|floatformat:2 }}</td>
+                        <td class="fin-text-right">₹{{ item.sale_rate|floatformat:2 }}</td>
+                        <td class="fin-text-right">₹{{ item.gst_amount|floatformat:2 }}</td>
+                        <td class="fin-text-right">₹{{ item.purchase_cost|floatformat:2 }}</td>
+                        <td class="fin-text-right">₹{{ item.sales_value|floatformat:2 }}</td>
+                        <td class="fin-text-right {% if item.profit >= 0 %}fin-profit-positive{% else %}fin-profit-negative{% endif %}">
+                            ₹{{ item.profit|floatformat:2 }}
+                        </td>
+                        <td class="fin-text-right {% if item.profit_percentage >= 0 %}fin-profit-positive{% else %}fin-profit-negative{% endif %}">
+                            {{ item.profit_percentage|floatformat:1 }}%
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <!-- Pagination Bottom -->
+            {% if financial_data.has_other_pages %}
+            <div class="fin-pagination-bottom">
+                <div class="fin-pagination-controls">
+                    {% if financial_data.has_previous %}
+                    <a href="?page=1&start_date={{ start_date }}&end_date={{ end_date }}&product_id={{ selected_product }}&product_search={{ product_search }}" class="fin-pagination-btn">First</a>
+                    <a href="?page={{ financial_data.previous_page_number }}&start_date={{ start_date }}&end_date={{ end_date }}&product_id={{ selected_product }}&product_search={{ product_search }}" class="fin-pagination-btn">Previous</a>
+                    {% endif %}
+                    <span class="fin-pagination-current">Page {{ financial_data.number }} of {{ financial_data.paginator.num_pages }}</span>
+                    {% if financial_data.has_next %}
+                    <a href="?page={{ financial_data.next_page_number }}&start_date={{ start_date }}&end_date={{ end_date }}&product_id={{ selected_product }}&product_search={{ product_search }}" class="fin-pagination-btn">Next</a>
+                    <a href="?page={{ financial_data.paginator.num_pages }}&start_date={{ start_date }}&end_date={{ end_date }}&product_id={{ selected_product }}&product_search={{ product_search }}" class="fin-pagination-btn">Last</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="fin-no-data">
+                <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 15px; opacity: 0.3;"></i>
+                <p>No financial data found for the selected filters.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function printReport() {
+        const printInfo = document.createElement('div');
+        printInfo.className = 'print-footer';
+        printInfo.innerHTML = `<strong>Report Generated:</strong> ${new Date().toLocaleString('en-IN')} | <strong>Period:</strong> {{ start_date }} to {{ end_date }} | <strong>System:</strong> Pharma Financial Management`;
+        document.querySelector('.fin-container').appendChild(printInfo);
+        setTimeout(() => {
+            window.print();
+            setTimeout(() => printInfo.remove(), 500);
+        }, 100);
+    }
+    
+    function exportPDF() {
+        const url = "{% url 'export_financial_pdf' %}?{{ request.GET.urlencode }}";
+        window.open(url, '_blank');
+    }
+    
+    window.addEventListener('DOMContentLoaded', function() {
+        const startDate = document.getElementById('start_date');
+        const endDate = document.getElementById('end_date');
+        
+        if (!startDate.value) {
+            const firstDay = new Date();
+            firstDay.setDate(1);
+            startDate.value = firstDay.toISOString().split('T')[0];
+        }
+        
+        if (!endDate.value) {
+            const today = new Date();
+            endDate.value = today.toISOString().split('T')[0];
+        }
+    });
+
+    // Product search with suggestions and keyboard navigation
+    const productSearch = document.getElementById('product_search');
+    const productId = document.getElementById('product_id');
+    const suggestions = document.getElementById('product_suggestions');
+    let debounceTimer;
+    let selectedIndex = -1;
+
+    productSearch.addEventListener('input', function() {
+        clearTimeout(debounceTimer);
+        const query = this.value.trim();
+        selectedIndex = -1;
+        
+        if (query.length < 1) {
+            suggestions.style.display = 'none';
+            productId.value = '';
+            return;
+        }
+        
+        debounceTimer = setTimeout(() => {
+            fetch(`/api/product-search-suggestions/?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.suggestions && data.suggestions.length > 0) {
+                        suggestions.innerHTML = data.suggestions.map((p, index) => 
+                            `<div class="fin-suggestion-item" data-id="${p.productid}" data-name="${p.product_name}" data-index="${index}">
+                                <strong>${p.product_name}</strong><br>
+                                <small style="color: #666;">${p.product_company} - ${p.product_packing}</small>
+                            </div>`
+                        ).join('');
+                        suggestions.style.display = 'block';
+                        
+                        document.querySelectorAll('.fin-suggestion-item').forEach(item => {
+                            item.addEventListener('click', function() {
+                                selectProduct(this);
+                            });
+                        });
+                    } else {
+                        suggestions.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    suggestions.style.display = 'none';
+                });
+        }, 150);
+    });
+
+    // Keyboard navigation
+    productSearch.addEventListener('keydown', function(e) {
+        const items = suggestions.querySelectorAll('.fin-suggestion-item');
+        
+        if (items.length === 0) return;
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedIndex = (selectedIndex + 1) % items.length;
+            updateSelection(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedIndex = selectedIndex <= 0 ? items.length - 1 : selectedIndex - 1;
+            updateSelection(items);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selectedIndex >= 0 && items[selectedIndex]) {
+                selectProduct(items[selectedIndex]);
+            }
+        } else if (e.key === 'Escape') {
+            suggestions.style.display = 'none';
+            selectedIndex = -1;
+        }
+    });
+
+    function updateSelection(items) {
+        items.forEach((item, index) => {
+            if (index === selectedIndex) {
+                item.style.background = '#667eea';
+                item.style.color = '#ffffff';
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.style.background = '';
+                item.style.color = '';
+            }
+        });
+    }
+
+    function selectProduct(item) {
+        const id = item.dataset.id;
+        const name = item.dataset.name;
+        productSearch.value = name;
+        productId.value = id;
+        suggestions.style.display = 'none';
+        selectedIndex = -1;
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!productSearch.contains(e.target) && !suggestions.contains(e.target)) {
+            suggestions.style.display = 'none';
+            selectedIndex = -1;
+        }
+    });
+</script>
+{% endblock %}

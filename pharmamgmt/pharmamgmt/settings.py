@@ -77,26 +77,22 @@ WSGI_APPLICATION = 'pharmamgmt.wsgi.application'
 
 import os
 
-# PostgreSQL Configuration - Primary Database
+# MySQL Configuration - Primary Database
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django.db.backends.mysql',
         'NAME': 'pharma_db',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
+        'USER': 'root',
+        'PASSWORD': 'Pratik@123',
         'HOST': 'localhost',
-        'PORT': '5432',
+        'PORT': '3306',
         'CONN_MAX_AGE': 600,
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
     }
 }
-
-# SQLite disabled - all data goes to PostgreSQL only
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
 
 # Custom user model
 AUTH_USER_MODEL = 'core.Web_User'

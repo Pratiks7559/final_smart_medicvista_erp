@@ -57,13 +57,13 @@
                     </option>
                     {% endfor %}
                 </select>
-                <button onclick="exportPDF()" class="ledger-btn ledger-btn-pdf" id="exportPdfBtn" data-url="{% url 'export_customer_ledger_pdf' customer.customerid %}{% if request.GET.start_date %}?start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}{% endif %}">
+                <button onclick="exportPDF()" class="ledger-btn ledger-btn-pdf" id="exportPdfBtn" data-url="{% url 'export_customer_ledger_pdf' customer.customerid %}?start_date={{ start_date }}&end_date={{ end_date }}">
                     <i class="fas fa-file-pdf"></i> PDF <span class="shortcut-badge">Ctrl+Q</span>
                 </button>
-                <a href="{% url 'export_customer_ledger_excel' customer.customerid %}{% if request.GET.start_date %}?start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}{% endif %}" class="ledger-btn ledger-btn-excel" id="exportExcelBtn">
+                <a href="{% url 'export_customer_ledger_excel' customer.customerid %}?start_date={{ start_date }}&end_date={{ end_date }}" class="ledger-btn ledger-btn-excel" id="exportExcelBtn">
                     <i class="fas fa-file-excel"></i> Excel <span class="shortcut-badge">Ctrl+E</span>
                 </a>
-                <a href="{% url 'customer_ledger_print' customer.customerid %}{% if request.GET.start_date %}?start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}{% endif %}" target="_blank" class="ledger-btn ledger-btn-print">
+                <a href="{% url 'customer_ledger_print' customer.customerid %}?start_date={{ start_date }}&end_date={{ end_date }}" target="_blank" class="ledger-btn ledger-btn-print">
                     <i class="fas fa-print"></i> Print
                 </a>
                 <a href="{% url 'customer_ledger' %}" class="ledger-btn ledger-btn-back">

@@ -115,19 +115,14 @@ def add_unified_payment(request):
                         invoice_total = Decimal(str(invoice.invoice_total)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                         invoice_paid = Decimal(str(invoice.invoice_paid)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                         balance = invoice_total - invoice_paid
+                        balance_rounded = Decimal(str(round(float(balance))))
                         
-                        print(f"Invoice balance: Rs.{balance}")
+                        print(f"Invoice balance: Rs.{balance} (rounded: Rs.{balance_rounded})")
                         
-                        # Handle small balance scenarios (≤ 10 paisa)
-                        if balance <= Decimal('0.10') and balance > 0:
-                            if payment_amount >= balance:
-                                # Auto-adjust payment to exact balance for small amounts
-                                payment_amount = balance
-                                print(f"Auto-adjusted payment to exact balance: Rs.{payment_amount}")
-                                messages.info(request, f'Payment adjusted to exact balance of Rs.{balance}')
-                        elif payment_amount > balance:
-                            print(f"Payment amount Rs.{payment_amount} exceeds balance Rs.{balance}")
-                            messages.error(request, f'Payment amount cannot exceed balance of Rs.{balance}')
+                        # Check against rounded balance (user pays round off amount)
+                        if payment_amount > balance_rounded:
+                            print(f"Payment amount Rs.{payment_amount} exceeds rounded balance Rs.{balance_rounded}")
+                            messages.error(request, f'Payment amount cannot exceed balance of Rs.{balance_rounded}')
                             return redirect('add_unified_payment')
                         
                         # Create payment record
@@ -145,9 +140,10 @@ def add_unified_payment(request):
                         old_paid = invoice.invoice_paid
                         invoice.invoice_paid = float(invoice_paid + payment_amount)
                         
-                        # Update payment status
+                        # Update payment status — compare rounded values
                         new_balance = invoice_total - Decimal(str(invoice.invoice_paid))
-                        if new_balance <= Decimal('0.01'):
+                        new_balance_rounded = Decimal(str(round(float(new_balance))))
+                        if new_balance_rounded <= Decimal('0'):
                             invoice.payment_status = 'paid'
                             print(f"Invoice marked as fully paid")
                         elif invoice.invoice_paid > 0:
@@ -159,10 +155,10 @@ def add_unified_payment(request):
                         invoice.save()
                         print(f"Invoice updated: Rs.{old_paid} -> Rs.{invoice.invoice_paid}, New balance: Rs.{new_balance}")
                         
-                        if new_balance <= Decimal('0.01'):
+                        if new_balance_rounded <= Decimal('0'):
                             messages.success(request, f'Payment of Rs.{payment_amount} added successfully! Invoice is now fully paid.')
                         else:
-                            messages.success(request, f'Payment of Rs.{payment_amount} added successfully! Remaining balance: Rs.{new_balance}')
+                            messages.success(request, f'Payment of Rs.{payment_amount} added successfully! Remaining balance: Rs.{new_balance_rounded}')
                         
                     except InvoiceMaster.DoesNotExist:
                         print(f"Invoice not found with invoice_no: '{invoice_no}'")
@@ -187,19 +183,14 @@ def add_unified_payment(request):
                         invoice_total = Decimal(str(invoice.sales_invoice_total)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                         invoice_paid = Decimal(str(invoice.sales_invoice_paid)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                         balance = invoice_total - invoice_paid
+                        balance_rounded = Decimal(str(round(float(balance))))
                         
-                        print(f"Sales invoice balance: Rs.{balance}")
+                        print(f"Sales invoice balance: Rs.{balance} (rounded: Rs.{balance_rounded})")
                         
-                        # Handle small balance scenarios (≤ 10 paisa)
-                        if balance <= Decimal('0.10') and balance > 0:
-                            if payment_amount >= balance:
-                                # Auto-adjust payment to exact balance for small amounts
-                                payment_amount = balance
-                                print(f"Auto-adjusted receipt to exact balance: Rs.{payment_amount}")
-                                messages.info(request, f'Receipt adjusted to exact balance of Rs.{balance}')
-                        elif payment_amount > balance:
-                            print(f"Receipt amount Rs.{payment_amount} exceeds balance Rs.{balance}")
-                            messages.error(request, f'Receipt amount cannot exceed balance of Rs.{balance}')
+                        # Check against rounded balance (user pays round off amount)
+                        if payment_amount > balance_rounded:
+                            print(f"Receipt amount Rs.{payment_amount} exceeds rounded balance Rs.{balance_rounded}")
+                            messages.error(request, f'Receipt amount cannot exceed balance of Rs.{balance_rounded}')
                             return redirect('add_unified_payment')
                         
                         # Create receipt record
@@ -216,15 +207,25 @@ def add_unified_payment(request):
                         # Update invoice paid amount
                         old_paid = invoice.sales_invoice_paid
                         invoice.sales_invoice_paid = float(invoice_paid + payment_amount)
-                        invoice.save()
                         
+                        # Update payment status — compare rounded values
                         new_balance = invoice_total - Decimal(str(invoice.sales_invoice_paid))
+                        new_balance_rounded = Decimal(str(round(float(new_balance))))
+                        if new_balance_rounded <= Decimal('0'):
+                            invoice.payment_status = 'paid'
+                            print(f"Sales invoice marked as fully paid")
+                        elif invoice.sales_invoice_paid > 0:
+                            invoice.payment_status = 'partial'
+                        else:
+                            invoice.payment_status = 'pending'
+                        
+                        invoice.save()
                         print(f"Sales invoice updated: Rs.{old_paid} -> Rs.{invoice.sales_invoice_paid}, New balance: Rs.{new_balance}")
                         
-                        if new_balance <= Decimal('0.01'):
+                        if new_balance_rounded <= Decimal('0'):
                             messages.success(request, f'Receipt of Rs.{payment_amount} added successfully! Invoice is now fully paid.')
                         else:
-                            messages.success(request, f'Receipt of Rs.{payment_amount} added successfully! Remaining balance: Rs.{new_balance}')
+                            messages.success(request, f'Receipt of Rs.{payment_amount} added successfully! Remaining balance: Rs.{new_balance_rounded}')
                         
                     except SalesInvoiceMaster.DoesNotExist:
                         print(f"Sales invoice not found with sales_invoice_no: '{invoice_no}'")
@@ -279,15 +280,16 @@ def search_supplier_invoices(request):
     results = []
     for invoice in invoices:
         balance = invoice.invoice_total - invoice.invoice_paid
-        if balance > 0:
+        balance_rounded = round(float(balance))
+        if balance_rounded > 0:
             results.append({
                 'supplier_id': invoice.supplierid.supplierid,
                 'supplier_name': invoice.supplierid.supplier_name,
                 'invoice_no': invoice.invoice_no,
                 'invoice_date': invoice.invoice_date.strftime('%d-%m-%Y'),
-                'total_amount': float(invoice.invoice_total),
-                'paid_amount': float(invoice.invoice_paid),
-                'balance_amount': float(balance)
+                'total_amount': round(float(invoice.invoice_total)),
+                'paid_amount': round(float(invoice.invoice_paid)),
+                'balance_amount': balance_rounded
             })
     
     return JsonResponse(results, safe=False)
@@ -310,15 +312,16 @@ def search_customer_invoices(request):
     results = []
     for invoice in invoices:
         balance = invoice.sales_invoice_total - invoice.sales_invoice_paid
-        if balance > 0:
+        balance_rounded = round(float(balance))
+        if balance_rounded > 0:
             results.append({
                 'customer_id': invoice.customerid.customerid,
                 'customer_name': invoice.customerid.customer_name,
                 'invoice_no': invoice.sales_invoice_no,
                 'invoice_date': invoice.sales_invoice_date.strftime('%d-%m-%Y'),
-                'total_amount': float(invoice.sales_invoice_total),
-                'paid_amount': float(invoice.sales_invoice_paid),
-                'balance_amount': float(balance)
+                'total_amount': round(float(invoice.sales_invoice_total)),
+                'paid_amount': round(float(invoice.sales_invoice_paid)),
+                'balance_amount': balance_rounded
             })
     
     return JsonResponse(results, safe=False)

@@ -660,7 +660,7 @@ input:focus, select:focus, textarea:focus {
                 <div class="form-group">
                     <label class="form-label" for="paymentAmount">Amount *</label>
                     <input type="number" id="paymentAmount" name="payment_amount" class="form-control" 
-                           step="0.01" min="0.01" placeholder="0.00" required>
+                           step="1" min="1" placeholder="0" required>
                 </div>
             </div>
             
@@ -976,8 +976,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         Invoice: ${result.invoice_no} | Date: ${result.invoice_date}
                     </div>
                     <div style="font-size: 0.75rem; color: var(--success-color); font-weight: 600;">
-                        Balance: Rs.<span class="rounded-balance">${Math.round(result.balance_amount)}</span>
-                        <small style="font-size: 0.65rem; color: #666;">(${result.balance_amount.toFixed(2)})</small>
+                        Balance: Rs.${Math.round(result.balance_amount)}
                     </div>
                 `;
                 
@@ -1019,9 +1018,11 @@ document.addEventListener('DOMContentLoaded', function() {
             invoiceNoField.value = invoice.invoice_no;
             console.log('Set invoice field value to:', invoice.invoice_no);
         }
+        const roundedBalance = Math.round(invoice.balance_amount);
         if (amountField) {
-            amountField.value = invoice.balance_amount.toFixed(2);
-            console.log('Set amount field value to:', invoice.balance_amount.toFixed(2));
+            amountField.value = roundedBalance;
+            amountField.max = roundedBalance;
+            console.log('Set amount field value to (rounded):', roundedBalance);
         }
         
         // Show selected invoice info
@@ -1032,9 +1033,9 @@ document.addEventListener('DOMContentLoaded', function() {
             invoiceDetails.innerHTML = `
                 <p><strong>${entityLabel}:</strong> ${entityName}</p>
                 <p><strong>Invoice:</strong> ${invoice.invoice_no} (${invoice.invoice_date})</p>
-                <p><strong>Total:</strong> Rs.<span class="rounded-amount">${Math.round(invoice.total_amount)}</span> <small style="font-size: 0.75rem; color: #666;">(${invoice.total_amount.toFixed(2)})</small></p>
-                <p><strong>Paid:</strong> Rs.<span class="rounded-amount">${Math.round(invoice.paid_amount)}</span> <small style="font-size: 0.75rem; color: #666;">(${invoice.paid_amount.toFixed(2)})</small></p>
-                <p><strong>Balance:</strong> <span style="color: var(--success-color); font-weight: 600;">Rs.<span class="rounded-amount">${Math.round(invoice.balance_amount)}</span></span> <small style="font-size: 0.75rem; color: #666;">(${invoice.balance_amount.toFixed(2)})</small></p>
+                <p><strong>Total:</strong> Rs.${invoice.total_amount}</p>
+                <p><strong>Paid:</strong> Rs.${invoice.paid_amount}</p>
+                <p><strong>Balance:</strong> <span style="color: var(--success-color); font-weight: 600;">Rs.${roundedBalance}</span></p>
             `;
         }
         
@@ -1051,12 +1052,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (dateField) dateField.focus();
         }, 100);
         
-        // Validate amount doesn't exceed balance
+        // Validate amount doesn't exceed rounded balance
         if (amountField) {
             amountField.addEventListener('input', function() {
-                const amount = parseFloat(this.value) || 0;
-                if (amount > invoice.balance_amount) {
-                    this.value = invoice.balance_amount.toFixed(2);
+                const amount = parseInt(this.value) || 0;
+                if (amount > roundedBalance) {
+                    this.value = roundedBalance;
                 }
             });
         }

@@ -1,72 +1,287 @@
-============================================================
-PHARMA MANAGEMENT SYSTEM - PERFORMANCE TEST REPORT
-============================================================
-Test Date: 2025-12-19 19:37:17
+MySQL 8.0.45 is installed. Now let me check if it's running and install the required Python driver, then convert the project.
 
-1. PAGE LOAD PERFORMANCE
-------------------------------------------------------------
-⚠ Dashboard                : 20.822s (expected: <1.0s)
-✓ Products List            : 0.027s (expected: <2.0s)
-✓ Suppliers List           : 0.013s (expected: <1.5s)
-✓ Customers List           : 0.012s (expected: <1.5s)
-✓ Purchase Invoices        : 0.112s (expected: <2.0s)
-✓ Sales Invoices           : 0.205s (expected: <2.0s)
-✓ Purchase Returns         : 0.013s (expected: <2.0s)
-✓ Sales Returns            : 0.013s (expected: <2.0s)
-✓ Supplier Challans        : 0.015s (expected: <2.0s)
-✓ Customer Challans        : 0.014s (expected: <2.0s)
-✓ Inventory                : 0.686s (expected: <2.5s)
-✓ Contra Entries           : 0.017s (expected: <1.5s)
+Check if MySQL is running and test root password
 
-Summary: 11 passed, 1 slow, 0 failed
+shell
 
-2. DATABASE QUERY PERFORMANCE
-------------------------------------------------------------
-✓ Products            : 2.55ms (1 queries)
-✓ Suppliers           : 1.10ms (1 queries)
-✓ Customers           : 1.37ms (1 queries)
-✓ Purchases           : 5.12ms (1 queries)
-✓ Sales               : 4.62ms (1 queries)
+Completed
+cmd /c ""C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqladmin.exe" -u root -proot status 2>&1"
+mysqladmin: [Warning] Using a password on the command line interface can be insecure.
+mysqladmin: connect to server at 'localhost' failed
+error: 'Access denied for user 'root'@'localhost' (using password: YES)'
+Try with empty password
 
-Summary: 5/5 fast queries
+shell
 
-3. DATA SCALABILITY
-------------------------------------------------------------
-Products                 : 3,369
-Suppliers                : 1
-Customers                : 1
-Purchase Invoices        : 12,779
-Purchases                : 14,970
-Sales Invoices           : 12,914
-Sales                    : 15,113
-Purchase Returns         : 0
-Sales Returns            : 0
-Supplier Challans        : 0
-Customer Challans        : 0
-Contra Entries           : 0
-------------------------------------------------------------
-TOTAL RECORDS            : 59,147
+Ignored
+cmd /c ""C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqladmin.exe" -u root -p"" status 2>&1" passoword-Pratik@123
 
-4. CONCURRENT LOAD TEST
-------------------------------------------------------------
-Concurrent Users: 200
-Successful: 0
-Average Time: 0.00s
 
-5. OVERALL ASSESSMENT
-------------------------------------------------------------
-Page Load Score: 91.7%
-Query Performance Score: 100.0%
-Reliability Score: 0.0%
+Context
+Test MySQL connection with provided password
 
-OVERALL SCORE: 63.9%
-STATUS: ⚠ FAIR - Optimization recommended
+shell
 
-6. RECOMMENDATIONS
-------------------------------------------------------------
-- Optimize 1 slow pages
-- Improve concurrent user handling
-- Consider caching implementation
-- Review database query optimization
+Completed
+cmd /c ""C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqladmin.exe" -u root -pPratik@123 status 2>&1"
+mysqladmin: [Warning] Using a password on the command line interface can be insecure.
+Uptime: 220956  Threads: 7  Questions: 12656  Slow queries: 0  Opens: 1129  Flush tables: 3  Open tables: 504  Queries per second avg: 0.057
+MySQL is running. Now let me create the database and install the MySQL Python driver.
 
-============================================================
+Create pharma_db database in MySQL
+
+shell
+
+Completed
+cmd /c ""C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -u root -pPratik@123 -e "CREATE DATABASE IF NOT EXISTS pharma_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>&1"
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Install MySQL Python driver
+
+shell
+
+Completed
+pip install mysqlclient 2>&1
+Requirement already satisfied: mysqlclient in C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages (2.2.8)
+Both done. Now update settings.py to switch from PostgreSQL to MySQL.
+
+Switch database config from PostgreSQL to MySQL
+
+settings.py
++9
+-13
+
+Undo
+Now run migrations to create all tables in MySQL.
+
+Run Django migrations to create all tables in MySQL
+
+shell
+
+Completed
+python manage.py migrate 2>&1
+System check identified some issues:
+
+WARNINGS:
+?: (staticfiles.W004) The directory 'C:\med final\smart-medicvista-erp\pharmamgmt\core\static' in the STATICFILES_DIRS setting does not exist.
+Operations to perform:
+  Apply all migrations: admin, auth, contenttypes, core, sessions
+Running migrations:
+  Applying contenttypes.0001_initial...
+ OK
+  Applying contenttypes.0002_remove_content_type_name...
+ OK
+  Applying auth.0001_initial...
+ OK
+  Applying auth.0002_alter_permission_name_max_length...
+ OK
+  Applying auth.0003_alter_user_email_max_length...
+ OK
+  Applying auth.0004_alter_user_username_opts...
+ OK
+  Applying auth.0005_alter_user_last_login_null...
+ OK
+  Applying auth.0006_require_contenttypes_0002...
+ OK
+  Applying auth.0007_alter_validators_add_error_messages...
+ OK
+  Applying auth.0008_alter_user_username_max_length...
+ OK
+  Applying auth.0009_alter_user_last_name_max_length...
+ OK
+  Applying auth.0010_alter_group_name_max_length...
+ OK
+  Applying auth.0011_update_proxy_permissions...
+ OK
+  Applying auth.0012_alter_user_first_name_max_length...
+ OK
+  Applying core.0001_initial...
+ OK
+  Applying admin.0001_initial...
+ OK
+  Applying admin.0002_logentry_remove_auto_add...
+ OK
+  Applying admin.0003_logentry_add_action_flag_choices...
+ OK
+  Applying core.0002_remove_salesinvoicemaster_sales_invoice_total_and_more...
+ OK
+  Applying core.0003_saleratemaster...
+ OK
+  Applying core.0004_returnpurchasemaster_return_reason_and_more...
+ OK
+  Applying core.0005_remove_productmaster_rate_a_and_more... OK
+  Applying core.0006_productmaster_product_barcode... OK
+  Applying core.0007_alter_purchasemaster_product_expiry_and_more...
+ OK
+  Applying core.0008_update_invoice_number_format...
+ OK
+  Applying core.0009_customermaster_customer_food_license_no...
+ OK
+  Applying core.0010_alter_salesmaster_id...
+ OK
+  Applying core.0011_add_performance_indexes...
+Traceback (most recent call last):
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\utils.py", line 87, in _execute
+    return self.cursor.execute(sql)
+           ~~~~~~~~~~~~~~~~~~~^^^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\mysql\base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\MySQLdb\cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\MySQLdb\cursors.py", line 330, in _query
+    db.query(q)
+    ~~~~~~~~^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\MySQLdb\connections.py", line 286, in query
+    _mysql.connection.query(self, query)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+MySQLdb.ProgrammingError: (1064, "You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'IF NOT EXISTS idx_product_name ON core_productmaster(product_name)' at line 1")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "c:\med final\smart-medicvista-erp\pharmamgmt\manage.py", line 21, in <module>
+    main()
+    ~~~~^^
+  File "c:\med final\smart-medicvista-erp\pharmamgmt\manage.py", line 17, in main
+    execute_from_command_line(sys.argv)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+    ~~~~~~~~~~~~~~~^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\__init__.py", line 436, in execute
+    self.fetch_command(subcommand).run_from_argv(self.argv)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\base.py", line 412, in run_from_argv
+    self.execute(*args, **cmd_options)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\base.py", line 458, in execute
+    output = self.handle(*args, **options)
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\base.py", line 106, in wrapper
+    res = handle_func(*args, **kwargs)
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\commands\migrate.py", line 356, in handle
+    post_migrate_state = executor.migrate(
+        targets,
+    ...<3 lines>...
+        fake_initial=fake_initial,
+    )
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\migrations\executor.py", line 135, in migrate
+    state = self._migrate_all_forwards(
+        state, plan, full_plan, fake=fake, fake_initial=fake_initial
+    )
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\migrations\executor.py", line 167, in _migrate_all_forwards
+    state = self.apply_migration(
+        state, migration, fake=fake, fake_initial=fake_initial
+    )
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\migrations\executor.py", line 252, in apply_migration
+    state = migration.apply(state, schema_editor)
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\migrations\migration.py", line 132, in apply
+    operation.database_forwards(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self.app_label, schema_editor, old_state, project_state
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\migrations\operations\special.py", line 106, in database_forwards
+    self._run_sql(schema_editor, self.sql)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\migrations\operations\special.py", line 133, in _run_sql
+    schema_editor.execute(statement, params=None)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\base\schema.py", line 201, in execute
+    cursor.execute(sql, params)
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\utils.py", line 102, in execute
+    return super().execute(sql, params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        sql, params, many=False, executor=self._execute
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\utils.py", line 84, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\utils.py", line 87, in _execute
+    return self.cursor.execute(sql)
+           ~~~~~~~~~~~~~~~~~~~^^^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\db\backends\mysql\base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+           ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\MySQLdb\cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\MySQLdb\cursors.py", line 330, in _query
+    db.query(q)
+    ~~~~~~~~^^^
+  File "C:\Users\hpeq2\AppData\Local\Programs\Python\Python313\Lib\site-packages\MySQLdb\connections.py", line 286, in query
+    _mysql.connection.query(self, query)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+django.db.utils.ProgrammingError: (1064, "You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'IF NOT EXISTS idx_product_name ON core_productmaster(product_name)' at line 1")
+
+Migration 0011 uses PostgreSQL-specific CREATE INDEX IF NOT EXISTS syntax which MySQL doesn't support. Let me fix that migration file.
+
+1 file read
+0011_add_performance_indexes.py
+Now let me check all other migrations that use raw SQL for similar issues.
+
+Check other migration files with raw SQL for PostgreSQL-specific syntax
+
+shell
+
+Completed
+findstr /l /i "IF NOT EXISTS\|IF EXISTS\|CREATE INDEX\|DROP INDEX\|RunSQL" "c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py" "c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1021_add_performance_indexes.py" "c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py" 2>&1
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_purchase_product_batch ON core_purchasemaster(productid_id, product_batch_no);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_purchase_product_batch;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_sales_product_batch ON core_salesmaster(productid_id, product_batch_no);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_sales_product_batch;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_purchase_product ON core_purchasemaster(productid_id);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_purchase_product;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_sales_product ON core_salesmaster(productid_id);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_sales_product;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_product_name ON core_productmaster(product_name);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_product_name;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_product_company ON core_productmaster(product_company);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_product_company;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_purchase_entry_date ON core_purchasemaster(purchase_entry_date);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_purchase_entry_date;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_sale_entry_date ON core_salesmaster(sale_entry_date);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\0002_add_inventory_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_sale_entry_date;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_product_name ON core_productmaster(product_name);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_product_name;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_product_company ON core_productmaster(product_company);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_product_company;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_purchase_product_batch ON core_purchasemaster(productid_id, product_batch_no);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_purchase_product_batch;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_purchase_expiry ON core_purchasemaster(product_expiry);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_purchase_expiry;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_sales_product_batch ON core_salesmaster(productid_id, product_batch_no);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_sales_product_batch;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_salerate_product_batch ON core_saleratemaster(productid_id, product_batch_no);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_salerate_product_batch;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_return_purchase_product_batch ON core_returnpurchasemaster(returnproductid_id, returnproduct_batch_no);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_return_purchase_product_batch;"
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            "CREATE INDEX IF NOT EXISTS idx_return_sales_product_batch ON core_returnsalesmaster(return_productid_id, return_product_batch_no);",
+c:\med final\smart-medicvista-erp\pharmamgmt\core\migrations\1022_add_inventory_performance_indexes.py:            reverse_sql="DROP INDEX IF EXISTS idx_return_sales_product_batch;"
+
+Three migration files have PostgreSQL-specific CREATE INDEX IF NOT EXISTS syntax. MySQL uses CREATE INDEX (without IF NOT EXISTS before MySQL 8.0.12, but the DROP INDEX IF EXISTS on a table needs ON table). Let me fix all three at once.
+
+3 files read
+0002_add_inventory_indexes.py
+1021_add_performance_indexes.py
+1022_add_inventory_performance_indexes.py
+MySQL doesn't support CREATE INDEX IF NOT EXISTS or DROP INDEX IF EXISTS (without ON table). I'll fix all three migration files to use MySQL-compatible syntax — wrapping in stored procedures to simulate IF NOT EXISTS.
+
+The cleanest fix is to replace RunSQL with migrations.SeparateDatabaseAndState or simply use a Python callable. The simplest approach: replace all RunSQL index operations with no-ops since Django's AddIndex (used in 1021) already handles indexes properly, and the raw SQL ones are duplicates.
+
+Fix 0002 migration to use MySQL-compatible index creation
+
+0002_add_inventory_indexes.py
++69
+-46
+
+Undo

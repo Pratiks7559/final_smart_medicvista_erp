@@ -349,11 +349,9 @@ def get_dateexpiry_inventory_data(search_query=''):
 def export_batch_inventory_pdf(request):
     """Export batch-wise inventory report as PDF (Ctrl+Q)"""
     try:
-        # Get search query
+        from .fast_inventory import FastInventory
         search_query = request.GET.get('search', '')
-        
-        # Get inventory data
-        all_inventory_data = get_batch_inventory_data(search_query)
+        all_inventory_data = FastInventory.get_batch_inventory_data(search_query)
         
         # Create PDF buffer
         buffer = io.BytesIO()
@@ -526,11 +524,9 @@ def export_batch_inventory_pdf(request):
 def export_batch_inventory_excel(request):
     """Export batch-wise inventory report as Excel (Ctrl+E)"""
     try:
-        # Get search query
+        from .fast_inventory import FastInventory
         search_query = request.GET.get('search', '')
-        
-        # Get inventory data
-        all_inventory_data = get_batch_inventory_data(search_query)
+        all_inventory_data = FastInventory.get_batch_inventory_data(search_query)
         
         # Create workbook
         wb = Workbook()
@@ -743,13 +739,14 @@ def export_batch_inventory_excel(request):
 def export_dateexpiry_inventory_pdf(request):
     """Export date-wise inventory report as PDF (Ctrl+Q)"""
     try:
+        from .fast_inventory import FastInventory
         # Get search query and filters
         search_query = request.GET.get('search', '')
         expiry_from = request.GET.get('expiry_from', '')
         expiry_to = request.GET.get('expiry_to', '')
         
         # Get inventory data
-        expiry_data, total_value = get_dateexpiry_inventory_data(search_query)
+        expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(search_query)
         
         # Create PDF buffer
         buffer = io.BytesIO()
@@ -920,13 +917,14 @@ def export_dateexpiry_inventory_pdf(request):
 def export_dateexpiry_inventory_excel(request):
     """Export date-wise inventory report as Excel (Ctrl+E)"""
     try:
+        from .fast_inventory import FastInventory
         # Get search query and filters
         search_query = request.GET.get('search', '')
         expiry_from = request.GET.get('expiry_from', '')
         expiry_to = request.GET.get('expiry_to', '')
         
         # Get inventory data
-        expiry_data, total_value = get_dateexpiry_inventory_data(search_query)
+        expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(search_query)
         
         # Create workbook
         wb = Workbook()
@@ -1479,3 +1477,8 @@ def export_all_product_inventory_excel(request):
         
     except Exception as e:
         return HttpResponse(f"Error generating Excel: {str(e)}", status=500)
+
+
+
+
+

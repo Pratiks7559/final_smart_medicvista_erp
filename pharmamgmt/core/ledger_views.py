@@ -725,9 +725,7 @@ def export_customer_ledger_pdf(request, customer_id):
     
     # Payments
     payments = SalesInvoicePaid.objects.filter(sales_ip_invoice_no__customerid=customer).order_by('sales_payment_date')
-    if start_date and end_date:
-        payments = payments.filter(sales_payment_date__range=[start_date, end_date])
-    
+    payments = payments.filter(sales_payment_date__range=[start_date, end_date])
     for payment in payments:
         transactions.append({
             'date': payment.sales_payment_date,
@@ -736,23 +734,37 @@ def export_customer_ledger_pdf(request, customer_id):
             'debit': 0,
             'credit': payment.sales_payment_amount
         })
-    
+
+    # Sales Returns (Credit)
+    returns = ReturnSalesInvoiceMaster.objects.filter(
+        return_sales_customerid=customer
+    ).order_by('return_sales_invoice_date')
+    returns = returns.filter(return_sales_invoice_date__range=[start_date, end_date])
+    for ret in returns:
+        transactions.append({
+            'date': ret.return_sales_invoice_date,
+            'type': 'Sales Return',
+            'reference': ret.return_sales_invoice_no,
+            'debit': 0,
+            'credit': ret.return_sales_invoice_total
+        })
+
     # Sort and calculate balance
     transactions.sort(key=lambda x: x['date'])
     balance = 0
     for trans in transactions:
         balance += trans['debit'] - trans['credit']
         trans['balance'] = balance
-    
+
     total_debit = sum(t['debit'] for t in transactions)
     total_credit = sum(t['credit'] for t in transactions)
-    
+
     # Get pharmacy details
     try:
         pharmacy = Pharmacy_Details.objects.first()
     except Pharmacy_Details.DoesNotExist:
         pharmacy = None
-    
+
     # Create PDF
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
@@ -772,7 +784,12 @@ def export_customer_ledger_pdf(request, customer_id):
     title = Paragraph(f"Customer Ledger - {customer.customer_name}", styles['Title'])
     story.append(title)
     story.append(Spacer(1, 12))
-    
+
+    # Date range
+    date_range = Paragraph(f"Period: {start_date} to {end_date}", styles['Normal'])
+    story.append(date_range)
+    story.append(Spacer(1, 6))
+
     # Customer info
     customer_info = Paragraph(f"<b>{customer.customer_name}</b><br/>Mobile: {customer.customer_mobile}", styles['Normal'])
     story.append(customer_info)
@@ -856,7 +873,6 @@ def export_customer_ledger_excel(request, customer_id):
     payments = SalesInvoicePaid.objects.filter(sales_ip_invoice_no__customerid=customer).order_by('sales_payment_date')
     if start_date and end_date:
         payments = payments.filter(sales_payment_date__range=[start_date, end_date])
-    
     for payment in payments:
         transactions.append({
             'date': payment.sales_payment_date,
@@ -865,23 +881,38 @@ def export_customer_ledger_excel(request, customer_id):
             'debit': 0,
             'credit': payment.sales_payment_amount
         })
-    
+
+    # Sales Returns (Credit)
+    returns = ReturnSalesInvoiceMaster.objects.filter(
+        return_sales_customerid=customer
+    ).order_by('return_sales_invoice_date')
+    if start_date and end_date:
+        returns = returns.filter(return_sales_invoice_date__range=[start_date, end_date])
+    for ret in returns:
+        transactions.append({
+            'date': ret.return_sales_invoice_date,
+            'type': 'Sales Return',
+            'reference': ret.return_sales_invoice_no,
+            'debit': 0,
+            'credit': ret.return_sales_invoice_total
+        })
+
     # Sort and calculate balance
     transactions.sort(key=lambda x: x['date'])
     balance = 0
     for trans in transactions:
         balance += trans['debit'] - trans['credit']
         trans['balance'] = balance
-    
+
     total_debit = sum(t['debit'] for t in transactions)
     total_credit = sum(t['credit'] for t in transactions)
-    
+
     # Get pharmacy details
     try:
         pharmacy = Pharmacy_Details.objects.first()
     except Pharmacy_Details.DoesNotExist:
         pharmacy = None
-    
+
     # Create Excel workbook
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -912,7 +943,13 @@ def export_customer_ledger_excel(request, customer_id):
     ws[f'A{row_num}'].font = Font(bold=True, size=14)
     ws.merge_cells(f'A{row_num}:F{row_num}')
     row_num += 1
-    
+
+    # Date range
+    ws[f'A{row_num}'] = f"Period: {start_date} to {end_date}"
+    ws[f'A{row_num}'].alignment = Alignment(horizontal='center')
+    ws.merge_cells(f'A{row_num}:F{row_num}')
+    row_num += 1
+
     # Customer info
     ws[f'A{row_num}'] = f"Mobile: {customer.customer_mobile}"
     ws.merge_cells(f'A{row_num}:F{row_num}')
