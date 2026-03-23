@@ -1,44 +1,23 @@
 # Django Framework
 Django==4.2.7
 
-# Production Server (handles concurrent requests - Windows compatible)
+# Production Server (Windows compatible)
 waitress==3.0.0
 
-# Redis Cache (for production deployment with multiple servers)
-redis==5.0.1
+# MySQL Database Driver
+mysqlclient==2.2.8
 
-# Load Testing
-requests==2.32.5
-locust==2.20.0
+# PDF Generation
+reportlab==4.4.4
 
-# Bulk Upload Dependencies
-pandas>=2.2.0
-openpyxl>=3.1.2
-PyPDF2>=3.0.1
-pdfplumber>=0.10.3
+# Excel Read/Write
+openpyxl==3.1.5
 
-# PDF and Excel Export Dependencies
-reportlab==4.0.7
+# Bulk Upload (Excel/CSV parsing)
+pandas==2.2.3
 
-# Database
-# SQLite is built-in with Python, no additional package needed
+# HTTP Requests
+requests==2.32.3
 
-# Python Standard Library (no installation needed)
-# - pathlib
-# - os
-# - datetime
-# - json
-# - logging
-
-# Optional: For production deployment
-# gunicorn==21.2.0
-# whitenoise==6.6.0
-
-# Optional: For PostgreSQL (if switching from SQLite)
-# psycopg2-binary==2.9.9
-
-# Optional: For MySQL (if switching from SQLite)
-# mysqlclient==2.2.0
-
-# Development tools (optional)
-# django-debug-toolbar==4.2.0
+# Serve static files in production
+whitenoise==6.11.0

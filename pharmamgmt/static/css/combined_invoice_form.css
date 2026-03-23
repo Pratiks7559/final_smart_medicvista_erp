@@ -156,7 +156,11 @@
 
 /* Charges Section */
 .ci-charges-section {
+    background: #f8f9fa !important;
+    padding: 12px;
+    border-radius: 6px;
     margin-bottom: 15px;
+    color: #212529 !important;
 }
 
 /* Products Section */
