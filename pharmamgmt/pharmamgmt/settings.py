@@ -1,21 +1,26 @@
 import os
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# BASE_DIR points to: pharmamgmt/ (the folder containing manage.py)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
+# ============================================================
+# SECURITY
+# ============================================================
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-5&j%-b#2a$=_!)^-n2x7iq9m$w!%gp-w$(-e8+b3*q$nkol-+k')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['0.0.0.0', 'localhost', '127.0.0.1', '.replit.dev', '.repl.co', 'testserver']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
-# CSRF settings for Replit
-CSRF_TRUSTED_ORIGINS = ['https://*.replit.dev', 'https://*.repl.co']
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    'CSRF_TRUSTED_ORIGINS',
+    'http://localhost,http://127.0.0.1'
+).split(',')
 
-# Application definition
+# ============================================================
+# APPS & MIDDLEWARE
+# ============================================================
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -35,28 +40,22 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.year_filter_middleware.YearFilterMiddleware',
-    'core.auth_middleware.LoginRequiredMiddleware',  # Authentication middleware
+    'core.auth_middleware.LoginRequiredMiddleware',
 ]
 
-# Session optimization for better performance with 600K records
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use DB only, no cache
-
-# SESSION_CACHE_ALIAS = 'default'
-SESSION_COOKIE_AGE = 3600  # 1 hour
-SESSION_SAVE_EVERY_REQUEST = False
-
-# Admin pagination for large datasets
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 50000
-
 ROOT_URLCONF = 'pharmamgmt.urls'
+WSGI_APPLICATION = 'pharmamgmt.wsgi.application'
+AUTH_USER_MODEL = 'core.Web_User'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# ============================================================
+# TEMPLATES
+# BASE_DIR/templates is the single templates directory
+# ============================================================
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [
-            os.path.join(BASE_DIR, 'templates'),
-            os.path.join(BASE_DIR, 'core', 'templates'),
-        ],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -70,22 +69,18 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'pharmamgmt.wsgi.application'
-
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
-import os
-
-# MySQL Configuration - Primary Database
+# ============================================================
+# DATABASE
+# Override via environment variables for production
+# ============================================================
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'pharma_db',
-        'USER': 'root',
-        'PASSWORD': 'Pratik@123',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': os.getenv('DB_NAME', 'pharma_db'),
+        'USER': os.getenv('DB_USER', 'root'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'Pratik@123'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),
+        'PORT': os.getenv('DB_PORT', '3306'),
         'CONN_MAX_AGE': 600,
         'OPTIONS': {
             'charset': 'utf8mb4',
@@ -94,109 +89,87 @@ DATABASES = {
     }
 }
 
-# Custom user model
-AUTH_USER_MODEL = 'core.Web_User'
-
-# Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
-
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
-
-# Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
-
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'Asia/Kolkata'
-
-USE_I18N = True
-
-USE_TZ = False
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
+# ============================================================
+# STATIC FILES
+# BASE_DIR/static  → source files (your CSS/JS)
+# BASE_DIR/staticfiles → collectstatic output (for production)
+# ============================================================
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Static files finders
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',   # only one source folder
+]
+
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # collectstatic writes here
+
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
 
-# Static files caching (browser cache for 1 year)
-if not DEBUG:
-    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
-
-# Static files storage (using default for now)
-# STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-# Media files
+# ============================================================
+# MEDIA FILES
+# ============================================================
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = BASE_DIR / 'media'
 
-# Additional static files configuration
-STATICFILES_DIRS += [
-    os.path.join(BASE_DIR, 'core', 'static'),  # App-specific static files
+# ============================================================
+# SESSION
+# ============================================================
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 3600
+SESSION_SAVE_EVERY_REQUEST = False
+
+# ============================================================
+# AUTH
+# ============================================================
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-# Pagination Settings
-PAGINATION_ITEMS_PER_PAGE = 50
-
-# Django Admin - Handle large datasets
-DATA_UPLOAD_MAX_NUMBER_FIELDS = 50000  # Increased for 600K records
-
-# Cache configuration
-import os
-
-# Enhanced caching for 600K records performance
-if os.getenv('REDIS_URL'):  # Production with Redis
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-            'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            },
-            'KEY_PREFIX': 'pharma',
-            'TIMEOUT': 300,  # 5 minutes default
-        }
-    }
-else:  # Development with enhanced local memory
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',  # Disable cache in development
-        }
-    }
-
-# Login URL
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/login/'
 
-# Logging configuration
+# ============================================================
+# INTERNATIONALISATION
+# ============================================================
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'Asia/Kolkata'
+USE_I18N = True
+USE_TZ = False
+
+# ============================================================
+# MISC
+# ============================================================
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 50000
+PAGINATION_ITEMS_PER_PAGE = 50
+
+# ============================================================
+# CACHE  (use Redis in production via REDIS_URL env var)
+# ============================================================
+if os.getenv('REDIS_URL'):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.getenv('REDIS_URL'),
+            'KEY_PREFIX': 'pharma',
+            'TIMEOUT': 300,
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        }
+    }
+
+# ============================================================
+# LOGGING
+# ============================================================
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -204,7 +177,7 @@ LOGGING = {
         'file': {
             'level': 'WARNING',
             'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'django.log'),
+            'filename': BASE_DIR / 'django.log',
         },
         'console': {
             'level': 'INFO',
@@ -212,15 +185,14 @@ LOGGING = {
         },
     },
     'loggers': {
-        'core.middleware': {
-            'handlers': ['file', 'console'],
-            'level': 'WARNING',
-            'propagate': True,
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
         },
         'django.db.backends': {
             'handlers': ['file'],
             'level': 'ERROR',
-            'propagate': True,
+            'propagate': False,
         },
     },
 }
