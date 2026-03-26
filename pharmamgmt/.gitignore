@@ -13,6 +13,7 @@ db.sqlite3-journal
 /media
 /staticfiles
 *.pot
+django.log
 
 # Environment
 .env
@@ -37,6 +38,7 @@ backups/
 *.sql
 backup_*.sqlite3
 backup_*.sql
+railway_backup.sql
 
 # Test files
 test_*.txt
