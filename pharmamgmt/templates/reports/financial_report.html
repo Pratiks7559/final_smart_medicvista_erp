@@ -117,9 +117,9 @@
             <button onclick="exportPDF()" class="fin-btn-export fin-btn-pdf">
                 <i class="fas fa-file-pdf"></i> Export PDF
             </button>
-            <a href="{% url 'export_financial_excel' %}?{{ request.GET.urlencode }}" class="fin-btn-export fin-btn-excel">
+            <button onclick="exportExcel()" class="fin-btn-export fin-btn-excel">
                 <i class="fas fa-file-excel"></i> Export Excel
-            </a>
+            </button>
         </div>
 
         <!-- Data Table -->
@@ -240,8 +240,30 @@
     }
     
     function exportPDF() {
-        const url = "{% url 'export_financial_pdf' %}?{{ request.GET.urlencode }}";
+        const startDate = document.getElementById('start_date').value;
+        const endDate   = document.getElementById('end_date').value;
+        const productId = document.getElementById('product_id').value;
+        const productSearch = document.getElementById('product_search').value;
+        const params = new URLSearchParams();
+        if (startDate)     params.set('start_date', startDate);
+        if (endDate)       params.set('end_date', endDate);
+        if (productId)     params.set('product_id', productId);
+        if (productSearch) params.set('product_search', productSearch);
+        const url = "{% url 'export_financial_pdf' %}?" + params.toString();
         window.open(url, '_blank');
+    }
+
+    function exportExcel() {
+        const startDate = document.getElementById('start_date').value;
+        const endDate   = document.getElementById('end_date').value;
+        const productId = document.getElementById('product_id').value;
+        const productSearch = document.getElementById('product_search').value;
+        const params = new URLSearchParams();
+        if (startDate)     params.set('start_date', startDate);
+        if (endDate)       params.set('end_date', endDate);
+        if (productId)     params.set('product_id', productId);
+        if (productSearch) params.set('product_search', productSearch);
+        window.location.href = "{% url 'export_financial_excel' %}?" + params.toString();
     }
     
     window.addEventListener('DOMContentLoaded', function() {

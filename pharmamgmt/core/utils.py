@@ -225,6 +225,7 @@ def get_stock_status(product_id):
         
         # Convert to legacy format for backward compatibility
         expiry_stock = []
+        total_free_qty = 0
         for batch in stock_summary['batches']:
             # Get additional batch details
             purchase = PurchaseMaster.objects.filter(
@@ -241,22 +242,40 @@ def get_stock_status(product_id):
                 
                 # Calculate batch stock including issues
                 batch_stock_with_issues = batch['stock'] - batch_stock_issues
+
+                # Calculate free qty for this batch
+                batch_free_purchased = PurchaseMaster.objects.filter(
+                    productid=product_id,
+                    product_batch_no=batch['batch_no']
+                ).aggregate(total=Sum('product_free_qty'))['total'] or 0
+
+                batch_free_sold = SalesMaster.objects.filter(
+                    productid=product_id,
+                    product_batch_no=batch['batch_no']
+                ).aggregate(total=Sum('sale_free_qty'))['total'] or 0
+
+                batch_free_qty = max(0, batch_free_purchased - batch_free_sold)
+                total_free_qty += batch_free_qty
                 
                 expiry_stock.append({
                     'batch_no': batch['batch_no'],
                     'expiry': batch['expiry'],
                     'quantity': batch_stock_with_issues,
+                    'free_qty': batch_free_qty,
+                    'total_qty': batch_stock_with_issues + batch_free_qty,
                     'purchase_rate': purchase.product_purchase_rate,
                     'mrp': purchase.product_MRP
                 })
         
         return {
             'purchased': stock_summary['total_purchased'],
-            'sold': total_sold_combined,  # Now includes both invoices and challans
+            'sold': total_sold_combined,
             'purchase_returns': stock_summary['total_purchase_returns'],
             'sales_returns': stock_summary['total_sales_returns'],
-            'stock_issues': total_stock_issues,  # Add stock issues to response
-            'current_stock': current_stock_with_issues,  # Updated stock including issues
+            'stock_issues': total_stock_issues,
+            'current_stock': current_stock_with_issues,
+            'total_free_qty': total_free_qty,
+            'current_stock_with_free': current_stock_with_issues + total_free_qty,
             'expiry_stock': expiry_stock
         }
     except Exception as e:
@@ -268,6 +287,8 @@ def get_stock_status(product_id):
             'sales_returns': 0,
             'stock_issues': 0,
             'current_stock': 0,
+            'total_free_qty': 0,
+            'current_stock_with_free': 0,
             'expiry_stock': []
         }
 

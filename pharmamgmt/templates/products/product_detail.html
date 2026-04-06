@@ -86,9 +86,10 @@
                 <div class="stock-summary-grid">
                     <div class="stock-current-section">
                         <h6 class="stock-current-label">Current Stock</h6>
-                        <h3 class="stock-current-value">
-                            {{ stock_info.current_stock }}
-                        </h3>
+                        <h3 class="stock-current-value">{{ stock_info.current_stock }}</h3>
+                        {% if stock_info.total_free_qty > 0 %}
+                        <small style="color:#6c757d;">+ {{ stock_info.total_free_qty }} Free = <strong>{{ stock_info.current_stock_with_free }}</strong> Total</small>
+                        {% endif %}
                     </div>
                     <div class="stock-purchased-section">
                         <h6 class="stock-purchased-label">Total Purchased</h6>
@@ -109,7 +110,9 @@
                                 <th class="expiry-date-header">Expiry Date</th>
                                 <th class="mrp-header">MRP</th>
                                 <th class="purchase-rate-header">Purchase Rate</th>
-                                <th class="quantity-header">Quantity</th>
+                                <th class="quantity-header">Qty (Paid)</th>
+                                <th class="free-qty-header">Free Qty</th>
+                                <th class="total-qty-header">Total Qty</th>
                             </tr>
                         </thead>
                         <tbody class="batch-stock-tbody">
@@ -120,10 +123,12 @@
                                 <td class="mrp-cell">{{ item.mrp|currency }}</td>
                                 <td class="purchase-rate-cell">{{ item.purchase_rate|currency }}</td>
                                 <td class="quantity-cell">{{ item.quantity }}</td>
+                                <td class="free-qty-cell" style="color:#28a745; font-weight:600;">{{ item.free_qty }}</td>
+                                <td class="total-qty-cell" style="font-weight:700;">{{ item.total_qty }}</td>
                             </tr>
                             {% empty %}
                             <tr class="batch-stock-empty-row">
-                                <td colspan="5" class="batch-stock-empty-cell">No stock information available</td>
+                                <td colspan="7" class="batch-stock-empty-cell">No stock information available</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -191,25 +196,29 @@
                                         <th class="purchase-invoice-header">Invoice</th>
                                         <th class="purchase-batch-header">Batch</th>
                                         <th class="purchase-qty-header">Qty</th>
+                                        <th class="purchase-free-qty-header" style="color:#28a745;">Free Qty</th>
+                                        <th class="purchase-total-qty-header">Total Qty</th>
                                         <th class="purchase-rate-header">Rate</th>
                                     </tr>
                                 </thead>
                                 <tbody class="purchase-history-tbody">
                                     {% for purchase in purchases %}
                                     <tr class="purchase-history-row">
-                                        <td class="purchase-date-cell">{{ purchase.purchase_entry_date|date:"d-m-Y" }}</td>
+                                        <td class="purchase-date-cell">{{ purchase.product_invoiceid__invoice_date|date:"d-m-Y" }}</td>
                                         <td class="purchase-invoice-cell">
-                                            <a href="{% url 'invoice_detail' pk=purchase.product_invoiceid.invoiceid %}" class="purchase-invoice-link">
+                                            <a href="{% url 'invoice_detail' pk=purchase.product_invoiceid__invoiceid %}" class="purchase-invoice-link">
                                                 {{ purchase.product_invoice_no }}
                                             </a>
                                         </td>
                                         <td class="purchase-batch-cell">{{ purchase.product_batch_no }}</td>
-                                        <td class="purchase-qty-cell">{{ purchase.product_quantity }}</td>
-                                        <td class="purchase-rate-cell">{{ purchase.product_purchase_rate|currency }}</td>
+                                        <td class="purchase-qty-cell">{{ purchase.product_quantity|floatformat:0 }}</td>
+                                        <td class="purchase-free-qty-cell" style="color:#28a745; font-weight:600;">{{ purchase.product_free_qty|floatformat:0 }}</td>
+                                        <td class="purchase-total-qty-cell" style="font-weight:700;">{{ purchase.product_quantity|add:purchase.product_free_qty|floatformat:0 }}</td>
+                                        <td class="purchase-rate-cell">₹{{ purchase.product_purchase_rate|floatformat:2 }}</td>
                                     </tr>
                                     {% empty %}
                                     <tr class="purchase-history-empty-row">
-                                        <td colspan="5" class="purchase-history-empty-cell">No purchase history</td>
+                                        <td colspan="7" class="purchase-history-empty-cell">No purchase history</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -233,25 +242,29 @@
                                         <th class="sales-invoice-header">Invoice</th>
                                         <th class="sales-batch-header">Batch</th>
                                         <th class="sales-qty-header">Qty</th>
+                                        <th class="sales-free-qty-header" style="color:#28a745;">Free Qty</th>
+                                        <th class="sales-total-qty-header">Total Qty</th>
                                         <th class="sales-rate-header">Rate</th>
                                     </tr>
                                 </thead>
                                 <tbody class="sales-history-tbody">
                                     {% for sale in sales %}
                                     <tr class="sales-history-row">
-                                        <td class="sales-date-cell">{{ sale.sale_entry_date|date:"d-m-Y" }}</td>
+                                        <td class="sales-date-cell">{{ sale.sales_invoice_no__sales_invoice_date|date:"d-m-Y" }}</td>
                                         <td class="sales-invoice-cell">
-                                            <a href="{% url 'sales_invoice_detail' pk=sale.sales_invoice_no.sales_invoice_no %}" class="sales-invoice-link">
-                                                {{ sale.sales_invoice_no.sales_invoice_no }}
+                                            <a href="{% url 'sales_invoice_detail' pk=sale.sales_invoice_no__sales_invoice_no %}" class="sales-invoice-link">
+                                                {{ sale.sales_invoice_no__sales_invoice_no }}
                                             </a>
                                         </td>
                                         <td class="sales-batch-cell">{{ sale.product_batch_no }}</td>
-                                        <td class="sales-qty-cell">{{ sale.sale_quantity }}</td>
-                                        <td class="sales-rate-cell">{{ sale.sale_rate|currency }}</td>
+                                        <td class="sales-qty-cell">{{ sale.sale_quantity|floatformat:0 }}</td>
+                                        <td class="sales-free-qty-cell" style="color:#28a745; font-weight:600;">{{ sale.sale_free_qty|floatformat:0 }}</td>
+                                        <td class="sales-total-qty-cell" style="font-weight:700;">{{ sale.sale_quantity|add:sale.sale_free_qty|floatformat:0 }}</td>
+                                        <td class="sales-rate-cell">₹{{ sale.sale_rate|floatformat:2 }}</td>
                                     </tr>
                                     {% empty %}
                                     <tr class="sales-history-empty-row">
-                                        <td colspan="5" class="sales-history-empty-cell">No sales history</td>
+                                        <td colspan="7" class="sales-history-empty-cell">No sales history</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>

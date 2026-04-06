@@ -1,0 +1,11 @@
+def batch_inventory_report(request):
+    from django.core.paginator import Paginator
+    from .fast_inventory import FastInventory
+    
+    search_query = request.GET.get('search', '')
+    all_inventory_data = FastInventory.get_batch_inventory_data(search_query)
+    
+    # Pagination
+    paginator = Paginator(all_inventory_data, 100)
+    page_number = request.GET.get('page')
+    batches_page = pag

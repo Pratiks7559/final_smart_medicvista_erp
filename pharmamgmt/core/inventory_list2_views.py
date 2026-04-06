@@ -4,7 +4,8 @@ from django.db.models import Q, Sum, Count, Max, F, Case, When, DecimalField, Va
 from django.core.paginator import Paginator
 from django.db import connection
 from django.http import JsonResponse, HttpResponse
-from .models import InventoryTransaction, ProductMaster, Pharmacy_Details, SaleRateMaster
+from .models import InventoryTransaction, ProductMaster, Pharmacy_Details, SaleRateMaster, InvoiceMaster, PurchaseMaster
+from .year_filter_utils import get_financial_year_dates, get_current_financial_year
 from decimal import Decimal
 import time
 
@@ -20,10 +21,37 @@ def inventory_list2(request):
     search_query = request.GET.get('search', '').strip()
     stock_filter = request.GET.get('stock_filter', 'all')
     page_number = request.GET.get('page', 1)
-    
-    # OPTIMIZED: Single aggregated query with prefetch
+
+    # Financial Year filter via Purchase Invoice date
+    selected_year = request.session.get('selected_year', get_current_financial_year())
+    fy_start, fy_end = get_financial_year_dates(selected_year)
+
+    # Get product_ids whose purchase invoice date OR challan date falls in selected FY
+    fy_invoice_ids = list(
+        InvoiceMaster.objects.filter(
+            invoice_date__gte=fy_start,
+            invoice_date__lte=fy_end
+        ).values_list('invoiceid', flat=True)
+    )
+    purchase_pids = set(
+        PurchaseMaster.objects.filter(
+            product_invoiceid__in=fy_invoice_ids
+        ).values_list('productid_id', flat=True)
+    )
+    from .models import SupplierChallanMaster
+    challan_pids = set(
+        SupplierChallanMaster.objects.filter(
+            product_challan_id__challan_date__gte=fy_start,
+            product_challan_id__challan_date__lte=fy_end
+        ).values_list('product_id_id', flat=True)
+    )
+    fy_product_ids = list(purchase_pids | challan_pids)
+
+    # OPTIMIZED: Single aggregated query - only FY products, cumulative stock
     stock_summary = InventoryTransaction.objects.select_related(
         'product'
+    ).filter(
+        product_id__in=fy_product_ids
     ).values(
         'product_id',
         'product__product_name',
@@ -36,7 +64,7 @@ def inventory_list2(request):
         total_free=Sum('free_quantity'),
         batch_count=Count('batch_no', distinct=True),
         avg_mrp=Max('mrp')
-    )  # Remove filter to show all products with batches, even if stock is 0
+    )
     
     # Apply search filter
     if search_query:
@@ -53,7 +81,7 @@ def inventory_list2(request):
     # OPTIMIZATION: Bulk fetch all product IDs
     product_ids = [item['product_id'] for item in stock_data]
     
-    # OPTIMIZATION: Prefetch all batches in one query (including zero stock)
+    # OPTIMIZATION: Prefetch all batches in one query (no FY filter - cumulative stock)
     all_batches = InventoryTransaction.objects.filter(
         product_id__in=product_ids
     ).values(
@@ -61,7 +89,7 @@ def inventory_list2(request):
     ).annotate(
         stock=Sum('quantity'),
         free_stock=Sum('free_quantity')
-    ).order_by('product_id', 'expiry_date', 'batch_no')  # Show all batches including zero stock
+    ).order_by('product_id', 'expiry_date', 'batch_no')
     
     # OPTIMIZATION: Prefetch all rates in one query
     all_rates = SaleRateMaster.objects.filter(
@@ -194,6 +222,8 @@ def inventory_list2(request):
         'next_offset': next_offset,
         'pharmacy': Pharmacy_Details.objects.first(),
         'title': 'Inventory List 2 (Real-time)',
+        'selected_year': selected_year,
+        'fy_label': f'{selected_year}-{str(selected_year + 1)[2:]}',
     }
     
     return render(request, 'inventory/inventory_list2.html', context)
@@ -361,9 +391,22 @@ def export_inventory2_pdf(request):
         # Get search query
         search_query = request.GET.get('search', '').strip()
         stock_filter = request.GET.get('stock_filter', 'all')
+
+        # FY filter via invoice date
+        selected_year = request.session.get('selected_year', get_current_financial_year())
+        fy_start, fy_end = get_financial_year_dates(selected_year)
+        fy_label = f'{selected_year}-{str(selected_year + 1)[2:]}'
+        fy_invoice_ids = list(InvoiceMaster.objects.filter(
+            invoice_date__gte=fy_start, invoice_date__lte=fy_end
+        ).values_list('invoiceid', flat=True))
+        fy_product_ids = list(PurchaseMaster.objects.filter(
+            product_invoiceid__in=fy_invoice_ids
+        ).values_list('productid_id', flat=True).distinct())
         
         # Get inventory data using same logic as main view
-        stock_summary = InventoryTransaction.objects.values(
+        stock_summary = InventoryTransaction.objects.filter(
+            product_id__in=fy_product_ids
+        ).values(
             'product_id',
             'product__product_name',
             'product__product_company',
@@ -449,7 +492,7 @@ def export_inventory2_pdf(request):
         # Title
         title_style = styles['Heading1']
         title_style.alignment = 1
-        title = Paragraph("INVENTORY REPORT (Real-time)", title_style)
+        title = Paragraph(f"INVENTORY REPORT - FY {fy_label}", title_style)
         story.append(title)
         
         # Date
@@ -534,9 +577,22 @@ def export_inventory2_excel(request):
         # Get search query
         search_query = request.GET.get('search', '').strip()
         stock_filter = request.GET.get('stock_filter', 'all')
+
+        # FY filter via invoice date
+        selected_year = request.session.get('selected_year', get_current_financial_year())
+        fy_start, fy_end = get_financial_year_dates(selected_year)
+        fy_label = f'{selected_year}-{str(selected_year + 1)[2:]}'
+        fy_invoice_ids = list(InvoiceMaster.objects.filter(
+            invoice_date__gte=fy_start, invoice_date__lte=fy_end
+        ).values_list('invoiceid', flat=True))
+        fy_product_ids = list(PurchaseMaster.objects.filter(
+            product_invoiceid__in=fy_invoice_ids
+        ).values_list('productid_id', flat=True).distinct())
         
         # Get inventory data
-        stock_summary = InventoryTransaction.objects.values(
+        stock_summary = InventoryTransaction.objects.filter(
+            product_id__in=fy_product_ids
+        ).values(
             'product_id',
             'product__product_name',
             'product__product_company',
@@ -632,7 +688,7 @@ def export_inventory2_excel(request):
             current_row = 1
         
         # Title
-        ws[f'A{current_row}'] = "INVENTORY REPORT (Real-time)"
+        ws[f'A{current_row}'] = f"INVENTORY REPORT - FY {fy_label}"
         ws[f'A{current_row}'].font = Font(bold=True, size=14)
         ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
         ws.merge_cells(f'A{current_row}:G{current_row}')

@@ -68,12 +68,12 @@
                         <div id="dateSearchSuggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d3e2; border-top: none; max-height: 300px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
                     </div>
                     <div class="date-filter-group">
-                        <label style="font-size: 0.85rem; margin-bottom: 2px; color: #6b7280;">From Entry Date:</label>
-                        <input type="date" name="expiry_from" value="{{ expiry_from|default:'' }}" placeholder="From Date" class="date-filter-input" title="Filter by purchase entry date (when expiry was added)">
+                        <label style="font-size: 0.85rem; margin-bottom: 2px; color: #6b7280;">From (Invoice/Challan Date):</label>
+                        <input type="date" name="expiry_from" value="{{ expiry_from|default:'' }}" placeholder="From Date" class="date-filter-input" title="Filter by Invoice Date or Challan Date">
                     </div>
                     <div class="date-filter-group">
-                        <label style="font-size: 0.85rem; margin-bottom: 2px; color: #6b7280;">To Entry Date:</label>
-                        <input type="date" name="expiry_to" value="{{ expiry_to|default:'' }}" placeholder="To Date" class="date-filter-input" title="Filter by purchase entry date (when expiry was added)">
+                        <label style="font-size: 0.85rem; margin-bottom: 2px; color: #6b7280;">To (Invoice/Challan Date):</label>
+                        <input type="date" name="expiry_to" value="{{ expiry_to|default:'' }}" placeholder="To Date" class="date-filter-input" title="Filter by Invoice Date or Challan Date">
                     </div>
                     <div class="date-filter-actions">
                         <button type="submit" class="date-filter-btn date-filter-btn-primary">
@@ -88,24 +88,30 @@
             {% if expiry_data %}
             <div class="date-info-alert" role="alert">
                 <span><i class="fas fa-info-circle me-2"></i>
-                This report shows products grouped by expiry date. Only products with current stock are displayed.</span>
+                Filter: Invoice Date / Challan Date ke basis pe. Products expiry date ke order mein sorted hain.</span>
                 <button type="button" class="date-alert-close" data-bs-dismiss="alert" aria-label="Close">&times;</button>
             </div>
             <div class="date-table-container">
                 <table class="date-inventory-table">
                     <thead class="date-table-header">
                         <tr>
-                            <th width="40%">Product Name</th>
-                            <th width="20%">Purchase Rate</th>
-                            <th width="20%">MRP</th>
-                            <th width="20%">Stock Value</th>
+                            <th>Product Name</th>
+                            <th>Batch No</th>
+                            <th>Expiry</th>
+                            <th>Qty</th>
+                            <th>Purchase Rate</th>
+                            <th>MRP</th>
+                            <th>Stock Value</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for expiry_group in expiry_data %}
                         {% for item in expiry_group.products %}
                         <tr class="{% if item.days_to_expiry < 0 %}expired-product{% elif item.days_to_expiry <= 30 %}expiring-soon{% elif item.days_to_expiry <= 90 %}expiring-warning{% endif %}">
-                            <td>{{ item.product_name }}</td>
+                            <td>{{ item.product_name }}<br><small class="text-muted">{{ item.product_company }}</small></td>
+                            <td>{{ item.batch_no }}</td>
+                            <td>{{ item.expiry_display }}</td>
+                            <td>{{ item.quantity|floatformat:0 }}</td>
                             <td>₹{{ item.purchase_rate|floatformat:2 }}</td>
                             <td>₹{{ item.mrp|floatformat:2 }}</td>
                             <td>₹{{ item.value|floatformat:2 }}</td>
@@ -115,7 +121,7 @@
                     </tbody>
                     <tfoot class="date-table-footer">
                         <tr>
-                            <td colspan="3" class="date-total-label">Total Inventory Value:</td>
+                            <td colspan="6" class="date-total-label">Total Inventory Value:</td>
                             <td>₹{{ total_value|floatformat:2 }}</td>
                         </tr>
                     </tfoot>

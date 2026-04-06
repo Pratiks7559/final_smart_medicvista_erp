@@ -15,6 +15,7 @@ import openpyxl
 from openpyxl.styles import Font, Alignment, PatternFill
 from openpyxl.utils import get_column_letter
 
+from django.db.models import Max
 from .models import ProductMaster
 from .stock_manager import StockManager
 
@@ -96,19 +97,27 @@ def stock_statement_report(request):
     from .models import PurchaseMaster, SalesMaster, ReturnPurchaseMaster, ReturnSalesMaster, SupplierChallanMaster, CustomerChallanMaster
     
     product_ids = [p.productid for p in products_page]
-    purchases = PurchaseMaster.objects.filter(productid__in=product_ids).values('productid').annotate(qty=Sum('product_quantity'), free_qty=Sum('product_free_qty'), avg_mrp=Sum('product_MRP')/Sum('product_quantity'))
+    purchases = PurchaseMaster.objects.filter(productid__in=product_ids).values('productid').annotate(qty=Sum('product_quantity'), free_qty=Sum('product_free_qty'), avg_mrp=Max('product_MRP'))
     sales = SalesMaster.objects.filter(productid__in=product_ids).values('productid').annotate(qty=Sum('sale_quantity'), free_qty=Sum('sale_free_qty'))
     purchase_returns = ReturnPurchaseMaster.objects.filter(returnproductid__in=product_ids).values('returnproductid').annotate(qty=Sum('returnproduct_quantity'), free_qty=Sum('returnproduct_free_qty'))
     sales_returns = ReturnSalesMaster.objects.filter(return_productid__in=product_ids).values('return_productid').annotate(qty=Sum('return_sale_quantity'), free_qty=Sum('return_sale_free_qty'))
-    supplier_challans = SupplierChallanMaster.objects.filter(product_id__in=product_ids).values('product_id').annotate(qty=Sum('product_quantity'), free_qty=Sum('product_free_qty'))
+    supplier_challans = SupplierChallanMaster.objects.filter(product_id__in=product_ids).values('product_id').annotate(qty=Sum('product_quantity'), free_qty=Sum('product_free_qty'), avg_mrp=Max('product_mrp'))
     customer_challans = CustomerChallanMaster.objects.filter(product_id__in=product_ids).values('product_id').annotate(qty=Sum('sale_quantity'), free_qty=Sum('sale_free_qty'))
     
     purchase_dict = {p['productid']: {'qty': p['qty'] or 0, 'free_qty': p['free_qty'] or 0, 'mrp': p['avg_mrp'] or 0} for p in purchases}
     sales_dict = {s['productid']: {'qty': s['qty'] or 0, 'free_qty': s['free_qty'] or 0} for s in sales}
     pr_dict = {pr['returnproductid']: {'qty': pr['qty'] or 0, 'free_qty': pr['free_qty'] or 0} for pr in purchase_returns}
     sr_dict = {sr['return_productid']: {'qty': sr['qty'] or 0, 'free_qty': sr['free_qty'] or 0} for sr in sales_returns}
-    sc_dict = {sc['product_id']: {'qty': sc['qty'] or 0, 'free_qty': sc['free_qty'] or 0} for sc in supplier_challans}
+    sc_dict = {sc['product_id']: {'qty': sc['qty'] or 0, 'free_qty': sc['free_qty'] or 0, 'mrp': sc['avg_mrp'] or 0} for sc in supplier_challans}
     cc_dict = {cc['product_id']: {'qty': cc['qty'] or 0, 'free_qty': cc['free_qty'] or 0} for cc in customer_challans}
+    
+    # MRP fallback: PurchaseMaster → SupplierChallanMaster → InventoryTransaction
+    from core.models import InventoryTransaction
+    it_mrp = {r['product_id']: r['mrp'] for r in InventoryTransaction.objects.filter(product_id__in=product_ids).values('product_id').annotate(mrp=Max('mrp'))}
+    def get_mrp(pid):
+        return (purchase_dict.get(pid, {}).get('mrp') or
+                sc_dict.get(pid, {}).get('mrp') or
+                it_mrp.get(pid) or 0)
     
     stock_data = []
     total_opening = 0
@@ -180,8 +189,8 @@ def stock_statement_report(request):
             sold_free = sales_dict.get(pid, {}).get('free_qty', 0) + pr_dict.get(pid, {}).get('free_qty', 0) + cc_dict.get(pid, {}).get('free_qty', 0)
             balance_stock = opening_stock + received_stock - sold_stock
             balance_free = opening_free + received_free - sold_free
-            avg_mrp = purchase_dict.get(pid, {}).get('mrp', 0)
-            # Stock value should only include paid stock, not free quantity
+            avg_mrp = get_mrp(pid)
+            # Stock value = balance paid stock * MRP
             stock_value = balance_stock * avg_mrp
             
             # Determine stock status
@@ -343,19 +352,53 @@ def export_stock_statement_pdf(request):
     product_ids = [p.productid for p in products_list]
     
     from .models import PurchaseMaster, SalesMaster, ReturnPurchaseMaster, ReturnSalesMaster, SupplierChallanMaster, CustomerChallanMaster
-    purchases = PurchaseMaster.objects.filter(productid__in=product_ids).values('productid').annotate(qty=Sum('product_quantity'), free_qty=Sum('product_free_qty'), avg_mrp=Sum('product_MRP')/Sum('product_quantity'))
-    sales = SalesMaster.objects.filter(productid__in=product_ids).values('productid').annotate(qty=Sum('sale_quantity'), free_qty=Sum('sale_free_qty'))
-    purchase_returns = ReturnPurchaseMaster.objects.filter(returnproductid__in=product_ids).values('returnproductid').annotate(qty=Sum('returnproduct_quantity'), free_qty=Sum('returnproduct_free_qty'))
-    sales_returns = ReturnSalesMaster.objects.filter(return_productid__in=product_ids).values('return_productid').annotate(qty=Sum('return_sale_quantity'), free_qty=Sum('return_sale_free_qty'))
-    supplier_challans = SupplierChallanMaster.objects.filter(product_id__in=product_ids).values('product_id').annotate(qty=Sum('product_quantity'), free_qty=Sum('product_free_qty'))
-    customer_challans = CustomerChallanMaster.objects.filter(product_id__in=product_ids).values('product_id').annotate(qty=Sum('sale_quantity'), free_qty=Sum('sale_free_qty'))
+    
+    # Apply date filter to queries if date_from/date_to provided
+    purchase_qs = PurchaseMaster.objects.filter(productid__in=product_ids)
+    sales_qs = SalesMaster.objects.filter(productid__in=product_ids)
+    pr_qs = ReturnPurchaseMaster.objects.filter(returnproductid__in=product_ids)
+    sr_qs = ReturnSalesMaster.objects.filter(return_productid__in=product_ids)
+    sc_qs = SupplierChallanMaster.objects.filter(product_id__in=product_ids)
+    cc_qs = CustomerChallanMaster.objects.filter(product_id__in=product_ids)
+    
+    if date_from:
+        try:
+            df = datetime.strptime(date_from, '%Y-%m-%d')
+            purchase_qs = purchase_qs.filter(purchase_entry_date__gte=df)
+            sales_qs = sales_qs.filter(sale_entry_date__gte=df)
+            pr_qs = pr_qs.filter(returnpurchase_entry_date__gte=df)
+            sr_qs = sr_qs.filter(return_sale_entry_date__gte=df)
+            sc_qs = sc_qs.filter(challan_entry_date__gte=df)
+            cc_qs = cc_qs.filter(sales_entry_date__gte=df)
+        except: pass
+    if date_to:
+        try:
+            dt = datetime.strptime(date_to, '%Y-%m-%d')
+            purchase_qs = purchase_qs.filter(purchase_entry_date__lte=dt)
+            sales_qs = sales_qs.filter(sale_entry_date__lte=dt)
+            pr_qs = pr_qs.filter(returnpurchase_entry_date__lte=dt)
+            sr_qs = sr_qs.filter(return_sale_entry_date__lte=dt)
+            sc_qs = sc_qs.filter(challan_entry_date__lte=dt)
+            cc_qs = cc_qs.filter(sales_entry_date__lte=dt)
+        except: pass
+    
+    purchases = purchase_qs.values('productid').annotate(qty=Sum('product_quantity'), free_qty=Sum('product_free_qty'), avg_mrp=Max('product_MRP'))
+    sales = sales_qs.values('productid').annotate(qty=Sum('sale_quantity'), free_qty=Sum('sale_free_qty'))
+    purchase_returns = pr_qs.values('returnproductid').annotate(qty=Sum('returnproduct_quantity'), free_qty=Sum('returnproduct_free_qty'))
+    sales_returns = sr_qs.values('return_productid').annotate(qty=Sum('return_sale_quantity'), free_qty=Sum('return_sale_free_qty'))
+    supplier_challans = sc_qs.values('product_id').annotate(qty=Sum('product_quantity'), free_qty=Sum('product_free_qty'), avg_mrp=Max('product_mrp'))
+    customer_challans = cc_qs.values('product_id').annotate(qty=Sum('sale_quantity'), free_qty=Sum('sale_free_qty'))
     
     purchase_dict = {p['productid']: {'qty': p['qty'] or 0, 'free_qty': p['free_qty'] or 0, 'mrp': p['avg_mrp'] or 0} for p in purchases}
     sales_dict = {s['productid']: {'qty': s['qty'] or 0, 'free_qty': s['free_qty'] or 0} for s in sales}
     pr_dict = {pr['returnproductid']: {'qty': pr['qty'] or 0, 'free_qty': pr['free_qty'] or 0} for pr in purchase_returns}
     sr_dict = {sr['return_productid']: {'qty': sr['qty'] or 0, 'free_qty': sr['free_qty'] or 0} for sr in sales_returns}
-    sc_dict = {sc['product_id']: {'qty': sc['qty'] or 0, 'free_qty': sc['free_qty'] or 0} for sc in supplier_challans}
+    sc_dict = {sc['product_id']: {'qty': sc['qty'] or 0, 'free_qty': sc['free_qty'] or 0, 'mrp': sc['avg_mrp'] or 0} for sc in supplier_challans}
     cc_dict = {cc['product_id']: {'qty': cc['qty'] or 0, 'free_qty': cc['free_qty'] or 0} for cc in customer_challans}
+    from core.models import InventoryTransaction
+    it_mrp_pdf = {r['product_id']: r['mrp'] for r in InventoryTransaction.objects.filter(product_id__in=product_ids).values('product_id').annotate(mrp=Max('mrp'))}
+    def get_mrp_pdf(pid):
+        return (purchase_dict.get(pid, {}).get('mrp') or sc_dict.get(pid, {}).get('mrp') or it_mrp_pdf.get(pid) or 0)
     
     for product in products_list:
         try:
@@ -369,8 +412,7 @@ def export_stock_statement_pdf(request):
             balance_stock = received_stock - sold_stock
             balance_free = received_free - sold_free
             total_balance = balance_stock + balance_free
-            avg_mrp = purchase_dict.get(pid, {}).get('mrp', 0)
-            # Stock value should only include paid stock, not free quantity
+            avg_mrp = get_mrp_pdf(pid)
             stock_value = balance_stock * avg_mrp
             
             if balance_stock <= 0:
@@ -560,19 +602,55 @@ def export_stock_statement_excel(request, stock_data=None):
         product_ids = [p.productid for p in products_list]
         
         from .models import PurchaseMaster, SalesMaster, ReturnPurchaseMaster, ReturnSalesMaster, SupplierChallanMaster, CustomerChallanMaster
-        purchases = PurchaseMaster.objects.filter(productid__in=product_ids).values('productid').annotate(qty=Sum('product_quantity'), free_qty=Sum('product_free_qty'), avg_mrp=Sum('product_MRP')/Sum('product_quantity'))
-        sales = SalesMaster.objects.filter(productid__in=product_ids).values('productid').annotate(qty=Sum('sale_quantity'), free_qty=Sum('sale_free_qty'))
-        purchase_returns = ReturnPurchaseMaster.objects.filter(returnproductid__in=product_ids).values('returnproductid').annotate(qty=Sum('returnproduct_quantity'), free_qty=Sum('returnproduct_free_qty'))
-        sales_returns = ReturnSalesMaster.objects.filter(return_productid__in=product_ids).values('return_productid').annotate(qty=Sum('return_sale_quantity'), free_qty=Sum('return_sale_free_qty'))
-        supplier_challans = SupplierChallanMaster.objects.filter(product_id__in=product_ids).values('product_id').annotate(qty=Sum('product_quantity'), free_qty=Sum('product_free_qty'))
-        customer_challans = CustomerChallanMaster.objects.filter(product_id__in=product_ids).values('product_id').annotate(qty=Sum('sale_quantity'), free_qty=Sum('sale_free_qty'))
+        
+        date_from_xl = request.GET.get('date_from', '')
+        date_to_xl = request.GET.get('date_to', '')
+        
+        purchase_qs = PurchaseMaster.objects.filter(productid__in=product_ids)
+        sales_qs = SalesMaster.objects.filter(productid__in=product_ids)
+        pr_qs = ReturnPurchaseMaster.objects.filter(returnproductid__in=product_ids)
+        sr_qs = ReturnSalesMaster.objects.filter(return_productid__in=product_ids)
+        sc_qs = SupplierChallanMaster.objects.filter(product_id__in=product_ids)
+        cc_qs = CustomerChallanMaster.objects.filter(product_id__in=product_ids)
+        
+        if date_from_xl:
+            try:
+                df = datetime.strptime(date_from_xl, '%Y-%m-%d')
+                purchase_qs = purchase_qs.filter(purchase_entry_date__gte=df)
+                sales_qs = sales_qs.filter(sale_entry_date__gte=df)
+                pr_qs = pr_qs.filter(returnpurchase_entry_date__gte=df)
+                sr_qs = sr_qs.filter(return_sale_entry_date__gte=df)
+                sc_qs = sc_qs.filter(challan_entry_date__gte=df)
+                cc_qs = cc_qs.filter(sales_entry_date__gte=df)
+            except: pass
+        if date_to_xl:
+            try:
+                dt = datetime.strptime(date_to_xl, '%Y-%m-%d')
+                purchase_qs = purchase_qs.filter(purchase_entry_date__lte=dt)
+                sales_qs = sales_qs.filter(sale_entry_date__lte=dt)
+                pr_qs = pr_qs.filter(returnpurchase_entry_date__lte=dt)
+                sr_qs = sr_qs.filter(return_sale_entry_date__lte=dt)
+                sc_qs = sc_qs.filter(challan_entry_date__lte=dt)
+                cc_qs = cc_qs.filter(sales_entry_date__lte=dt)
+            except: pass
+        
+        purchases = purchase_qs.values('productid').annotate(qty=Sum('product_quantity'), free_qty=Sum('product_free_qty'), avg_mrp=Max('product_MRP'))
+        sales = sales_qs.values('productid').annotate(qty=Sum('sale_quantity'), free_qty=Sum('sale_free_qty'))
+        purchase_returns = pr_qs.values('returnproductid').annotate(qty=Sum('returnproduct_quantity'), free_qty=Sum('returnproduct_free_qty'))
+        sales_returns = sr_qs.values('return_productid').annotate(qty=Sum('return_sale_quantity'), free_qty=Sum('return_sale_free_qty'))
+        supplier_challans = sc_qs.values('product_id').annotate(qty=Sum('product_quantity'), free_qty=Sum('product_free_qty'), avg_mrp=Max('product_mrp'))
+        customer_challans = cc_qs.values('product_id').annotate(qty=Sum('sale_quantity'), free_qty=Sum('sale_free_qty'))
         
         purchase_dict = {p['productid']: {'qty': p['qty'] or 0, 'free_qty': p['free_qty'] or 0, 'mrp': p['avg_mrp'] or 0} for p in purchases}
         sales_dict = {s['productid']: {'qty': s['qty'] or 0, 'free_qty': s['free_qty'] or 0} for s in sales}
         pr_dict = {pr['returnproductid']: {'qty': pr['qty'] or 0, 'free_qty': pr['free_qty'] or 0} for pr in purchase_returns}
         sr_dict = {sr['return_productid']: {'qty': sr['qty'] or 0, 'free_qty': sr['free_qty'] or 0} for sr in sales_returns}
-        sc_dict = {sc['product_id']: {'qty': sc['qty'] or 0, 'free_qty': sc['free_qty'] or 0} for sc in supplier_challans}
+        sc_dict = {sc['product_id']: {'qty': sc['qty'] or 0, 'free_qty': sc['free_qty'] or 0, 'mrp': sc['avg_mrp'] or 0} for sc in supplier_challans}
         cc_dict = {cc['product_id']: {'qty': cc['qty'] or 0, 'free_qty': cc['free_qty'] or 0} for cc in customer_challans}
+        from core.models import InventoryTransaction
+        it_mrp_xl = {r['product_id']: r['mrp'] for r in InventoryTransaction.objects.filter(product_id__in=product_ids).values('product_id').annotate(mrp=Max('mrp'))}
+        def get_mrp_xl(pid):
+            return (purchase_dict.get(pid, {}).get('mrp') or sc_dict.get(pid, {}).get('mrp') or it_mrp_xl.get(pid) or 0)
         
         stock_data = []
         for product in products_list:
@@ -587,8 +665,8 @@ def export_stock_statement_excel(request, stock_data=None):
                 balance_stock = received_stock - sold_stock
                 balance_free = received_free - sold_free
                 total_balance = balance_stock + balance_free
-                avg_mrp = purchase_dict.get(pid, {}).get('mrp', 0)
-                # Stock value should only include paid stock, not free quantity
+                avg_mrp = get_mrp_xl(pid)
+                # Stock value = balance paid stock * MRP
                 stock_value = balance_stock * avg_mrp
                 
                 if balance_stock <= 0:
@@ -773,17 +851,21 @@ def stock_statement_batch_detail(request, product_id):
         
         # Get all unique batch combinations
         from .models import PurchaseMaster, SalesMaster, ReturnPurchaseMaster, ReturnSalesMaster, SupplierChallanMaster, CustomerChallanMaster, SaleRateMaster
-        
-        # Get unique batches from purchases
-        purchase_batches = PurchaseMaster.objects.filter(
-            productid=product_id
-        ).values('product_batch_no', 'product_expiry').distinct()
-        
+
+        # Get unique batches from BOTH purchases AND supplier challans
+        purchase_batch_set = set(
+            PurchaseMaster.objects.filter(productid=product_id)
+            .values_list('product_batch_no', 'product_expiry').distinct()
+        )
+        challan_batch_set = set(
+            SupplierChallanMaster.objects.filter(product_id=product_id)
+            .values_list('product_batch_no', 'product_expiry').distinct()
+        )
+        all_batches = purchase_batch_set | challan_batch_set
+
         batch_details = []
-        
-        for batch_info in purchase_batches:
-            batch_no = batch_info['product_batch_no']
-            expiry = batch_info['product_expiry']
+
+        for batch_no, expiry in all_batches:
             
             # Get purchased quantities
             purchased_data = PurchaseMaster.objects.filter(
@@ -907,7 +989,7 @@ def stock_statement_batch_detail(request, product_id):
                 'purchase_returns_free': purchase_returns_free,
                 'sales_returns': sales_returns,
                 'sales_returns_free': sales_returns_free,
-                'mrp': purchase.product_MRP if purchase else 0,
+                'mrp': (purchase.product_MRP if purchase else None) or (SupplierChallanMaster.objects.filter(product_id=product_id, product_batch_no=batch_no).values_list('product_mrp', flat=True).first() or 0),
                 'rate_A': rate_A,
                 'rate_B': rate_B,
                 'rate_C': rate_C

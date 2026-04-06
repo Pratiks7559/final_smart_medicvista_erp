@@ -416,11 +416,20 @@ def product_detail(request, pk):
     # Get stock status
     stock_info = get_stock_status(pk)
     
-    # Get purchase history
-    purchases = PurchaseMaster.objects.filter(productid=pk).order_by('-purchase_entry_date')
-    
-    # Get sales history
-    sales = SalesMaster.objects.filter(productid=pk).order_by('-sale_entry_date')
+    # Get purchase history - order by actual invoice date
+    purchases = PurchaseMaster.objects.filter(productid=pk).select_related('product_invoiceid').order_by('-product_invoiceid__invoice_date').values(
+        'purchaseid', 'product_invoice_no', 'product_batch_no',
+        'product_quantity', 'product_free_qty', 'product_purchase_rate',
+        'product_MRP', 'product_expiry',
+        'product_invoiceid__invoice_date', 'product_invoiceid__invoiceid'
+    )
+
+    # Get sales history - order by actual sales invoice date
+    sales = SalesMaster.objects.filter(productid=pk).select_related('sales_invoice_no').order_by('-sales_invoice_no__sales_invoice_date').values(
+        'id', 'product_batch_no', 'sale_quantity', 'sale_free_qty',
+        'sale_rate', 'product_MRP', 'product_expiry',
+        'sales_invoice_no__sales_invoice_no', 'sales_invoice_no__sales_invoice_date'
+    )
     
     # Get rate history
     rates = ProductRateMaster.objects.filter(rate_productid=pk).order_by('-rate_date')
@@ -5487,9 +5496,13 @@ def inventory_list(request):
 def batch_inventory_report(request):
     from django.core.paginator import Paginator
     from .fast_inventory import FastInventory
+    from .year_filter_utils import get_financial_year_dates, get_current_financial_year
     
     search_query = request.GET.get('search', '')
-    all_inventory_data = FastInventory.get_batch_inventory_data(search_query)
+    selected_year = request.session.get('selected_year', get_current_financial_year())
+    fy_start, fy_end = get_financial_year_dates(selected_year)
+    fy_product_ids = FastInventory.get_fy_product_ids(fy_start, fy_end)
+    all_inventory_data = FastInventory.get_batch_inventory_data(search_query, fy_product_ids=fy_product_ids)
     
     # Pagination
     paginator = Paginator(all_inventory_data, 100)
@@ -5521,7 +5534,17 @@ def dateexpiry_inventory_report(request):
     expiry_from = request.GET.get('expiry_from', '')
     expiry_to = request.GET.get('expiry_to', '')
     
-    expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(search_query)
+    from datetime import date as date_type
+    start_date = None
+    end_date = None
+    try:
+        if expiry_from:
+            start_date = date_type.fromisoformat(expiry_from)
+        if expiry_to:
+            end_date = date_type.fromisoformat(expiry_to)
+    except ValueError:
+        pass
+    expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(search_query, start_date=start_date, end_date=end_date)
     
     # Pagination - 50 entries per page
     paginator = Paginator(expiry_data, 50)
@@ -5697,104 +5720,185 @@ def purchase_report(request):
 def financial_report(request):
     from datetime import datetime, timedelta
     from django.db.models import Sum, F
+    from django.core.paginator import Paginator
 
-    # Get date range from request - no defaults, user must select
     start_date_str = request.GET.get('start_date', '')
-    end_date_str = request.GET.get('end_date', '')
-    
+    end_date_str   = request.GET.get('end_date', '')
+    product_id_str = request.GET.get('product_id', '')
+    product_search = request.GET.get('product_search', '')
+    page_number    = request.GET.get('page', 1)
+
     start_date = None
-    end_date = None
-    sales = 0
-    purchases = 0
-    
+    end_date   = None
+    financial_rows = []
+
     if start_date_str and end_date_str:
         try:
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-            
-            # Calculate financial data
-            sales_invoices = SalesInvoiceMaster.objects.filter(
-                sales_invoice_date__range=[start_date, end_date]
-            )
-            purchase_invoices = InvoiceMaster.objects.filter(
-                invoice_date__range=[start_date, end_date]
-            )
-
-            # Calculate totals
-            sales = SalesMaster.objects.filter(
-                sales_invoice_no__in=sales_invoices
-            ).aggregate(total=Sum('sale_total_amount'))['total'] or 0
-
-            purchases = purchase_invoices.aggregate(total=Sum('invoice_total'))['total'] or 0
+            end_date   = datetime.strptime(end_date_str,   '%Y-%m-%d').date()
         except (ValueError, TypeError):
-            pass
-    
-    # Placeholder for returns
-    sales_returns = 0
-    purchase_returns = 0
-    
-    # Calculate net figures
-    net_sales = sales - sales_returns
-    net_purchases = purchases - purchase_returns
-    gross_profit = net_sales - net_purchases
+            start_date = end_date = None
 
-    # Outstanding amounts (total, not date-filtered)
+    if start_date and end_date:
+        # ── Sales transactions ──────────────────────────────────────────
+        sales_qs = SalesMaster.objects.filter(
+            sales_invoice_no__sales_invoice_date__range=[start_date, end_date]
+        ).select_related('sales_invoice_no__customerid', 'productid')
+
+        if product_id_str:
+            sales_qs = sales_qs.filter(productid=product_id_str)
+        elif product_search:
+            sales_qs = sales_qs.filter(product_name__icontains=product_search)
+
+        for s in sales_qs:
+            # purchase rate for this batch
+            from .models import PurchaseMaster as PM
+            pur = PM.objects.filter(
+                productid=s.productid,
+                product_batch_no=s.product_batch_no
+            ).first()
+            purchase_rate = float(pur.product_purchase_rate) if pur else 0.0
+
+            qty          = float(s.sale_quantity or 0)
+            sale_rate    = float(s.sale_rate or 0)
+            mrp          = float(s.product_MRP or 0)
+            cgst         = float(s.sale_cgst or 0)
+            sgst         = float(s.sale_sgst or 0)
+            gst_rate     = cgst + sgst
+
+            sales_value  = float(s.sale_total_amount or 0)
+            # taxable = sales_value / (1 + gst_rate/100)
+            taxable      = sales_value / (1 + gst_rate / 100) if gst_rate else sales_value
+            gst_amount   = sales_value - taxable
+            purchase_cost = purchase_rate * qty
+            profit       = taxable - purchase_cost
+            profit_pct   = (profit / purchase_cost * 100) if purchase_cost else 0
+
+            customer_name = ''
+            try:
+                customer_name = s.sales_invoice_no.customerid.customer_name
+            except Exception:
+                pass
+
+            financial_rows.append({
+                'date':             s.sales_invoice_no.sales_invoice_date,
+                'type':             'Sale',
+                'invoice_no':       s.sales_invoice_no.sales_invoice_no,
+                'customer':         customer_name,
+                'product_name':     s.product_name,
+                'company':          s.product_company,
+                'batch_no':         s.product_batch_no,
+                'quantity':         qty,
+                'mrp':              mrp,
+                'purchase_rate':    purchase_rate,
+                'sale_rate':        sale_rate,
+                'gst_amount':       gst_amount,
+                'purchase_cost':    purchase_cost,
+                'sales_value':      sales_value,
+                'profit':           profit,
+                'profit_percentage': profit_pct,
+            })
+
+        # ── Purchase transactions ────────────────────────────────────────
+        from .models import PurchaseMaster as PM2
+        purchase_qs = PM2.objects.filter(
+            product_invoiceid__invoice_date__range=[start_date, end_date]
+        ).select_related('product_invoiceid__supplierid', 'productid')
+
+        if product_id_str:
+            purchase_qs = purchase_qs.filter(productid=product_id_str)
+        elif product_search:
+            purchase_qs = purchase_qs.filter(product_name__icontains=product_search)
+
+        for p in purchase_qs:
+            qty           = float(p.product_quantity or 0)
+            purchase_rate = float(p.product_purchase_rate or 0)
+            mrp           = float(p.product_MRP or 0)
+            cgst          = float(p.CGST or 0)
+            sgst          = float(p.SGST or 0)
+            gst_rate      = cgst + sgst
+            purchase_cost = float(p.total_amount or purchase_rate * qty)
+            gst_amount    = purchase_cost * gst_rate / (100 + gst_rate) if gst_rate else 0
+
+            supplier_name = ''
+            try:
+                supplier_name = p.product_invoiceid.supplierid.supplier_name
+            except Exception:
+                pass
+
+            financial_rows.append({
+                'date':             p.product_invoiceid.invoice_date,
+                'type':             'Purchase',
+                'invoice_no':       p.product_invoice_no,
+                'customer':         supplier_name,
+                'product_name':     p.product_name,
+                'company':          p.product_company,
+                'batch_no':         p.product_batch_no,
+                'quantity':         qty,
+                'mrp':              mrp,
+                'purchase_rate':    purchase_rate,
+                'sale_rate':        0,
+                'gst_amount':       gst_amount,
+                'purchase_cost':    purchase_cost,
+                'sales_value':      0,
+                'profit':           0,
+                'profit_percentage': 0,
+            })
+
+        # sort by date desc
+        financial_rows.sort(key=lambda x: x['date'], reverse=True)
+
+    # ── Summary ──────────────────────────────────────────────────────────
+    total_sales_value  = sum(r['sales_value']   for r in financial_rows)
+    total_purchase_cost= sum(r['purchase_cost'] for r in financial_rows if r['type'] == 'Purchase')
+    total_gst          = sum(r['gst_amount']    for r in financial_rows)
+    total_profit       = sum(r['profit']        for r in financial_rows)
+    profit_pct         = (total_profit / total_sales_value * 100) if total_sales_value else 0
+
+    # stock valuation = all purchases - all sales (purchase cost basis)
+    stock_valuation = total_purchase_cost - sum(r['purchase_cost'] for r in financial_rows if r['type'] == 'Sale')
+
+    summary = {
+        'total_sales_value':  total_sales_value,
+        'total_purchase_cost': total_purchase_cost,
+        'total_gst':          total_gst,
+        'total_profit':       total_profit,
+        'profit_percentage':  profit_pct,
+        'stock_valuation':    max(0, stock_valuation),
+        'total_transactions': len(financial_rows),
+    }
+
+    # ── Pagination ───────────────────────────────────────────────────────
+    paginator    = Paginator(financial_rows, 50)
+    financial_data = paginator.get_page(page_number)
+
+    # Outstanding (all-time, not date-filtered)
     total_receivables = 0
-    total_payables = 0
-    
-    # Calculate receivables properly
-    for invoice in SalesInvoiceMaster.objects.all():
-        balance = invoice.sales_invoice_total - invoice.sales_invoice_paid
-        if balance > 0:
-            total_receivables += balance
-    
-    # Calculate payables
+    for inv in SalesInvoiceMaster.objects.all():
+        bal = inv.sales_invoice_total - inv.sales_invoice_paid
+        if bal > 0:
+            total_receivables += bal
+
     total_payables = InvoiceMaster.objects.aggregate(
         total=Sum(F('invoice_total') - F('invoice_paid'))
     )['total'] or 0
 
-    # Monthly sales for chart (last 12 months)
-    monthly_sales = []
-    current_date = datetime.now()
-    for i in range(12):
-        if i == 0:
-            month_start = current_date.replace(day=1)
-        else:
-            if month_start.month == 1:
-                month_start = month_start.replace(year=month_start.year-1, month=12, day=1)
-            else:
-                month_start = month_start.replace(month=month_start.month-1, day=1)
-        
-        if month_start.month == 12:
-            month_end = month_start.replace(year=month_start.year+1, month=1, day=1) - timedelta(days=1)
-        else:
-            month_end = month_start.replace(month=month_start.month+1, day=1) - timedelta(days=1)
-        
-        month_sales = SalesMaster.objects.filter(
-            sales_invoice_no__sales_invoice_date__range=[month_start, month_end]
-        ).aggregate(total=Sum('sale_total_amount'))['total'] or 0
-        
-        monthly_sales.insert(0, {
-            'month': month_start,
-            'total': month_sales
-        })
-
     context = {
-        'title': 'Financial Report',
-        'start_date': start_date,
-        'end_date': end_date,
-        'sales': sales,
-        'purchases': purchases,
-        'sales_returns': sales_returns,
-        'purchase_returns': purchase_returns,
-        'net_sales': net_sales,
-        'net_purchases': net_purchases,
-        'gross_profit': gross_profit,
+        'title':            'Financial Report',
+        'start_date':       start_date,
+        'end_date':         end_date,
+        'summary':          summary,
+        'financial_data':   financial_data,
+        'selected_product': product_id_str,
+        'product_search':   product_search,
         'total_receivables': total_receivables,
-        'total_payables': total_payables,
-        'monthly_sales': monthly_sales,
-        'outstanding_receivables': [],
-        'outstanding_payables': [],
+        'total_payables':   total_payables,
+        # legacy keys kept for any other template references
+        'sales':            total_sales_value,
+        'purchases':        total_purchase_cost,
+        'net_sales':        total_sales_value,
+        'net_purchases':    total_purchase_cost,
+        'gross_profit':     total_profit,
     }
     return render(request, 'reports/financial_report.html', context)
 
@@ -6825,9 +6929,14 @@ def export_inventory_pdf(request):
 
         # Get inventory data with all batches
         from .fast_inventory import FastInventory
+        from .year_filter_utils import get_financial_year_dates, get_current_financial_year
         
         search_query = request.GET.get('search', '')
-        all_inventory = FastInventory.get_batch_inventory_data(search_query)
+        selected_year = request.session.get('selected_year', get_current_financial_year())
+        fy_start, fy_end = get_financial_year_dates(selected_year)
+        fy_label = f"{selected_year}-{str(selected_year + 1)[2:]}"
+        fy_product_ids = FastInventory.get_fy_product_ids(fy_start, fy_end)
+        all_inventory = FastInventory.get_batch_inventory_data(search_query, fy_product_ids=fy_product_ids)
         
         inventory_data = []
         for item in all_inventory:
@@ -7052,9 +7161,14 @@ def export_inventory_excel(request):
     # Get all batches
     from .fast_inventory import FastInventory
     from collections import defaultdict
+    from .year_filter_utils import get_financial_year_dates, get_current_financial_year
     
     search_query = request.GET.get('search', '')
-    all_inventory = FastInventory.get_batch_inventory_data(search_query)
+    selected_year = request.session.get('selected_year', get_current_financial_year())
+    fy_start, fy_end = get_financial_year_dates(selected_year)
+    fy_label = f"{selected_year}-{str(selected_year + 1)[2:]}"
+    fy_product_ids = FastInventory.get_fy_product_ids(fy_start, fy_end)
+    all_inventory = FastInventory.get_batch_inventory_data(search_query, fy_product_ids=fy_product_ids)
     
     # Group by product
     product_groups = defaultdict(list)

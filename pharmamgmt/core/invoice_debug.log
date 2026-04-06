@@ -1,0 +1,37 @@
+2026-04-05 18:57:08,133 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['9dk4rL1qoJrgfwGs4mgt8yjcVX5Il8yGDMRnf2FbtEjbdWX0IjthVDkzGOVxZnFf'], 'invoice_no': ['123'], 'invoice_date': ['2013-04-05'], 'supplierid': ['1'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"281","batch_no":"1223","expiry":"12-2020","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-04-05 18:57:08,154 - core.combined_invoice_view - INFO - Products data received: [{"productid":"281","batch_no":"1223","expiry":"12-2020","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-04-05 18:57:08,154 - core.combined_invoice_view - INFO - Challan flag: false
+2026-04-05 18:57:08,164 - core.combined_invoice_view - INFO - Invoice created with ID: 134989
+2026-04-05 18:57:08,288 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-04-05 18:57:08,288 - core.combined_invoice_view - INFO - Setting rates for AZAUK 200 SUSP 15 ML: A=1.0, B=2.0, C=3.0
+2026-04-05 18:57:08,289 - core.combined_invoice_view - INFO - Product AZAUK 200 SUSP 15 ML: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-04-05 18:57:08,649 - core.combined_invoice_view - INFO - Product AZAUK 200 SUSP 15 ML added to invoice
+2026-04-05 18:57:08,650 - core.combined_invoice_view - INFO - PURCHASE CREATED: AZAUK 200 SUSP 15 ML, Batch: 1223, Qty: 1.0, Free Qty: 1.0
+2026-04-05 18:57:08,663 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-04-05 18:57:08,664 - core.combined_invoice_view - INFO - Invoice 123 created successfully with 1 products
+2026-04-06 12:32:31,763 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['5gqqRYtMa40wcIwCyeX77ESK41tNDg5LcPngBsuGLIDUmiesVBU7JPPRf4Ldqcoa'], 'invoice_no': ['12345'], 'invoice_date': ['2012-07-06'], 'supplierid': ['1'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"254","batch_no":"2345","expiry":"12-2020","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-04-06 12:32:31,781 - core.combined_invoice_view - INFO - Products data received: [{"productid":"254","batch_no":"2345","expiry":"12-2020","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-04-06 12:32:31,783 - core.combined_invoice_view - INFO - Challan flag: false
+2026-04-06 12:32:31,789 - core.combined_invoice_view - INFO - Invoice created with ID: 134990
+2026-04-06 12:32:31,969 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-04-06 12:32:31,970 - core.combined_invoice_view - INFO - Setting rates for ASITUSS-A SYP 100ML: A=1.0, B=2.0, C=3.0
+2026-04-06 12:32:31,971 - core.combined_invoice_view - INFO - Product ASITUSS-A SYP 100ML: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-04-06 12:32:32,072 - core.combined_invoice_view - INFO - Product ASITUSS-A SYP 100ML added to invoice
+2026-04-06 12:32:32,073 - core.combined_invoice_view - INFO - PURCHASE CREATED: ASITUSS-A SYP 100ML, Batch: 2345, Qty: 1.0, Free Qty: 1.0
+2026-04-06 12:32:32,087 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-04-06 12:32:32,088 - core.combined_invoice_view - INFO - Invoice 12345 created successfully with 1 products
+2026-04-06 19:36:37,981 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['h4HZADVbSymC7Ci1rDAwfUGABhdQXNTGMCKlbSCzW2aKJ5etwfPOGU08eCUTbrK7'], 'invoice_no': ['22424'], 'invoice_date': ['2026-04-06'], 'supplierid': ['1'], 'transport_charges': ['0'], 'invoice_total': ['2.10'], 'roundoff_amount': ['0.10'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"2","batch_no":"1232","expiry":"12-2034","mrp":"1","purchase_rate":"2","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":true,"challan_no":"112","challan_date":"23-03-2026"}]'], 'is_from_challan': ['true']}>
+2026-04-06 19:36:37,998 - core.combined_invoice_view - INFO - Products data received: [{"productid":"2","batch_no":"1232","expiry":"12-2034","mrp":"1","purchase_rate":"2","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":true,"challan_no":"112","challan_date":"23-03-2026"}]
+2026-04-06 19:36:38,001 - core.combined_invoice_view - INFO - Challan flag: true
+2026-04-06 19:36:38,009 - core.combined_invoice_view - INFO - Invoice created with ID: 134991
+2026-04-06 19:36:38,017 - core.combined_invoice_view - INFO - Challan data received: challan_no=112, challan_date=23-03-2026
+2026-04-06 19:36:38,022 - core.combined_invoice_view - INFO - Set source_challan_no: 112
+2026-04-06 19:36:38,024 - core.combined_invoice_view - INFO - Set source_challan_date: 2026-03-23
+2026-04-06 19:36:38,025 - core.combined_invoice_view - INFO - Setting rates for 1ST AID TRANSPORE TAPE .5"": A=1.0, B=2.0, C=3.0
+2026-04-06 19:36:38,026 - core.combined_invoice_view - INFO - Product 1ST AID TRANSPORE TAPE .5"": Base=2.0, CGST=0.05, SGST=0.05, Total=2.1
+2026-04-06 19:36:38,113 - core.combined_invoice_view - INFO - Product 1ST AID TRANSPORE TAPE .5"" added to invoice
+2026-04-06 19:36:38,114 - core.combined_invoice_view - INFO - PURCHASE CREATED: 1ST AID TRANSPORE TAPE .5"", Batch: 1232, Qty: 1.0, Free Qty: 1.0
+2026-04-06 19:36:38,123 - core.combined_invoice_view - INFO - Saved invoice: Total=2.1, RoundOff=0.1 (deducted)
+2026-04-06 19:36:38,249 - core.combined_invoice_view - INFO - Moved challan entry to SupplierChallanMaster2: 1ST AID TRANSPORE TAPE .5"" - 1232
+2026-04-06 19:36:38,250 - core.combined_invoice_view - INFO - Total 1 challan entries moved to SupplierChallanMaster2
+2026-04-06 19:36:38,250 - core.combined_invoice_view - INFO - Invoice 22424 created successfully with 1 products

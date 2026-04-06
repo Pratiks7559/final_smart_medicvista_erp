@@ -20,7 +20,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
-from .models import Pharmacy_Details, ProductMaster, PurchaseMaster, SalesMaster, ReturnPurchaseMaster, ReturnSalesMaster, SupplierChallanMaster, CustomerChallanMaster, StockIssueDetail
+from .models import Pharmacy_Details, ProductMaster, PurchaseMaster, SalesMaster, ReturnPurchaseMaster, ReturnSalesMaster, SupplierChallanMaster, CustomerChallanMaster, StockIssueDetail, InvoiceMaster
+from .year_filter_utils import get_financial_year_dates, get_current_financial_year
 from django.db.models import Q
 from collections import defaultdict
 import calendar
@@ -351,7 +352,11 @@ def export_batch_inventory_pdf(request):
     try:
         from .fast_inventory import FastInventory
         search_query = request.GET.get('search', '')
-        all_inventory_data = FastInventory.get_batch_inventory_data(search_query)
+        selected_year = request.session.get('selected_year', get_current_financial_year())
+        fy_start, fy_end = get_financial_year_dates(selected_year)
+        fy_label = f'{selected_year}-{str(selected_year + 1)[2:]}'
+        fy_product_ids = FastInventory.get_fy_product_ids(fy_start, fy_end)
+        all_inventory_data = FastInventory.get_batch_inventory_data(search_query, fy_product_ids=fy_product_ids)
         
         # Create PDF buffer
         buffer = io.BytesIO()
@@ -394,6 +399,7 @@ def export_batch_inventory_pdf(request):
             story.append(Spacer(1, 0.1*inch))
         
         story.append(Paragraph("Batch-wise Inventory Report", title_style))
+        story.append(Paragraph(f"Financial Year: {fy_label}", date_style))
         story.append(Paragraph(f"Generated on: {datetime.now().strftime('%d %B %Y at %H:%M')}", date_style))
         
         if search_query:
@@ -526,7 +532,11 @@ def export_batch_inventory_excel(request):
     try:
         from .fast_inventory import FastInventory
         search_query = request.GET.get('search', '')
-        all_inventory_data = FastInventory.get_batch_inventory_data(search_query)
+        selected_year = request.session.get('selected_year', get_current_financial_year())
+        fy_start, fy_end = get_financial_year_dates(selected_year)
+        fy_label = f'{selected_year}-{str(selected_year + 1)[2:]}'
+        fy_product_ids = FastInventory.get_fy_product_ids(fy_start, fy_end)
+        all_inventory_data = FastInventory.get_batch_inventory_data(search_query, fy_product_ids=fy_product_ids)
         
         # Create workbook
         wb = Workbook()
@@ -595,6 +605,12 @@ def export_batch_inventory_excel(request):
         ws.merge_cells(f'A{current_row}:H{current_row}')
         ws[f'A{current_row}'] = "Batch-wise Inventory Report"
         ws[f'A{current_row}'].font = title_font
+        ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
+        current_row += 1
+
+        ws.merge_cells(f'A{current_row}:H{current_row}')
+        ws[f'A{current_row}'] = f"Financial Year: {fy_label}"
+        ws[f'A{current_row}'].font = info_font
         ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
         current_row += 1
         
@@ -721,14 +737,18 @@ def export_batch_inventory_excel(request):
         for i, width in enumerate(column_widths, 1):
             ws.column_dimensions[get_column_letter(i)].width = width
         
-        # Create response
+        # Save to BytesIO buffer then return
+        import io as _io
+        buffer = _io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
         response = HttpResponse(
+            buffer.read(),
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
         filename = f"batch_inventory_report_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
-        wb.save(response)
         return response
         
     except Exception as e:
@@ -745,8 +765,18 @@ def export_dateexpiry_inventory_pdf(request):
         expiry_from = request.GET.get('expiry_from', '')
         expiry_to = request.GET.get('expiry_to', '')
         
-        # Get inventory data
-        expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(search_query)
+        # Get inventory data with date filter
+        from datetime import date as date_type
+        start_date = None
+        end_date = None
+        try:
+            if expiry_from:
+                start_date = date_type.fromisoformat(expiry_from)
+            if expiry_to:
+                end_date = date_type.fromisoformat(expiry_to)
+        except ValueError:
+            pass
+        expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(search_query, start_date=start_date, end_date=end_date)
         
         # Create PDF buffer
         buffer = io.BytesIO()
@@ -923,8 +953,18 @@ def export_dateexpiry_inventory_excel(request):
         expiry_from = request.GET.get('expiry_from', '')
         expiry_to = request.GET.get('expiry_to', '')
         
-        # Get inventory data
-        expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(search_query)
+        # Get inventory data with date filter
+        from datetime import date as date_type
+        start_date = None
+        end_date = None
+        try:
+            if expiry_from:
+                start_date = date_type.fromisoformat(expiry_from)
+            if expiry_to:
+                end_date = date_type.fromisoformat(expiry_to)
+        except ValueError:
+            pass
+        expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(search_query, start_date=start_date, end_date=end_date)
         
         # Create workbook
         wb = Workbook()
@@ -1125,14 +1165,18 @@ def export_dateexpiry_inventory_excel(request):
         for i, width in enumerate(column_widths, 1):
             ws.column_dimensions[get_column_letter(i)].width = width
         
-        # Create response
+        # Save to BytesIO buffer then return
+        import io as _io
+        buffer = _io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
         response = HttpResponse(
+            buffer.read(),
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
         filename = f"dateexpiry_inventory_report_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
-        wb.save(response)
         return response
         
     except Exception as e:
@@ -1465,14 +1509,18 @@ def export_all_product_inventory_excel(request):
         for i, width in enumerate(column_widths, 1):
             ws.column_dimensions[get_column_letter(i)].width = width
         
-        # Create response
+        # Save to BytesIO buffer then return
+        import io as _io
+        buffer = _io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        
         response = HttpResponse(
+            buffer.read(),
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
         filename = f"all_product_inventory_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
-        wb.save(response)
         return response
         
     except Exception as e:
