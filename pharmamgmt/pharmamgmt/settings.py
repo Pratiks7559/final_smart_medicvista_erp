@@ -103,12 +103,16 @@ STATICFILES_DIRS = [
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Use simple storage - CompressedManifest causes 500 on missing files
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 ]
+
+# Serve media files via WhiteNoise in production
+WHITENOISE_ROOT = BASE_DIR / 'staticfiles'
 
 # ============================================================
 # MEDIA FILES

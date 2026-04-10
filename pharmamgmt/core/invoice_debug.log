@@ -35,3 +35,14 @@
 2026-04-06 19:36:38,249 - core.combined_invoice_view - INFO - Moved challan entry to SupplierChallanMaster2: 1ST AID TRANSPORE TAPE .5"" - 1232
 2026-04-06 19:36:38,250 - core.combined_invoice_view - INFO - Total 1 challan entries moved to SupplierChallanMaster2
 2026-04-06 19:36:38,250 - core.combined_invoice_view - INFO - Invoice 22424 created successfully with 1 products
+2026-04-10 17:16:21,093 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['7bFAbSrxo6fToroEyupBylBEn85orVGp6kJDhufsDeborOW893uGT00gMRgjThaE'], 'invoice_no': ['14535'], 'invoice_date': ['2026-04-10'], 'supplierid': ['1'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'roundoff_amount': ['0.05'], 'roundoff_type': ['deducted'], 'products_data': ['[{"productid":"164","batch_no":"24","expiry":"12-2020","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"3","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-04-10 17:16:21,116 - core.combined_invoice_view - INFO - Products data received: [{"productid":"164","batch_no":"24","expiry":"12-2020","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"1","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"3","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-04-10 17:16:21,117 - core.combined_invoice_view - INFO - Challan flag: false
+2026-04-10 17:16:21,123 - core.combined_invoice_view - INFO - Invoice created with ID: 134992
+2026-04-10 17:16:21,295 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-04-10 17:16:21,295 - core.combined_invoice_view - INFO - Setting rates for AMALZOL IV INJ 1: A=1.0, B=3.0, C=3.0
+2026-04-10 17:16:21,297 - core.combined_invoice_view - INFO - Product AMALZOL IV INJ 1: Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-04-10 17:16:21,418 - core.combined_invoice_view - INFO - Product AMALZOL IV INJ 1 added to invoice
+2026-04-10 17:16:21,419 - core.combined_invoice_view - INFO - PURCHASE CREATED: AMALZOL IV INJ 1, Batch: 24, Qty: 1.0, Free Qty: 1.0
+2026-04-10 17:16:21,434 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.05 (deducted)
+2026-04-10 17:16:21,434 - core.combined_invoice_view - INFO - Invoice 14535 created successfully with 1 products

@@ -1965,9 +1965,10 @@ def sales_invoice_detail(request, pk):
     # Get all payments for this invoice
     payments = SalesInvoicePaid.objects.filter(sales_ip_invoice_no=pk).order_by('-sales_payment_date')
     
-    # Get customers and products for edit modal
+    # Get customers, products and invoice series for edit modal
     customers = CustomerMaster.objects.all().order_by('customer_name')
     products = ProductMaster.objects.all().order_by('product_name')
+    invoice_series = InvoiceSeries.objects.filter(is_active=True).order_by('series_name')
     
     context = {
         'invoice': invoice,
@@ -1976,14 +1977,10 @@ def sales_invoice_detail(request, pk):
         'payments': payments,
         'customers': customers,
         'products': products,
+        'invoice_series': invoice_series,
         'title': f'Sales Invoice #{invoice.sales_invoice_no}'
     }
     return render(request, 'sales/sales_invoice_detail.html', context)
-
-
-
-
-
 
 
 @login_required
@@ -2259,115 +2256,153 @@ def delete_user(request, pk):
 
 @login_required
 def edit_sales_invoice(request, pk):
-    # Only allow POST requests to prevent accidental data deletion on page refresh
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
     
     invoice = get_object_or_404(SalesInvoiceMaster, sales_invoice_no=pk)
     
     try:
-        # Update invoice basic details (explicitly excluding primary key sales_invoice_no)
-        # DO NOT update sales_invoice_no as it's the primary key and referenced by other tables
-        invoice.sales_invoice_date = request.POST.get('sales_invoice_date')
-        invoice.customerid_id = request.POST.get('customerid')
-        
-        # Process products data if provided
-        products_data = request.POST.get('products_data')
-        if products_data:
-            try:
-                products = json.loads(products_data)
+        new_invoice_no = request.POST.get('sales_invoice_no', pk).strip()
+        new_date = request.POST.get('sales_invoice_date')
+        new_customer_id = request.POST.get('customerid')
+        new_series_id = request.POST.get('invoice_series_id')
+
+        # Handle invoice number change
+        if new_invoice_no and new_invoice_no != pk:
+            # Check if new invoice no already exists
+            if SalesInvoiceMaster.objects.filter(sales_invoice_no=new_invoice_no).exclude(sales_invoice_no=pk).exists():
+                return JsonResponse({'success': False, 'error': f'Invoice number {new_invoice_no} already exists'})
+            
+            # Rename: create new invoice, move all related records, delete old
+            with transaction.atomic():
+                # Update all SalesMaster records to point to new invoice no
+                # We need to create new invoice first, then update FK references
+                old_invoice_no = pk
                 
-                # Get existing products for this invoice
-                existing_products = list(SalesMaster.objects.filter(sales_invoice_no=invoice))
+                # Create new invoice with new number
+                new_invoice = SalesInvoiceMaster.objects.create(
+                    sales_invoice_no=new_invoice_no,
+                    sales_invoice_date=new_date or invoice.sales_invoice_date,
+                    customerid_id=new_customer_id or invoice.customerid_id,
+                    invoice_series_id=new_series_id if new_series_id else invoice.invoice_series_id,
+                    sales_transport_charges=invoice.sales_transport_charges,
+                    sales_invoice_paid=invoice.sales_invoice_paid,
+                )
                 
-                # Clear all existing products first
-                for sale in existing_products:
-                    sale.delete()
+                # Move all sales items
+                SalesMaster.objects.filter(sales_invoice_no=old_invoice_no).update(sales_invoice_no=new_invoice_no)
                 
-                # Add all products from the form (both existing and new)
-                for product_data in products:
+                # Move all payments
+                SalesInvoicePaid.objects.filter(sales_ip_invoice_no=old_invoice_no).update(sales_ip_invoice_no=new_invoice_no)
+                
+                # Process products data if provided
+                products_data = request.POST.get('products_data')
+                if products_data:
                     try:
-                        product = ProductMaster.objects.get(productid=product_data['productid'])
-                        
-                        # Skip stock validation for edit mode - we're just updating existing invoice
-                        # Stock was already validated when invoice was first created
-                        
-                        # Calculate total amount
-                        base_price = float(product_data['sale_rate']) * float(product_data['quantity'])
-                        discount = float(product_data.get('discount', 0))
-                        cgst = float(product_data.get('cgst', 0))
-                        sgst = float(product_data.get('sgst', 0))
-                        
-                        if product_data.get('calculation_mode', 'flat') == 'flat':
-                            discounted_amount = base_price - discount
-                        else:
-                            discounted_amount = base_price * (1 - (discount / 100))
-                        
-                        total_amount = discounted_amount * (1 + ((cgst + sgst) / 100))
-                        
-                        # Keep expiry date in MM-YYYY format for SalesMaster
-                        expiry_date = product_data.get('expiry', '')
-                        if expiry_date:
+                        products = json.loads(products_data)
+                        SalesMaster.objects.filter(sales_invoice_no=new_invoice_no).delete()
+                        for product_data in products:
                             try:
-                                # Ensure it's in MM-YYYY format
-                                if len(expiry_date) == 10 and '-' in expiry_date:
-                                    # Convert YYYY-MM-DD to MM-YYYY
+                                product = ProductMaster.objects.get(productid=product_data['productid'])
+                                base_price = float(product_data['sale_rate']) * float(product_data['quantity'])
+                                discount = float(product_data.get('discount', 0))
+                                cgst = float(product_data.get('cgst', 0))
+                                sgst = float(product_data.get('sgst', 0))
+                                discounted_amount = base_price - discount if product_data.get('calculation_mode', 'flat') == 'flat' else base_price * (1 - discount / 100)
+                                total_amount = discounted_amount * (1 + (cgst + sgst) / 100)
+                                expiry_date = product_data.get('expiry', '')
+                                if expiry_date and len(expiry_date) == 10 and '-' in expiry_date:
                                     parts = expiry_date.split('-')
-                                    if len(parts[0]) == 4:  # YYYY-MM-DD format
+                                    if len(parts[0]) == 4:
                                         expiry_date = f"{parts[1]}-{parts[0]}"
-                                # If already in MM-YYYY format, keep as is
-                            except:
-                                pass  # Keep original format if conversion fails
-                        
-                        # Get rate_applied from product_data or derive from customer type
-                        rate_applied = product_data.get('rate_applied')
-                        if not rate_applied:
-                            customer_type = invoice.customerid.customer_type
-                            rate_applied = customer_type.split('-')[1] if '-' in customer_type else 'A'
-                        
-                        # Create sale entry
-                        sale = SalesMaster(
-                            sales_invoice_no=invoice,
-                            customerid=invoice.customerid,
-                            productid=product,
-                            product_name=product.product_name,
-                            product_company=product.product_company,
-                            product_packing=product.product_packing,
-                            product_batch_no=product_data.get('batch_no', ''),
-                            product_expiry=expiry_date,
-                            product_MRP=float(product_data.get('mrp', 0)),
-                            sale_rate=float(product_data.get('sale_rate', 0)),
-                            sale_quantity=float(product_data.get('quantity', 0)),
-                            sale_free_qty=float(product_data.get('free_qty', 0)),
-                            sale_scheme=float(product_data.get('scheme', 0)),
-                            sale_discount=discount,
-                            sale_calculation_mode=product_data.get('calculation_mode', 'flat'),
-                            sale_cgst=cgst,
-                            sale_sgst=sgst,
-                            rate_applied=rate_applied,
-                            sale_total_amount=total_amount
-                        )
-                        sale.save()
-                        
-                    except ProductMaster.DoesNotExist:
-                        continue
+                                rate_applied = product_data.get('rate_applied') or (new_invoice.customerid.customer_type.split('-')[1] if '-' in new_invoice.customerid.customer_type else 'A')
+                                SalesMaster.objects.create(
+                                    sales_invoice_no=new_invoice,
+                                    customerid=new_invoice.customerid,
+                                    productid=product,
+                                    product_name=product.product_name,
+                                    product_company=product.product_company,
+                                    product_packing=product.product_packing,
+                                    product_batch_no=product_data.get('batch_no', ''),
+                                    product_expiry=expiry_date,
+                                    product_MRP=float(product_data.get('mrp', 0)),
+                                    sale_rate=float(product_data.get('sale_rate', 0)),
+                                    sale_quantity=float(product_data.get('quantity', 0)),
+                                    sale_free_qty=float(product_data.get('free_qty', 0)),
+                                    sale_discount=discount,
+                                    sale_calculation_mode=product_data.get('calculation_mode', 'flat'),
+                                    sale_cgst=cgst,
+                                    sale_sgst=sgst,
+                                    rate_applied=rate_applied,
+                                    sale_total_amount=total_amount
+                                )
+                            except ProductMaster.DoesNotExist:
+                                continue
+                    except json.JSONDecodeError:
+                        pass
                 
-            except json.JSONDecodeError:
-                pass  # If products_data is invalid, just update basic fields
+                # Delete old invoice
+                SalesInvoiceMaster.objects.filter(sales_invoice_no=old_invoice_no).delete()
+                
+                return JsonResponse({'success': True, 'message': f'Sales Invoice updated to #{new_invoice_no}!', 'new_invoice_no': new_invoice_no})
         
-        invoice.save()
+        # No invoice number change — just update fields
+        with transaction.atomic():
+            invoice.sales_invoice_date = new_date
+            invoice.customerid_id = new_customer_id
+            if new_series_id:
+                invoice.invoice_series_id = new_series_id
+            
+            products_data = request.POST.get('products_data')
+            if products_data:
+                try:
+                    products = json.loads(products_data)
+                    SalesMaster.objects.filter(sales_invoice_no=invoice).delete()
+                    for product_data in products:
+                        try:
+                            product = ProductMaster.objects.get(productid=product_data['productid'])
+                            base_price = float(product_data['sale_rate']) * float(product_data['quantity'])
+                            discount = float(product_data.get('discount', 0))
+                            cgst = float(product_data.get('cgst', 0))
+                            sgst = float(product_data.get('sgst', 0))
+                            discounted_amount = base_price - discount if product_data.get('calculation_mode', 'flat') == 'flat' else base_price * (1 - discount / 100)
+                            total_amount = discounted_amount * (1 + (cgst + sgst) / 100)
+                            expiry_date = product_data.get('expiry', '')
+                            if expiry_date and len(expiry_date) == 10 and '-' in expiry_date:
+                                parts = expiry_date.split('-')
+                                if len(parts[0]) == 4:
+                                    expiry_date = f"{parts[1]}-{parts[0]}"
+                            rate_applied = product_data.get('rate_applied') or (invoice.customerid.customer_type.split('-')[1] if '-' in invoice.customerid.customer_type else 'A')
+                            SalesMaster.objects.create(
+                                sales_invoice_no=invoice,
+                                customerid=invoice.customerid,
+                                productid=product,
+                                product_name=product.product_name,
+                                product_company=product.product_company,
+                                product_packing=product.product_packing,
+                                product_batch_no=product_data.get('batch_no', ''),
+                                product_expiry=expiry_date,
+                                product_MRP=float(product_data.get('mrp', 0)),
+                                sale_rate=float(product_data.get('sale_rate', 0)),
+                                sale_quantity=float(product_data.get('quantity', 0)),
+                                sale_free_qty=float(product_data.get('free_qty', 0)),
+                                sale_discount=discount,
+                                sale_calculation_mode=product_data.get('calculation_mode', 'flat'),
+                                sale_cgst=cgst,
+                                sale_sgst=sgst,
+                                rate_applied=rate_applied,
+                                sale_total_amount=total_amount
+                            )
+                        except ProductMaster.DoesNotExist:
+                            continue
+                except json.JSONDecodeError:
+                    pass
+            
+            invoice.save()
         
-        messages.success(request, f'Sales Invoice #{pk} updated successfully!')
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Sales Invoice #{pk} updated successfully!'
-        })
+        return JsonResponse({'success': True, 'message': f'Sales Invoice #{pk} updated successfully!'})
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        })
+        return JsonResponse({'success': False, 'error': str(e)})
 
 @login_required
 def delete_sales_invoice(request, pk):

@@ -321,16 +321,35 @@
                 <form id="editSalesInvoiceForm">
                     {% csrf_token %}
                     <div class="row mb-3">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="edit_sales_invoice_no" class="form-label">Invoice No</label>
-                            <input type="text" class="form-control" id="edit_sales_invoice_no" name="sales_invoice_no" value="{{ invoice.sales_invoice_no }}" readonly>
-                            <small class="form-text text-muted">Invoice number cannot be changed</small>
+                            <input type="text" class="form-control" id="edit_sales_invoice_no" name="sales_invoice_no" value="{{ invoice.sales_invoice_no }}">
+                            <small class="form-text text-muted">Change to rename invoice number</small>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label class="form-label mb-0">Invoice Series</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary py-0" onclick="openEditAddSeriesDialog()"><i class="fas fa-plus"></i> Add</button>
+                            </div>
+                            <input type="hidden" name="invoice_series_id" id="edit_invoice_series_id" value="{{ invoice.invoice_series_id|default:'' }}">
+                            <div class="series-display" id="editSeriesDisplay" onclick="toggleEditSeriesList()" tabindex="0" style="padding:8px 12px;border:1px solid #ced4da;border-radius:4px;background:#fff;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+                                <span id="editSelectedSeriesText">{% if invoice.invoice_series %}{{ invoice.invoice_series.series_name }}{% else %}Select Series{% endif %}</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div id="editSeriesList" style="display:none;position:absolute;background:#fff;border:1px solid #ced4da;border-radius:4px;z-index:1000;min-width:150px;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+                                {% for series in invoice_series %}
+                                <div class="series-item" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #e9ecef;" onclick="selectEditSeries({{ series.series_id }}, '{{ series.series_name }}')" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#fff'">{{ series.series_name }}</div>
+                                {% endfor %}
+                            </div>
+                            <div id="editInvoicePreview" style="display:none;margin-top:6px;padding:6px 8px;background:#e8f5e9;border-radius:4px;border-left:3px solid #4caf50;">
+                                <small style="color:#2e7d32;font-weight:500;"></small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
                             <label for="edit_sales_invoice_date" class="form-label">Invoice Date</label>
                             <input type="date" class="form-control" id="edit_sales_invoice_date" name="sales_invoice_date" value="{{ invoice.sales_invoice_date|date:'Y-m-d' }}" autofocus required>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="edit_customerid" class="form-label">Customer</label>
                             <select class="form-select" id="edit_customerid" name="customerid" onchange="fetchEditCustomerRateInfo(this.value)" required>
                                 {% for customer in customers %}
@@ -588,6 +607,62 @@ function closeSalesPaymentDialog() {
         window.paymentDialogKeyHandler = null;
     }
 }
+
+// Series selector for edit modal
+function toggleEditSeriesList() {
+    const list = document.getElementById('editSeriesList');
+    list.style.display = list.style.display === 'block' ? 'none' : 'block';
+}
+
+function selectEditSeries(seriesId, seriesName) {
+    document.getElementById('edit_invoice_series_id').value = seriesId;
+    document.getElementById('editSelectedSeriesText').textContent = seriesName;
+    document.getElementById('editSeriesList').style.display = 'none';
+    // Update invoice no preview
+    fetch(`/api/get-next-invoice-number/?series_id=${seriesId}`)
+        .then(r => r.json())
+        .then(data => {
+            const preview = document.getElementById('editInvoicePreview');
+            if (data.success) {
+                preview.querySelector('small').textContent = `Next: ${data.invoice_number}`;
+                preview.style.display = 'block';
+            }
+        });
+}
+
+function openEditAddSeriesDialog() {
+    const name = prompt('Enter new series name (max 10 chars):');
+    if (!name || !name.trim()) return;
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const formData = new FormData();
+    formData.append('series_name', name.trim().toUpperCase());
+    formData.append('csrfmiddlewaretoken', csrfToken);
+    fetch('/api/add-invoice-series/', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const list = document.getElementById('editSeriesList');
+                const item = document.createElement('div');
+                item.className = 'series-item';
+                item.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid #e9ecef;';
+                item.textContent = data.series_name;
+                item.onclick = () => selectEditSeries(data.series_id, data.series_name);
+                item.onmouseover = () => item.style.background = '#e9ecef';
+                item.onmouseout = () => item.style.background = '#fff';
+                list.appendChild(item);
+                selectEditSeries(data.series_id, data.series_name);
+            } else { alert('Error: ' + data.error); }
+        });
+}
+
+// Close series list on outside click
+document.addEventListener('click', function(e) {
+    const display = document.getElementById('editSeriesDisplay');
+    const list = document.getElementById('editSeriesList');
+    if (display && list && !display.contains(e.target) && !list.contains(e.target)) {
+        list.style.display = 'none';
+    }
+});
 
 // Edit Sales Invoice functionality
 let editProductRowIndex = {{ sales|length }};
@@ -933,7 +1008,11 @@ document.getElementById('saveEditSalesInvoice').addEventListener('click', functi
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            location.reload();
+            if (data.new_invoice_no) {
+                window.location.href = '/sales/' + data.new_invoice_no + '/';
+            } else {
+                location.reload();
+            }
         } else {
             alert('Error: ' + data.error);
         }
