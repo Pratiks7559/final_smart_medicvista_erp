@@ -253,6 +253,15 @@ def view_supplier_challan(request, challan_id):
     
     products_total = (challan_items_1.aggregate(total=Sum('total_amount'))['total'] or 0) + (challan_items_2.aggregate(total=Sum('total_amount'))['total'] or 0)
     
+    # Calculate summary figures for the bill footer
+    subtotal_before_discount = sum(item.product_purchase_rate * item.product_quantity for item in challan_items)
+    total_discount = sum(item.product_discount for item in challan_items)
+    discount_pct = (total_discount / subtotal_before_discount * 100) if subtotal_before_discount else 0
+    total_gst = sum(
+        (item.product_purchase_rate * item.product_quantity - item.product_discount) * (item.cgst + item.sgst) / 100
+        for item in challan_items
+    )
+    
     # Get suppliers and products for edit modal
     suppliers = SupplierMaster.objects.all().order_by('supplier_name')
     products = ProductMaster.objects.all().order_by('product_name')
@@ -261,6 +270,10 @@ def view_supplier_challan(request, challan_id):
         'challan': challan,
         'challan_items': challan_items,
         'products_total': products_total,
+        'subtotal_before_discount': subtotal_before_discount,
+        'total_discount': total_discount,
+        'discount_pct': discount_pct,
+        'total_gst': total_gst,
         'suppliers': suppliers,
         'products': products,
         'title': f'Challan {challan.challan_no}'

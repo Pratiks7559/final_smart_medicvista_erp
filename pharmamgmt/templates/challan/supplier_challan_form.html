@@ -319,9 +319,24 @@ body.select2-open {
                                 </table>
                             </div>
                             <div class="ci-total-section">
-                                <div class="ci-grand-total-display">
-                                    <strong class="ci-total-text">challan Total: ₹<span id="challanTotal" class="ci-total-amount">0.00</span></strong>
-                                </div>
+                                <table style="margin-left:auto; border-collapse:collapse; min-width:300px;">
+                                    <tr>
+                                        <td style="padding:4px 12px; text-align:right;">Subtotal (before discount):</td>
+                                        <td style="padding:4px 12px; text-align:right;">₹<span id="challanSubtotal">0.00</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:4px 12px; text-align:right;">Total Discount:</td>
+                                        <td style="padding:4px 12px; text-align:right;">- ₹<span id="challanTotalDiscount">0.00</span> (<span id="challanDiscountPct">0.00</span>%)</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:4px 12px; text-align:right;">GST Total (CGST + SGST):</td>
+                                        <td style="padding:4px 12px; text-align:right;">₹<span id="challanGstTotal">0.00</span></td>
+                                    </tr>
+                                    <tr style="border-top:2px solid #333;">
+                                        <td style="padding:6px 12px; text-align:right; font-weight:700;">Challan Total:</td>
+                                        <td style="padding:6px 12px; text-align:right; font-weight:700;">₹<span id="challanTotal">0.00</span></td>
+                                    </tr>
+                                </table>
                             </div>
                         </div>
 
@@ -725,32 +740,39 @@ function calculateRowTotal(rowIndex) {
 }
 
 function calculatechallanTotal() {
-    let productsTotal = 0;
-    document.querySelectorAll('.row-total').forEach(span => {
-        productsTotal += parseFloat(span.textContent) || 0;
+    let subtotal = 0;
+    let totalDiscount = 0;
+    let totalGst = 0;
+
+    document.querySelectorAll('#productRows tr').forEach(row => {
+        const rate = parseFloat(row.querySelector('.challan-rate')?.value) || 0;
+        const qty = parseFloat(row.querySelector('.qty')?.value) || 0;
+        const discount = parseFloat(row.querySelector('.discount')?.value) || 0;
+        const cgst = parseFloat(row.querySelector('.cgst-rate')?.value) || 0;
+        const sgst = parseFloat(row.querySelector('.sgst-rate')?.value) || 0;
+
+        const base = rate * qty;
+        const afterDiscount = base - discount;
+        const gst = (afterDiscount * (cgst + sgst)) / 100;
+
+        subtotal += base;
+        totalDiscount += discount;
+        totalGst += gst;
     });
-    
+
+    const discountPct = subtotal > 0 ? (totalDiscount / subtotal * 100) : 0;
+    const productsTotal = subtotal - totalDiscount + totalGst;
     const transportCharges = parseFloat(document.getElementById('transport_charges').value) || 0;
     const rawTotal = productsTotal + transportCharges;
-    const roundedTotal = Math.round(rawTotal); // Round to nearest integer
-    const roundoffAmount = roundedTotal - rawTotal;
-    
-    // Update display with round-off info
-    let displayHtml = '';
-    if (transportCharges > 0) {
-        displayHtml = `${productsTotal.toFixed(2)} + ${transportCharges.toFixed(2)}`;
-    } else {
-        displayHtml = productsTotal.toFixed(2);
-    }
-    if (Math.abs(roundoffAmount) > 0.001) {
-        const sign = roundoffAmount > 0 ? '+' : '-';
-        displayHtml += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>${roundedTotal}</strong>`;
-    } else {
-        displayHtml += ` = <strong>${roundedTotal}</strong>`;
-    }
-    document.getElementById('challanTotal').innerHTML = displayHtml;
-    
-    // Save ACTUAL amount (with decimals) in database
+    const roundedTotal = Math.round(rawTotal);
+
+    const setSpan = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setSpan('challanSubtotal', subtotal.toFixed(2));
+    setSpan('challanTotalDiscount', totalDiscount.toFixed(2));
+    setSpan('challanDiscountPct', discountPct.toFixed(2));
+    setSpan('challanGstTotal', totalGst.toFixed(2));
+    setSpan('challanTotal', roundedTotal.toFixed(2));
+
     const challanTotalInput = document.querySelector('input[name*="challan_total"]');
     if (challanTotalInput) {
         challanTotalInput.value = rawTotal.toFixed(2);
