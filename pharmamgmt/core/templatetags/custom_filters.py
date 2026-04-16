@@ -534,3 +534,47 @@ def get_item(dictionary, key):
         return dictionary.get(key, [])
     except (AttributeError, TypeError):
         return []
+
+@register.filter
+def subtotal_amount(purchases):
+    """Calculate subtotal (rate * qty) before discount for a list of purchases"""
+    try:
+        return sum(float(p.product_purchase_rate) * float(p.product_quantity) for p in purchases)
+    except Exception:
+        return 0
+
+@register.filter
+def total_discount(purchases):
+    """Calculate total discount amount for a list of purchases"""
+    try:
+        total = 0
+        for p in purchases:
+            base = float(p.product_purchase_rate) * float(p.product_quantity)
+            disc = float(p.product_discount_got)
+            total += (base * disc / 100) if p.purchase_calculation_mode == 'perc' else disc
+        return total
+    except Exception:
+        return 0
+
+@register.filter
+def taxable_amount(purchases):
+    """Calculate taxable amount (subtotal - discount) for a list of purchases"""
+    try:
+        return float(subtotal_amount(purchases)) - float(total_discount(purchases))
+    except Exception:
+        return 0
+
+@register.filter
+def total_gst(purchases):
+    """Calculate total GST (CGST + SGST) for a list of purchases"""
+    try:
+        total = 0
+        for p in purchases:
+            base = float(p.product_purchase_rate) * float(p.product_quantity)
+            disc = float(p.product_discount_got)
+            disc_amt = (base * disc / 100) if p.purchase_calculation_mode == 'perc' else disc
+            taxable = base - disc_amt
+            total += taxable * (float(p.CGST) + float(p.SGST)) / 100
+        return total
+    except Exception:
+        return 0

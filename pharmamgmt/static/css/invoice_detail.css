@@ -385,6 +385,82 @@
     font-weight: 600;
 }
 
+/* Breakdown rows - subtotal, discount, taxable, GST */
+.tfoot-breakdown-row td {
+    padding: 5px 12px;
+    font-size: 0.85rem;
+    background: #fffbf0 !important;
+    border-bottom: 1px solid #f0e6c8;
+}
+
+.tfoot-breakdown-row .tfoot-label {
+    text-align: right;
+    font-weight: 600;
+    color: #555;
+}
+
+.tfoot-breakdown-row .tfoot-value {
+    font-weight: 700;
+    color: #2c3e50;
+    white-space: nowrap;
+}
+
+.tfoot-discount-row td {
+    background: #fff5f5 !important;
+    border-bottom: 1px solid #fecaca;
+}
+
+.tfoot-discount-row .tfoot-label {
+    color: #dc3545;
+}
+
+.tfoot-discount-row .tfoot-value {
+    color: #dc3545;
+}
+
+.tfoot-gst-row td {
+    background: #f0f9ff !important;
+    border-bottom: 2px solid #bee3f8;
+}
+
+.tfoot-gst-row .tfoot-label {
+    color: #2563eb;
+}
+
+.tfoot-gst-row .tfoot-value {
+    color: #2563eb;
+}
+
+.tfoot-products-row td {
+    padding: 6px 12px;
+    background: #f8f9fa !important;
+    border-top: 2px solid #dee2e6;
+}
+
+.tfoot-grand-total-row td {
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #e8f5e9, #d4edda) !important;
+    border-top: 2px solid #27ae60;
+    font-size: 1rem;
+}
+
+.tfoot-grand-total-row .tfoot-label {
+    color: #155724;
+    font-size: 1rem;
+}
+
+.tfoot-grand-total-row .tfoot-value {
+    color: #155724;
+    font-size: 1.1rem;
+}
+
+.tfoot-actual-row td {
+    padding: 3px 12px;
+    background: #f8f9fa !important;
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
 .grand-total-row {
     background: linear-gradient(135deg, #e8f4fd, #d1ecf1);
     border-top: 2px solid #3498db;

@@ -217,26 +217,52 @@
                     </tbody>
                     <tfoot class="table-footer">
                         <tr>
-                            <td colspan="11" style="font-weight: 600;"><strong>Sum of Products:</strong></td>
-                            <td style="font-weight: 600;">{{ purchases_total|currency }}</td>
+                            <td colspan="10" style="text-align:right;font-weight:600;">Subtotal (before discount):</td>
+                            <td style="font-weight:600;">
+                                ₹<span id="detailSubtotal">{{ purchases|subtotal_amount }}</span>
+                            </td>
+                            <td colspan="3"></td>
+                        </tr>
+                        <tr style="color:#e74c3c;">
+                            <td colspan="10" style="text-align:right;font-weight:600;">Total Discount (₹):</td>
+                            <td style="font-weight:600;color:#e74c3c;">- ₹<span id="detailDiscount">{{ purchases|total_discount }}</span></td>
+                            <td colspan="3"></td>
                         </tr>
                         <tr>
-                            <td colspan="11" style="font-weight: 600;"><strong>Transport Charges:</strong></td>
-                            <td style="font-weight: 600;">{{ invoice.transport_charges|currency }}</td>
+                            <td colspan="10" style="text-align:right;font-weight:600;">Taxable Amount:</td>
+                            <td style="font-weight:600;">₹<span id="detailTaxable">{{ purchases|taxable_amount }}</span></td>
+                            <td colspan="3"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="10" style="text-align:right;font-weight:600;">Total GST (CGST + SGST):</td>
+                            <td style="font-weight:600;">₹<span id="detailGST">{{ purchases|total_gst }}</span></td>
+                            <td colspan="3"></td>
+                        </tr>
+                        <tr style="border-top:1px solid #dee2e6;">
+                            <td colspan="10" style="text-align:right;font-weight:600;"><strong>Sum of Products:</strong></td>
+                            <td style="font-weight:600;">{{ purchases_total|currency }}</td>
+                            <td colspan="3"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="10" style="text-align:right;font-weight:600;"><strong>Transport Charges:</strong></td>
+                            <td style="font-weight:600;">{{ invoice.transport_charges|currency }}</td>
+                            <td colspan="3"></td>
                         </tr>
                         <tr class="grand-total-row">
-                            <td colspan="11" style="font-weight: 700; color: #2c3e50;"><strong>Invoice Total:</strong></td>
-                            <td style="font-weight: 700; color: #2c3e50;">₹{{ invoice.invoice_total|floatformat:0 }}</td>
+                            <td colspan="10" style="text-align:right;font-weight:700;color:#2c3e50;"><strong>Invoice Total:</strong></td>
+                            <td style="font-weight:700;color:#2c3e50;">₹{{ invoice.invoice_total|floatformat:0 }}</td>
+                            <td colspan="3"></td>
                         </tr>
                         <tr>
-                            <td colspan="11" style="text-align: right; color: #6c757d; font-size: 0.9em;">Actual Amount:</td>
-                            <td style="color: #6c757d; font-size: 0.9em;">₹{{ invoice.invoice_total|floatformat:2 }}</td>
+                            <td colspan="10" style="text-align:right;color:#6c757d;font-size:0.9em;">Actual Amount:</td>
+                            <td style="color:#6c757d;font-size:0.9em;">₹{{ invoice.invoice_total|floatformat:2 }}</td>
+                            <td colspan="3"></td>
                         </tr>
                         {% if has_pending_entries %}
                         <tr class="pending-entries-row">
-                            <td colspan="11">
+                            <td colspan="10">
                                 <strong>Pending Entries:</strong>
-                                <div style="font-size: 0.8rem; color: #e74c3c;">
+                                <div style="font-size:0.8rem;color:#e74c3c;">
                                     {% if invoice_pending > 0 %}
                                     There are missing product entries worth {{ invoice_pending|currency }}
                                     {% else %}
@@ -244,7 +270,8 @@
                                     {% endif %}
                                 </div>
                             </td>
-                            <td style="color: #e74c3c; font-weight: 600;">{{ invoice_pending|currency }}</td>
+                            <td style="color:#e74c3c;font-weight:600;">{{ invoice_pending|currency }}</td>
+                            <td colspan="3"></td>
                         </tr>
                         {% endif %}
                     </tfoot>
@@ -1698,10 +1725,43 @@ function printPurchaseReceipt() {
     window.open(receiptUrl, '_blank');
 }
 
-// Show shortcut hint on page load
-window.addEventListener('load', function() {
-    console.log('💡 Tip: Press Ctrl+P to print purchase receipt');
-});
+// Calculate and display subtotal, discount, taxable, GST from table rows
+function calculateDetailTotals() {
+    let subtotal = 0;
+    let totalDiscount = 0;
+    let totalGST = 0;
+
+    {% for purchase in purchases %}
+    (function() {
+        var rate = {{ purchase.product_purchase_rate|default:0 }};
+        var qty  = {{ purchase.product_quantity|default:0 }};
+        var disc = {{ purchase.product_discount_got|default:0 }};
+        var cgst = {{ purchase.CGST|default:0 }};
+        var sgst = {{ purchase.SGST|default:0 }};
+        var mode = '{{ purchase.purchase_calculation_mode }}';
+
+        var base = rate * qty;
+        subtotal += base;
+
+        var discAmt = (mode === 'perc') ? (base * disc / 100) : disc;
+        totalDiscount += discAmt;
+
+        var taxable = base - discAmt;
+        var gst = taxable * (cgst + sgst) / 100;
+        totalGST += gst;
+    })();
+    {% endfor %}
+
+    var taxable = subtotal - totalDiscount;
+
+    document.getElementById('detailSubtotal').textContent = subtotal.toFixed(2);
+    document.getElementById('detailDiscount').textContent = totalDiscount.toFixed(2);
+    document.getElementById('detailTaxable').textContent  = taxable.toFixed(2);
+    document.getElementById('detailGST').textContent      = totalGST.toFixed(2);
+}
+
+document.addEventListener('DOMContentLoaded', calculateDetailTotals);
+
 </script>
 
 <style>

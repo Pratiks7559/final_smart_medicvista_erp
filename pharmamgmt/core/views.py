@@ -1962,6 +1962,22 @@ def sales_invoice_detail(request, pk):
     from django.db.models import Sum
     products_total = sales.aggregate(total=Sum('sale_total_amount'))['total'] or 0
     
+    # Calculate bill summary
+    bill_subtotal = 0
+    bill_discount = 0
+    bill_taxable = 0
+    bill_cgst = 0
+    bill_sgst = 0
+    for sale in sales:
+        base = float(sale.sale_rate) * float(sale.sale_quantity)
+        discount = float(sale.sale_discount)
+        after_discount = base - discount
+        bill_subtotal += base
+        bill_discount += discount
+        bill_taxable += after_discount
+        bill_cgst += (after_discount * float(sale.sale_cgst)) / 100
+        bill_sgst += (after_discount * float(sale.sale_sgst)) / 100
+    
     # Get all payments for this invoice
     payments = SalesInvoicePaid.objects.filter(sales_ip_invoice_no=pk).order_by('-sales_payment_date')
     
@@ -1974,6 +1990,11 @@ def sales_invoice_detail(request, pk):
         'invoice': invoice,
         'sales': sales,
         'products_total': products_total,
+        'bill_subtotal': round(bill_subtotal, 2),
+        'bill_discount': round(bill_discount, 2),
+        'bill_taxable': round(bill_taxable, 2),
+        'bill_cgst': round(bill_cgst, 2),
+        'bill_sgst': round(bill_sgst, 2),
         'payments': payments,
         'customers': customers,
         'products': products,

@@ -119,9 +119,38 @@
                                 </div>
                                 <div class="total-section">
                                     <div class="total-wrapper">
-                                        <div class="grand-total">
-                                            <strong class="total-label">Grand Total: ₹<span id="grandTotal" class="total-amount">0.00</span></strong>
-                            <small style="color: #6c757d; margin-left: 8px;">(₹<span id="actualTotal">0.00</span>)</small>
+                                        <div class="totals-card">
+                                        <table class="totals-table">
+                                            <tr class="totals-row-subtotal">
+                                                <td>Subtotal (before discount):</td>
+                                                <td>₹<span id="salesSubtotal">0.00</span></td>
+                                            </tr>
+                                            <tr class="totals-row-discount">
+                                                <td>Total Discount (₹):</td>
+                                                <td>- ₹<span id="salesTotalDiscount">0.00</span></td>
+                                            </tr>
+                                            <tr class="totals-row-taxable">
+                                                <td>Taxable Amount:</td>
+                                                <td>₹<span id="salesTotalTaxable">0.00</span></td>
+                                            </tr>
+                                            <tr class="totals-row-cgst">
+                                                <td>Total CGST:</td>
+                                                <td>₹<span id="salesTotalCGST">0.00</span></td>
+                                            </tr>
+                                            <tr class="totals-row-sgst">
+                                                <td>Total SGST:</td>
+                                                <td>₹<span id="salesTotalSGST">0.00</span></td>
+                                            </tr>
+                                            <tr class="totals-row-roundoff" id="roundoffRow" style="display:none;">
+                                                <td>Round Off:</td>
+                                                <td><span id="roundoffDisplay"></span></td>
+                                            </tr>
+                                            <tr class="totals-row-grand">
+                                                <td>Grand Total:</td>
+                                                <td>₹<span id="grandTotal" class="total-amount">0.00</span></td>
+                                            </tr>
+                                        </table>
+                                        <small class="totals-actual">(Actual: ₹<span id="actualTotal">0.00</span>)</small>
                                         </div>
                                     </div>
                                 </div>
@@ -1237,32 +1266,59 @@ function calculateRowTotal(index, immediate = false) {
 }
 
 function calculateGrandTotal() {
+    let subtotal = 0;
+    let totalDiscount = 0;
+    let taxableAmount = 0;
+    let totalCGST = 0;
+    let totalSGST = 0;
     let grandTotal = 0;
-    document.querySelectorAll('.row-total').forEach(span => {
-        const amount = parseFloat(span.textContent.replace('₹', '')) || 0;
-        grandTotal += amount;
+
+    document.querySelectorAll('#productRows tr').forEach(row => {
+        const rate = parseFloat(row.querySelector('.rate')?.value) || 0;
+        const qty = parseFloat(row.querySelector('.quantity')?.value) || 0;
+        const discount = parseFloat(row.querySelector('.discount')?.value) || 0;
+        const cgst = parseFloat(row.querySelector('.cgst')?.value) || 0;
+        const sgst = parseFloat(row.querySelector('.sgst')?.value) || 0;
+
+        const base = rate * qty;
+        const afterDiscount = base - discount;
+        const cgstAmt = (afterDiscount * cgst) / 100;
+        const sgstAmt = (afterDiscount * sgst) / 100;
+
+        subtotal += base;
+        totalDiscount += discount;
+        taxableAmount += afterDiscount;
+        totalCGST += cgstAmt;
+        totalSGST += sgstAmt;
+        grandTotal += afterDiscount + cgstAmt + sgstAmt;
     });
-    
+
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val.toFixed(2); };
+    setVal('salesSubtotal', subtotal);
+    setVal('salesTotalDiscount', totalDiscount);
+    setVal('salesTotalTaxable', taxableAmount);
+    setVal('salesTotalCGST', totalCGST);
+    setVal('salesTotalSGST', totalSGST);
+
     const transportCharges = parseFloat(document.querySelector('[name="sales_transport_charges"]').value) || 0;
     const rawTotal = grandTotal + transportCharges;
     const roundedTotal = Math.round(rawTotal);
     const roundoffAmount = roundedTotal - rawTotal;
-    
-    // Update display with round-off info
-    let displayHtml = '';
-    if (transportCharges > 0) {
-        displayHtml = `${grandTotal.toFixed(2)} + ${transportCharges.toFixed(2)}`;
-    } else {
-        displayHtml = grandTotal.toFixed(2);
-    }
+
+    // Update grand total display
+    document.getElementById('grandTotal').textContent = roundedTotal.toFixed(2);
+    document.getElementById('actualTotal').textContent = rawTotal.toFixed(2);
+
+    // Show/hide round-off row
+    const roundoffRow = document.getElementById('roundoffRow');
+    const roundoffDisplay = document.getElementById('roundoffDisplay');
     if (Math.abs(roundoffAmount) > 0.001) {
         const sign = roundoffAmount > 0 ? '+' : '-';
-        displayHtml += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>${roundedTotal}</strong>`;
+        roundoffDisplay.textContent = sign + ' ₹' + Math.abs(roundoffAmount).toFixed(2);
+        roundoffRow.style.display = '';
     } else {
-        displayHtml += ` = <strong>${roundedTotal}</strong>`;
+        roundoffRow.style.display = 'none';
     }
-    document.getElementById('grandTotal').innerHTML = displayHtml;
-    document.getElementById('actualTotal').textContent = rawTotal.toFixed(2);
 }
 
 function validateExpiryDate(dateString) {

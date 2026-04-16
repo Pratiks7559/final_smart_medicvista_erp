@@ -928,6 +928,124 @@
     .batch-details, .batch-rates { font-size: 0.65rem; }
 }
 
+/* ============================================
+   TOTALS SUMMARY SECTION - Theme-proof
+   Uses !important to override dark/light theme
+   ============================================ */
+
+.total-section {
+    background: #ffffff !important;
+    padding: 12px 16px !important;
+    border-top: 2px solid #28a745 !important;
+}
+
+.total-wrapper {
+    display: flex !important;
+    justify-content: flex-end !important;
+}
+
+/* The totals card box */
+.totals-card {
+    background: #ffffff !important;
+    border: 1.5px solid #dee2e6 !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    min-width: 340px !important;
+    max-width: 440px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+}
+
+.totals-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    font-size: 0.88rem !important;
+}
+
+.totals-table td {
+    padding: 6px 14px !important;
+    border: none !important;
+    vertical-align: middle !important;
+}
+
+.totals-table td:last-child {
+    text-align: right !important;
+    font-weight: 600 !important;
+}
+
+/* Subtotal row */
+.totals-row-subtotal {
+    background: #f8f9fa !important;
+}
+.totals-row-subtotal td {
+    color: #495057 !important;
+}
+
+/* Discount row */
+.totals-row-discount {
+    background: #fff5f5 !important;
+}
+.totals-row-discount td {
+    color: #c0392b !important;
+}
+
+/* Taxable row */
+.totals-row-taxable {
+    background: #ffffff !important;
+    border-top: 1px solid #dee2e6 !important;
+}
+.totals-row-taxable td {
+    color: #343a40 !important;
+}
+
+/* CGST row */
+.totals-row-cgst {
+    background: #f8f9fa !important;
+}
+.totals-row-cgst td {
+    color: #495057 !important;
+}
+
+/* SGST row */
+.totals-row-sgst {
+    background: #ffffff !important;
+}
+.totals-row-sgst td {
+    color: #495057 !important;
+}
+
+/* Round-off row */
+.totals-row-roundoff {
+    background: #fffbf0 !important;
+}
+.totals-row-roundoff td {
+    color: #856404 !important;
+    font-style: italic !important;
+    font-size: 0.82rem !important;
+}
+
+/* Grand Total row */
+.totals-row-grand {
+    background: #e8f5e9 !important;
+    border-top: 2px solid #27ae60 !important;
+}
+.totals-row-grand td {
+    padding: 8px 14px !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    color: #1a7a3c !important;
+}
+
+/* Actual total note */
+.totals-actual {
+    color: #6c757d !important;
+    background: #ffffff !important;
+    margin-top: 4px !important;
+    display: block !important;
+    text-align: right !important;
+    font-size: 0.78rem !important;
+    padding: 2px 14px 4px !important;
+}
+
 /* Loading States */
 .loading {
     position: relative;
