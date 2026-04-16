@@ -272,4 +272,69 @@ jab bhi user login karne ke baad ek box aaye fy year drodown ka waha pe bhi do u
 
 jab bhi mai website chalu karu to landing page pr jane ki vajah vo login ke page pr ja raha hai aisa na ho
 
-jab bhi mai page ko chota karta hu to instead of navabr ke jagah hambuger menu aatapr usr click karne pr kuch nhi ho raha hai solve
+jab bhi mai page ko chota karta hu to instead of navabr ke jagah hambuger menu aatapr usr click karne pr kuch nhi ho raha hai solve'
+
+
+1. core/forms.py
+clean_sales_invoice_date method mein:
+
+Pehle: sirf YYYY-MM-DD aur DDMMYYYY parse karta tha, koi year check nahi tha
+
+Ab: year < 1990 ya > current_year + 1 pe error deta hai
+
+clean_invoice_date method mein (purchase invoice):
+
+Same year range validation add ki
+
+Undo karna ho toh: Dono methods se ye lines hata do:
+
+current_year = datetime.now().year
+if parsed.year < 1990:
+    raise forms.ValidationError(...)
+if parsed.year > current_year + 1:
+    raise forms.ValidationError(...)
+
+
+2. templates/sales/combined_sales_invoice_form.html
+Date input field mein min aur max attribute add kiye:
+
+Pehle:
+
+<input type="date" name="sales_invoice_date" id="sales_invoice_date" class="form-control"
+       value="..." title="Enter invoice date" required>
+
+
+Ab:
+
+<input type="date" name="sales_invoice_date" id="sales_invoice_date" class="form-control"
+       value="..." min="1990-01-01" max="{{ today|date:'Y-m-d' }}"
+       title="Enter invoice date" required>
+
+
+
+Undo karna ho toh: min="1990-01-01" max="{{ today|date:'Y-m-d' }}" hata do
+
+3. core/views.py — add_sales_invoice_with_products
+Context mein today add kiya:
+
+Pehle:
+
+context = {
+    'invoice_form': invoice_form,
+    'customers': customers,
+    ...
+}
+
+Ab:
+
+from datetime import date as date_today
+context = {
+    'invoice_form': invoice_form,
+    'customers': customers,
+    ...
+    'today': date_today.today(),
+}
+
+Copy
+python
+Undo karna ho toh: 'today': date_today.today() aur from datetime import date as date_today hata do

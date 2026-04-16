@@ -151,12 +151,42 @@
             <form id="editChallanForm" method="post">
                 {% csrf_token %}
                 <div class="form-grid">
+                    <!-- Challan No -->
                     <div class="form-group">
-                        <label for="challan_date">Challan Date:</label>
+                        <label for="edit_challan_no">Challan No</label>
+                        <input type="text" id="edit_challan_no" name="challan_no" value="{{ challan.customer_challan_no }}">
+                        <small style="color:#6c757d;font-size:0.78rem;">Change to rename challan number</small>
+                    </div>
+                    <!-- Challan Series -->
+                    <div class="form-group" style="position:relative;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                            <label style="margin:0;">Challan Series</label>
+                            <button type="button" onclick="openEditAddSeriesDialog()" style="background:none;border:1px solid #007bff;color:#007bff;border-radius:4px;padding:2px 8px;font-size:12px;cursor:pointer;"><i class="fas fa-plus"></i> Add</button>
+                        </div>
+                        <input type="hidden" name="challan_series_id" id="edit_challan_series_id" value="{{ challan.challan_series_id|default:'' }}">
+                        <div id="editChallanSeriesDisplay" onclick="toggleEditChallanSeriesList()" tabindex="0"
+                             style="padding:8px 12px;border:1px solid #ced4da;border-radius:4px;background:#fff;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:0.85rem;">
+                            <span id="editChallanSeriesText">{% if challan.challan_series %}{{ challan.challan_series.series_name }}{% else %}Select Series{% endif %}</span>
+                            <i class="fas fa-chevron-down" style="color:#6c757d;"></i>
+                        </div>
+                        <div id="editChallanSeriesList" style="display:none;position:absolute;background:#fff;border:1px solid #ced4da;border-radius:4px;z-index:2000;min-width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+                            {% for series in challan_series %}
+                            <div onclick="selectEditChallanSeries({{ series.series_id }}, '{{ series.series_name }}')"
+                                 style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #e9ecef;font-size:0.85rem;"
+                                 onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#fff'">
+                                {{ series.series_name }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <!-- Date -->
+                    <div class="form-group">
+                        <label for="challan_date">Challan Date</label>
                         <input type="date" id="challan_date" name="challan_date" value="{{ challan.customer_challan_date|date:'Y-m-d' }}" required autofocus>
                     </div>
+                    <!-- Customer -->
                     <div class="form-group">
-                        <label for="customer_name">Customer:</label>
+                        <label for="customer_name">Customer</label>
                         <select id="customer_name" name="customer_name" required>
                             {% for customer in customers %}
                             <option value="{{ customer.customerid }}" {% if customer.customerid == challan.customer_name.customerid %}selected{% endif %}>
@@ -165,8 +195,9 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <!-- Transport -->
                     <div class="form-group">
-                        <label for="transport_charges">Transport Charges:</label>
+                        <label for="transport_charges">Transport Charges</label>
                         <input type="number" id="transport_charges" name="transport_charges" value="{{ challan.customer_transport_charges }}" step="0.01" min="0">
                     </div>
                 </div>
@@ -219,6 +250,51 @@ window.initializeProductCache = function() {
     },{% endfor %}];
     console.log('Product cache initialized with', window.productCache.length, 'products');
 };
+
+// Challan Series selector for edit modal
+function toggleEditChallanSeriesList() {
+    const list = document.getElementById('editChallanSeriesList');
+    list.style.display = list.style.display === 'block' ? 'none' : 'block';
+}
+
+function selectEditChallanSeries(seriesId, seriesName) {
+    document.getElementById('edit_challan_series_id').value = seriesId;
+    document.getElementById('editChallanSeriesText').textContent = seriesName;
+    document.getElementById('editChallanSeriesList').style.display = 'none';
+}
+
+function openEditAddSeriesDialog() {
+    const name = prompt('Enter new series name (max 10 chars):');
+    if (!name || !name.trim()) return;
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const formData = new FormData();
+    formData.append('series_name', name.trim().toUpperCase());
+    formData.append('csrfmiddlewaretoken', csrfToken);
+    fetch('/api/add-challan-series/', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const list = document.getElementById('editChallanSeriesList');
+                const item = document.createElement('div');
+                item.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid #e9ecef;font-size:0.85rem;';
+                item.textContent = data.series_name;
+                item.onclick = () => selectEditChallanSeries(data.series_id, data.series_name);
+                item.onmouseover = () => item.style.background = '#e9ecef';
+                item.onmouseout = () => item.style.background = '#fff';
+                list.appendChild(item);
+                selectEditChallanSeries(data.series_id, data.series_name);
+            } else { alert('Error: ' + data.error); }
+        });
+}
+
+// Close series list on outside click
+document.addEventListener('click', function(e) {
+    const display = document.getElementById('editChallanSeriesDisplay');
+    const list = document.getElementById('editChallanSeriesList');
+    if (display && list && !display.contains(e.target) && !list.contains(e.target)) {
+        list.style.display = 'none';
+    }
+});
 
 function openEditChallanModal() {
     document.getElementById('editChallanModal').style.display = 'block';

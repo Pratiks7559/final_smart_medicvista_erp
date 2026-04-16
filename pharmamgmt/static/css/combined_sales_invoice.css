@@ -112,24 +112,27 @@
     transform: translateY(-1px);
 }
 
+/* Form controls in invoice details section */
 .form-group input,
 .form-group select {
     width: 100%;
-    padding: 6px 10px;
-    border: 1px solid #e5e7eb;
-    border-radius: 4px;
-    font-size: 0.8rem;
+    padding: 7px 10px;
+    border: 1.5px solid #ced4da;
+    border-radius: 5px;
+    font-size: 0.85rem;
     transition: all 0.2s ease;
     background: white;
-    height: 28px;
+    height: 36px;
     box-sizing: border-box;
+    color: #212529;
 }
 
 .form-group input:focus,
 .form-group select:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+    background: #fff;
 }
 
 .form-group .text-muted {
@@ -258,15 +261,15 @@
 }
 
 .header-row th {
-    padding: 8px 6px;
+    padding: 10px 8px;
     text-align: left;
-    font-weight: 600;
-    font-size: 0.7rem;
+    font-weight: 700;
+    font-size: 0.72rem;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
     border-bottom: 2px solid #dee2e6;
     white-space: nowrap;
-    background: linear-gradient(135deg, #495057 0%, #6c757d 100%);
+    background: linear-gradient(135deg, #343a40 0%, #495057 100%);
 }
 
 .table-body tr {
@@ -284,7 +287,7 @@
 }
 
 .table-body td {
-    padding: 6px 4px;
+    padding: 7px 5px;
     vertical-align: middle;
 }
 
@@ -300,57 +303,90 @@
 .total-col { width: 10%; }
 .action-col { width: 6%; }
 
-/* Form Controls in Table - Compact */
+/* Form Controls in Table - Improved */
 .product-select,
 .batch-no,
 .expiry,
 .mrp,
 .rate,
 .quantity,
+.free-qty,
 .discount,
+.cgst,
+.sgst,
 .igst {
     width: 100%;
-    padding: 4px 6px;
-    border: 1px solid #e5e7eb;
-    border-radius: 3px;
-    font-size: 0.75rem;
+    padding: 5px 8px;
+    border: 1.5px solid #ced4da;
+    border-radius: 5px;
+    font-size: 0.82rem;
     transition: all 0.2s ease;
-    background: white;
-    height: 24px;
+    background: #fff;
+    height: 32px;
     box-sizing: border-box;
+    color: #212529;
+    font-weight: 500;
+}
+
+.product-select:hover,
+.batch-no:hover,
+.mrp:hover,
+.rate:hover,
+.quantity:hover,
+.free-qty:hover,
+.discount:hover,
+.cgst:hover,
+.sgst:hover {
+    border-color: #adb5bd;
+    background: #f8f9fa;
 }
 
 .expiry {
-    background: #fff3cd;
+    background: #fff8e1;
     border-color: #ffc107;
     font-weight: 600;
-    color: #856404;
+    color: #5d4037;
 }
 
 .expiry:focus {
-    border-color: #ffc107;
-    box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.2);
-    background: white;
+    border-color: #ff8f00;
+    box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.25);
+    background: #fff;
 }
 
 .product-select:focus,
 .batch-no:focus,
-.expiry:focus,
 .mrp:focus,
 .rate:focus,
 .quantity:focus,
+.free-qty:focus,
 .discount:focus,
+.cgst:focus,
+.sgst:focus,
 .igst:focus {
     outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+    background: #fff;
 }
 
 .batch-no:focus {
-    border-color: #28a745 !important;
-    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2) !important;
-    background: #d4edda !important;
+    border-color: #198754 !important;
+    box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.2) !important;
+    background: #f0fff4 !important;
     font-weight: 600;
+}
+
+.quantity:focus {
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.2) !important;
+    background: #f0f4ff !important;
+}
+
+.rate:focus {
+    border-color: #6f42c1 !important;
+    box-shadow: 0 0 0 3px rgba(111, 66, 193, 0.2) !important;
+    background: #f8f0ff !important;
 }
 
 .batch-no.auto-focused {
@@ -377,15 +413,16 @@
 }
 
 .row-total {
-    color: #28a745;
+    color: #155724;
     font-weight: 700;
-    font-size: 0.8rem;
-    padding: 2px 4px;
+    font-size: 0.82rem;
+    padding: 3px 6px;
     background: #d4edda;
-    border-radius: 3px;
+    border: 1px solid #c3e6cb;
+    border-radius: 4px;
     display: inline-block;
-    min-width: 60px;
-    text-align: center;
+    min-width: 65px;
+    text-align: right;
 }
 
 .remove-btn {
@@ -409,17 +446,18 @@
     transform: scale(1.1);
 }
 
-/* Stock Info - Compact */
+/* Stock Info */
 .stock-info {
     display: block;
-    margin-top: 2px;
-    padding: 2px 4px;
-    background: #d1ecf1;
-    border-radius: 3px;
-    color: #0c5460;
-    font-weight: 500;
-    font-size: 0.65rem;
-    border-left: 2px solid #17a2b8;
+    margin-top: 3px;
+    padding: 3px 6px;
+    background: #e8f5e9;
+    border-radius: 4px;
+    color: #1b5e20;
+    font-weight: 600;
+    font-size: 0.68rem;
+    border-left: 3px solid #43a047;
+    line-height: 1.4;
 }
 
 /* Total Section - Compact */
@@ -620,32 +658,34 @@
 }
 
 .batch-no {
-    font-size: 0.8rem;
-    margin-bottom: 2px;
-    font-weight: 600;
-    color: red;
+    font-size: 0.85rem;
+    margin-bottom: 3px;
+    font-weight: 700;
+    color: #1a1a2e;
 }
 
 .batch-details {
     display: flex;
-    gap: 8px;
-    margin-bottom: 2px;
-    font-size: 0.8rem;
-    color:red ;
+    gap: 10px;
+    margin-bottom: 3px;
+    font-size: 0.78rem;
+    color: #495057;
 }
 
 .batch-item.batch-selected .batch-details {
-    opacity: 0.9;
+    opacity: 0.95;
+    color: #fff;
 }
 
 .batch-rates {
-    font-size: 0.68rem;
-    font-weight: 500;
-    color: red;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #0d6efd;
 }
 
 .batch-item.batch-selected .batch-rates {
     opacity: 0.95;
+    color: #fff;
 }
 
 .batch-modal-footer {

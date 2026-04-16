@@ -1883,7 +1883,7 @@ def delete_invoice(request, pk):
 # Sales Invoice views
 @login_required
 def sales_invoice_list(request):
-    invoices = SalesInvoiceMaster.objects.all().order_by('-sales_invoice_date')
+    invoices = SalesInvoiceMaster.objects.all().order_by('-sales_invoice_date', '-sales_invoice_no')
     invoices = apply_year_filter(invoices, request, 'sales_invoice_date')
     
     # Search functionality
@@ -3073,12 +3073,15 @@ def add_purchase_return(request):
     import json
     from django.db import transaction
     
-    # Generate preview return ID
+    # Generate unique preview return ID
     today = datetime.now().date()
-    count = ReturnInvoiceMaster.objects.filter(
-        returninvoice_date=today
-    ).count() + 1
-    preview_id = f'PR-{today.strftime("%Y%m%d")}-{count:04d}'
+    date_str = today.strftime('%Y%m%d')
+    count = 1
+    while True:
+        preview_id = f'PR-{date_str}-{count:04d}'
+        if not ReturnInvoiceMaster.objects.filter(returninvoiceid=preview_id).exists():
+            break
+        count += 1
     
     if request.method == 'POST':
         try:
@@ -3087,7 +3090,33 @@ def add_purchase_return(request):
                 if form.is_valid():
                     # Create return invoice
                     return_invoice = form.save(commit=False)
-                    return_invoice.returninvoiceid = preview_id
+                    
+                    # Use user-provided return ID, or generate a fresh unique one
+                    user_return_id = request.POST.get('return_id', '').strip()
+                    if user_return_id:
+                        if ReturnInvoiceMaster.objects.filter(returninvoiceid=user_return_id).exists():
+                            messages.error(request, f'Return ID "{user_return_id}" already exists. Please use a different ID.')
+                            context = {
+                                'form': form,
+                                'preview_id': preview_id,
+                                'suppliers': SupplierMaster.objects.all().order_by('supplier_name'),
+                                'products': ProductMaster.objects.all().order_by('product_name'),
+                                'title': 'Add Purchase Return with Products'
+                            }
+                            return render(request, 'returns/purchase_return_form.html', context)
+                        final_return_id = user_return_id
+                    else:
+                        # Always generate a fresh unique ID at save time
+                        _date_str = datetime.now().date().strftime('%Y%m%d')
+                        _count = 1
+                        while True:
+                            final_return_id = f'PR-{_date_str}-{_count:04d}'
+                            if not ReturnInvoiceMaster.objects.filter(returninvoiceid=final_return_id).exists():
+                                break
+                            _count += 1
+                    
+                    return_invoice.returninvoiceid = final_return_id
+                    
                     return_invoice.returninvoice_paid = 0
                     return_invoice.save()
                     
@@ -3346,88 +3375,106 @@ def update_purchase_return_api(request):
     try:
         data = json.loads(request.body)
         return_id = data.get('return_id')
+        new_return_id = data.get('new_return_id', '').strip()
         
         return_invoice = get_object_or_404(ReturnInvoiceMaster, returninvoiceid=return_id)
         
-        # Update basic return details
+        # Handle Return ID rename
+        if new_return_id and new_return_id != return_id:
+            if ReturnInvoiceMaster.objects.filter(returninvoiceid=new_return_id).exists():
+                return JsonResponse({'success': False, 'error': f'Return ID "{new_return_id}" already exists'})
+            
+            from django.db import connection
+            # Disable FK checks OUTSIDE transaction so MySQL respects it
+            with connection.cursor() as cursor:
+                cursor.execute('SET FOREIGN_KEY_CHECKS=0;')
+            try:
+                with transaction.atomic():
+                    new_invoice = ReturnInvoiceMaster.objects.create(
+                        returninvoiceid=new_return_id,
+                        returninvoice_date=data.get('return_date') or return_invoice.returninvoice_date,
+                        returnsupplierid_id=data.get('supplier_id') or return_invoice.returnsupplierid_id,
+                        return_charges=float(data.get('return_charges', 0)),
+                        returninvoice_total=return_invoice.returninvoice_total,
+                        returninvoice_paid=return_invoice.returninvoice_paid,
+                    )
+                    ReturnPurchaseMaster.objects.filter(returninvoiceid=return_invoice).update(returninvoiceid=new_invoice)
+                    PurchaseReturnInvoicePaid.objects.filter(pr_ip_returninvoiceid=return_invoice).update(pr_ip_returninvoiceid=new_invoice)
+                    return_invoice.delete()
+                    
+                    products = data.get('products', [])
+                    if products:
+                        ReturnPurchaseMaster.objects.filter(returninvoiceid=new_invoice).delete()
+                        total_items = _create_return_items(new_invoice, products)
+                        new_invoice.returninvoice_total = total_items + new_invoice.return_charges
+                        new_invoice.save()
+            finally:
+                with connection.cursor() as cursor:
+                    cursor.execute('SET FOREIGN_KEY_CHECKS=1;')
+            
+            return JsonResponse({'success': True, 'message': f'Purchase Return updated to #{new_return_id}!', 'new_return_id': new_return_id})
+        
+        # No ID change — normal update
         return_invoice.returnsupplierid_id = data.get('supplier_id')
         return_invoice.returninvoice_date = data.get('return_date')
         return_invoice.return_charges = float(data.get('return_charges', 0))
         
-        # Clear existing return items
         ReturnPurchaseMaster.objects.filter(returninvoiceid=return_invoice).delete()
-        
-        # Add updated products
-        total_items = 0
-        products = data.get('products', [])
-        
-        for product_data in products:
-            if not product_data.get('productid'):
-                continue
-                
-            try:
-                product = ProductMaster.objects.get(productid=product_data['productid'])
-            except ProductMaster.DoesNotExist:
-                continue
-            
-            # Calculate total amount
-            return_rate = float(product_data.get('return_rate', 0))
-            return_quantity = float(product_data.get('return_quantity', 1))
-            cgst = float(product_data.get('cgst', 2.5))
-            sgst = float(product_data.get('sgst', 2.5))
-            
-            subtotal = return_rate * return_quantity
-            cgst_amount = (subtotal * cgst) / 100
-            sgst_amount = (subtotal * sgst) / 100
-            item_total = round(subtotal + cgst_amount + sgst_amount, 2)
-            
-            # Convert expiry date
-            expiry_date = product_data.get('expiry', '')
-            if expiry_date:
-                try:
-                    if len(expiry_date) == 7 and expiry_date.count('-') == 1:
-                        month, year = expiry_date.split('-')
-                        expiry_formatted = datetime(int(year), int(month), 1).date()
-                    else:
-                        expiry_formatted = datetime.strptime(expiry_date, '%Y-%m-%d').date()
-                except (ValueError, TypeError):
-                    expiry_formatted = datetime.now().date()
-            else:
-                expiry_formatted = datetime.now().date()
-            
-            # Create return item
-            ReturnPurchaseMaster.objects.create(
-                returninvoiceid=return_invoice,
-                returnproduct_supplierid=return_invoice.returnsupplierid,
-                returnproductid=product,
-                returnproduct_batch_no=product_data.get('batch_no', ''),
-                returnproduct_expiry=expiry_formatted,
-                returnproduct_MRP=float(product_data.get('mrp', 0)),
-                returnproduct_purchase_rate=return_rate,
-                returnproduct_quantity=return_quantity,
-                returnproduct_free_qty=float(product_data.get('return_free_qty', 0)),
-                returnproduct_cgst=cgst,
-                returnproduct_sgst=sgst,
-                returntotal_amount=item_total,
-                return_reason=product_data.get('reason', '')
-            )
-            
-            total_items += item_total
-        
-        # Update return invoice total
+        total_items = _create_return_items(return_invoice, data.get('products', []))
         return_invoice.returninvoice_total = total_items + return_invoice.return_charges
         return_invoice.save()
         
-        return JsonResponse({
-            'success': True,
-            'message': f'Purchase Return #{return_invoice.returninvoiceid} updated successfully!'
-        })
+        return JsonResponse({'success': True, 'message': f'Purchase Return #{return_invoice.returninvoiceid} updated successfully!'})
         
     except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+def _create_return_items(return_invoice, products):
+    """Helper to create ReturnPurchaseMaster items and return total amount."""
+    total_items = 0
+    for product_data in products:
+        if not product_data.get('productid'):
+            continue
+        try:
+            product = ProductMaster.objects.get(productid=product_data['productid'])
+        except ProductMaster.DoesNotExist:
+            continue
+        return_rate = float(product_data.get('return_rate', 0))
+        return_quantity = float(product_data.get('return_quantity', 1))
+        cgst = float(product_data.get('cgst', 2.5))
+        sgst = float(product_data.get('sgst', 2.5))
+        subtotal = return_rate * return_quantity
+        item_total = round(subtotal + (subtotal * cgst / 100) + (subtotal * sgst / 100), 2)
+        expiry_date = product_data.get('expiry', '')
+        if expiry_date:
+            try:
+                if len(expiry_date) == 7 and expiry_date.count('-') == 1:
+                    month, year = expiry_date.split('-')
+                    expiry_formatted = datetime(int(year), int(month), 1).date()
+                else:
+                    expiry_formatted = datetime.strptime(expiry_date, '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                expiry_formatted = datetime.now().date()
+        else:
+            expiry_formatted = datetime.now().date()
+        ReturnPurchaseMaster.objects.create(
+            returninvoiceid=return_invoice,
+            returnproduct_supplierid=return_invoice.returnsupplierid,
+            returnproductid=product,
+            returnproduct_batch_no=product_data.get('batch_no', ''),
+            returnproduct_expiry=expiry_formatted,
+            returnproduct_MRP=float(product_data.get('mrp', 0)),
+            returnproduct_purchase_rate=return_rate,
+            returnproduct_quantity=return_quantity,
+            returnproduct_free_qty=float(product_data.get('return_free_qty', 0)),
+            returnproduct_cgst=cgst,
+            returnproduct_sgst=sgst,
+            returntotal_amount=item_total,
+            return_reason=product_data.get('reason', '')
+        )
+        total_items += item_total
+    return total_items
 
 @login_required
 def delete_purchase_return(request, pk):
@@ -3640,12 +3687,15 @@ def add_sales_return(request):
         # Default to current date if format is unrecognized
         return datetime.now().date()
     
-    # Generate preview return ID
+    # Generate unique preview return ID
     today = datetime.now().date()
-    count = ReturnSalesInvoiceMaster.objects.filter(
-        return_sales_invoice_date=today
-    ).count() + 1
-    preview_id = f'SR-{today.strftime("%Y%m%d")}-{count:04d}'
+    date_str = today.strftime('%Y%m%d')
+    _count = 1
+    while True:
+        preview_id = f'SR-{date_str}-{_count:04d}'
+        if not ReturnSalesInvoiceMaster.objects.filter(return_sales_invoice_no=preview_id).exists():
+            break
+        _count += 1
     
     if request.method == 'POST':
         try:
@@ -3658,9 +3708,32 @@ def add_sales_return(request):
                 additional_charges = float(request.POST.get('return_sales_charges', 0))
                 transport_charges = float(request.POST.get('transport_charges', 0))
                 
+                # Use user-provided return ID, or generate a fresh unique one
+                user_return_id = request.POST.get('return_id', '').strip()
+                if user_return_id:
+                    if ReturnSalesInvoiceMaster.objects.filter(return_sales_invoice_no=user_return_id).exists():
+                        messages.error(request, f'Return ID "{user_return_id}" already exists. Please use a different ID.')
+                        context = {
+                            'preview_id': preview_id,
+                            'customers': CustomerMaster.objects.all().order_by('customer_name'),
+                            'products': ProductMaster.objects.all().order_by('product_name'),
+                            'title': 'Add Sales Return with Products'
+                        }
+                        return render(request, 'returns/sales_return_form.html', context)
+                    final_return_id = user_return_id
+                else:
+                    # Always generate a fresh unique ID at save time
+                    _date_str = datetime.now().date().strftime('%Y%m%d')
+                    _c = 1
+                    while True:
+                        final_return_id = f'SR-{_date_str}-{_c:04d}'
+                        if not ReturnSalesInvoiceMaster.objects.filter(return_sales_invoice_no=final_return_id).exists():
+                            break
+                        _c += 1
+                
                 # Create return invoice
                 return_invoice = ReturnSalesInvoiceMaster.objects.create(
-                    return_sales_invoice_no=preview_id,
+                    return_sales_invoice_no=final_return_id,
                     return_sales_invoice_date=return_date,
                     return_sales_customerid_id=request.POST.get('return_sales_customerid'),
                     return_sales_charges=additional_charges,
@@ -4356,108 +4429,115 @@ def update_sales_return_api(request):
     try:
         data = json.loads(request.body)
         return_id = data.get('return_id')
+        new_return_id = data.get('new_return_id', '').strip()
         customer_id = data.get('customer_id')
         return_date = data.get('return_date')
         return_charges = float(data.get('return_charges', 0))
         transport_charges = float(data.get('transport_charges', 0))
         products = data.get('products', [])
         
-        # Use select_for_update to prevent database locking issues
-        with transaction.atomic():
-            return_invoice = ReturnSalesInvoiceMaster.objects.select_for_update().get(
-                return_sales_invoice_no=return_id
-            )
+        return_invoice = get_object_or_404(ReturnSalesInvoiceMaster, return_sales_invoice_no=return_id)
+        
+        # Handle Return ID rename
+        if new_return_id and new_return_id != return_id:
+            if ReturnSalesInvoiceMaster.objects.filter(return_sales_invoice_no=new_return_id).exists():
+                return JsonResponse({'success': False, 'error': f'Return ID "{new_return_id}" already exists'})
             
-            # Update basic fields
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute('SET FOREIGN_KEY_CHECKS=0;')
+            try:
+                with transaction.atomic():
+                    new_invoice = ReturnSalesInvoiceMaster.objects.create(
+                        return_sales_invoice_no=new_return_id,
+                        return_sales_invoice_date=datetime.strptime(return_date, '%Y-%m-%d').date() if return_date else return_invoice.return_sales_invoice_date,
+                        return_sales_customerid_id=customer_id or return_invoice.return_sales_customerid_id,
+                        return_sales_charges=return_charges,
+                        transport_charges=transport_charges,
+                        return_sales_invoice_total=return_invoice.return_sales_invoice_total,
+                        return_sales_invoice_paid=return_invoice.return_sales_invoice_paid,
+                    )
+                    ReturnSalesMaster.objects.filter(return_sales_invoice_no=return_invoice).update(return_sales_invoice_no=new_invoice)
+                    ReturnSalesInvoicePaid.objects.filter(return_sales_ip_invoice_no=return_invoice).update(return_sales_ip_invoice_no=new_invoice)
+                    return_invoice.delete()
+                    
+                    if products:
+                        ReturnSalesMaster.objects.filter(return_sales_invoice_no=new_invoice).delete()
+                        total_amount = _create_sales_return_items(new_invoice, customer_id, products)
+                        new_invoice.return_sales_invoice_total = round(total_amount + return_charges + transport_charges, 2)
+                        new_invoice.save()
+            finally:
+                with connection.cursor() as cursor:
+                    cursor.execute('SET FOREIGN_KEY_CHECKS=1;')
+            
+            return JsonResponse({'success': True, 'message': f'Sales Return updated to #{new_return_id}!', 'new_return_id': new_return_id})
+        
+        # No ID change — normal update
+        with transaction.atomic():
             return_invoice.return_sales_customerid_id = customer_id
             return_invoice.return_sales_invoice_date = datetime.strptime(return_date, '%Y-%m-%d').date()
             return_invoice.return_sales_charges = return_charges
-            
-            # Delete existing items in a separate step
-            existing_items = ReturnSalesMaster.objects.filter(return_sales_invoice_no=return_invoice)
-            existing_items.delete()
-            
-            # Create new items
-            total_amount = 0
-            new_items = []
-            
-            for product_data in products:
-                try:
-                    product = ProductMaster.objects.get(productid=product_data['productid'])
-                    
-                    rate = float(product_data.get('return_rate', 0))
-                    qty = float(product_data.get('return_quantity', 0))
-                    discount = float(product_data.get('discount', 0))
-                    cgst = float(product_data.get('cgst', 2.5))
-                    sgst = float(product_data.get('sgst', 2.5))
-                    
-                    subtotal = rate * qty
-                    after_discount = subtotal - discount
-                    cgst_amount = (after_discount * cgst) / 100
-                    sgst_amount = (after_discount * sgst) / 100
-                    item_total = round(after_discount + cgst_amount + sgst_amount, 2)
-                    
-                    new_item = ReturnSalesMaster(
-                        return_sales_invoice_no=return_invoice,
-                        return_customerid_id=customer_id,
-                        return_productid=product,
-                        return_product_name=product.product_name,
-                        return_product_company=product.product_company,
-                        return_product_packing=product.product_packing,
-                        return_product_batch_no=product_data.get('batch_no', ''),
-                        return_product_expiry=product_data.get('expiry', ''),
-                        return_product_MRP=float(product_data.get('mrp', 0)),
-                        return_sale_rate=rate,
-                        return_sale_quantity=qty,
-                        return_sale_free_qty=float(product_data.get('return_free_qty', 0)),
-                        return_sale_discount=discount,
-                        return_sale_calculation_mode='flat',
-                        return_sale_cgst=cgst,
-                        return_sale_sgst=sgst,
-                        return_sale_total_amount=item_total,
-                        return_reason=product_data.get('reason', '')
-                    )
-                    
-                    new_items.append(new_item)
-                    total_amount += item_total
-                    
-                except ProductMaster.DoesNotExist:
-                    continue
-                except Exception as item_error:
-                    print(f"Error processing item: {item_error}")
-                    continue
-            
-            # Bulk create all items at once
-            if new_items:
-                ReturnSalesMaster.objects.bulk_create(new_items)
-            
-            # Update total and save (products + additional charges + transport charges)
-            final_total = round(total_amount + return_charges + transport_charges, 2)
-            return_invoice.return_sales_invoice_total = final_total
             return_invoice.transport_charges = transport_charges
+            
+            ReturnSalesMaster.objects.filter(return_sales_invoice_no=return_invoice).delete()
+            total_amount = _create_sales_return_items(return_invoice, customer_id, products)
+            return_invoice.return_sales_invoice_total = round(total_amount + return_charges + transport_charges, 2)
             return_invoice.save()
-            
-            return JsonResponse({
-                'success': True,
-                'message': f'Sales return {return_id} updated successfully!'
-            })
-            
+        
+        return JsonResponse({'success': True, 'message': f'Sales Return #{return_invoice.return_sales_invoice_no} updated successfully!'})
+        
     except ReturnSalesInvoiceMaster.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Sales return not found'
-        }, status=404)
+        return JsonResponse({'success': False, 'error': 'Sales return not found'}, status=404)
     except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'error': 'Invalid JSON data'
-        }, status=400)
+        return JsonResponse({'success': False, 'error': 'Invalid JSON data'}, status=400)
     except Exception as e:
         print(f"Error in update_sales_return_api: {e}")
-        return JsonResponse({
-            'success': False,
-            'error': f'Database error: {str(e)}'
-        }, status=500)
+        import traceback; traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+def _create_sales_return_items(return_invoice, customer_id, products):
+    """Helper to create ReturnSalesMaster items and return total amount."""
+    total_amount = 0
+    new_items = []
+    for product_data in products:
+        try:
+            product = ProductMaster.objects.get(productid=product_data['productid'])
+            rate = float(product_data.get('return_rate', 0))
+            qty = float(product_data.get('return_quantity', 0))
+            discount = float(product_data.get('discount', 0))
+            cgst = float(product_data.get('cgst', 2.5))
+            sgst = float(product_data.get('sgst', 2.5))
+            subtotal = rate * qty
+            after_discount = subtotal - discount
+            item_total = round(after_discount + (after_discount * cgst / 100) + (after_discount * sgst / 100), 2)
+            new_items.append(ReturnSalesMaster(
+                return_sales_invoice_no=return_invoice,
+                return_customerid_id=customer_id,
+                return_productid=product,
+                return_product_name=product.product_name,
+                return_product_company=product.product_company,
+                return_product_packing=product.product_packing,
+                return_product_batch_no=product_data.get('batch_no', ''),
+                return_product_expiry=product_data.get('expiry', ''),
+                return_product_MRP=float(product_data.get('mrp', 0)),
+                return_sale_rate=rate,
+                return_sale_quantity=qty,
+                return_sale_free_qty=float(product_data.get('return_free_qty', 0)),
+                return_sale_discount=discount,
+                return_sale_calculation_mode='flat',
+                return_sale_cgst=cgst,
+                return_sale_sgst=sgst,
+                return_sale_total_amount=item_total,
+                return_reason=product_data.get('reason', '')
+            ))
+            total_amount += item_total
+        except ProductMaster.DoesNotExist:
+            continue
+    if new_items:
+        ReturnSalesMaster.objects.bulk_create(new_items)
+    return total_amount
+
 
 @login_required
 def delete_sales_return_item_api(request):
@@ -5537,22 +5617,21 @@ def batch_inventory_report(request):
     selected_year = request.session.get('selected_year', get_current_financial_year())
     fy_start, fy_end = get_financial_year_dates(selected_year)
     fy_product_ids = FastInventory.get_fy_product_ids(fy_start, fy_end)
-    all_inventory_data = FastInventory.get_batch_inventory_data(search_query, fy_product_ids=fy_product_ids)
-    
-    # Pagination
-    paginator = Paginator(all_inventory_data, 100)
+
+    # Get grouped data: each item = one product with its batches list
+    all_grouped = FastInventory.get_batch_inventory_grouped(search_query, fy_product_ids=fy_product_ids)
+
+    # Pagination on products (not batches)
+    paginator = Paginator(all_grouped, 50)
     page_number = request.GET.get('page')
-    batches_page = paginator.get_page(page_number)
-    
-    # Get inventory data for current page
-    inventory_data = list(batches_page)
-    
-    # Page-level total value
-    page_total_value = sum(item['value'] for item in inventory_data)
-    
+    products_page = paginator.get_page(page_number)
+    grouped_page = list(products_page)
+
+    page_total_value = sum(p['total_value'] for p in grouped_page)
+
     context = {
-        'inventory_data': inventory_data,
-        'batches_page': batches_page,
+        'grouped_data': grouped_page,
+        'products_page': products_page,
         'page_total_value': page_total_value,
         'search_query': search_query,
         'title': 'Batch-wise Inventory Report'

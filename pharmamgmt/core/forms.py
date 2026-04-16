@@ -172,25 +172,37 @@ class InvoiceForm(forms.ModelForm):
     def clean_invoice_date(self):
         from datetime import datetime
         date_str = self.cleaned_data['invoice_date']
-        
-        # Handle YYYY-MM-DD format (from backend)
+        if not date_str:
+            raise forms.ValidationError("Date is required.")
+        date_str = str(date_str).strip()
+        parsed = None
+
         if len(date_str) == 10 and '-' in date_str:
             try:
-                return datetime.strptime(date_str, '%Y-%m-%d').date()
+                parsed = datetime.strptime(date_str, '%Y-%m-%d').date()
             except ValueError:
-                pass
-        
-        # Handle DDMMYYYY format
-        if len(date_str) == 8 and date_str.isdigit():
+                raise forms.ValidationError("Invalid date format.")
+        elif len(date_str) == 8 and date_str.isdigit():
             day = int(date_str[:2])
             month = int(date_str[2:4])
             year = int(date_str[4:8])
             try:
-                return datetime(year, month, day).date()
+                parsed = datetime(year, month, day).date()
             except ValueError:
                 raise forms.ValidationError("Invalid date")
-        
-        raise forms.ValidationError("Enter date in DDMMYYYY format")
+        else:
+            raise forms.ValidationError("Enter date in DDMMYYYY format")
+
+        current_year = datetime.now().year
+        if parsed.year < 1990:
+            raise forms.ValidationError(
+                f"Year {parsed.year} seems incorrect. "
+                f"Please use DDMMYYYY format (e.g. {parsed.day:02d}{parsed.month:02d}{current_year})."
+            )
+        if parsed.year > current_year + 1:
+            raise forms.ValidationError(f"Year {parsed.year} is too far in the future.")
+
+        return parsed
     
     class Meta:
         model = InvoiceMaster
@@ -300,25 +312,44 @@ class SalesInvoiceForm(forms.ModelForm):
     def clean_sales_invoice_date(self):
         from datetime import datetime
         date_str = self.cleaned_data['sales_invoice_date']
-        
-        # Handle YYYY-MM-DD format (from backend)
+        if not date_str:
+            raise forms.ValidationError("Date is required.")
+        date_str = str(date_str).strip()
+        parsed = None
+
+        # Handle YYYY-MM-DD format (from HTML date input)
         if len(date_str) == 10 and '-' in date_str:
             try:
-                return datetime.strptime(date_str, '%Y-%m-%d').date()
+                parsed = datetime.strptime(date_str, '%Y-%m-%d').date()
             except ValueError:
-                pass
-        
-        # Handle DDMMYYYY format
-        if len(date_str) == 8 and date_str.isdigit():
+                raise forms.ValidationError("Invalid date format.")
+
+        # Handle DDMMYYYY format (manual entry)
+        elif len(date_str) == 8 and date_str.isdigit():
             day = int(date_str[:2])
             month = int(date_str[2:4])
             year = int(date_str[4:8])
             try:
-                return datetime(year, month, day).date()
+                parsed = datetime(year, month, day).date()
             except ValueError:
                 raise forms.ValidationError("Invalid date. Please check day, month and year values.")
-        
-        raise forms.ValidationError("Enter date in DDMMYYYY format")
+
+        else:
+            raise forms.ValidationError("Enter date in DDMMYYYY format (e.g. 15012025)")
+
+        # Year range validation - reject clearly wrong years only
+        current_year = datetime.now().year
+        if parsed.year < 1990:
+            raise forms.ValidationError(
+                f"Year {parsed.year} seems incorrect. "
+                f"Please use DDMMYYYY format (e.g. {parsed.day:02d}{parsed.month:02d}{current_year})."
+            )
+        if parsed.year > current_year + 1:
+            raise forms.ValidationError(
+                f"Year {parsed.year} is too far in the future. Please enter a valid date."
+            )
+
+        return parsed
     
     class Meta:
         model = SalesInvoiceMaster

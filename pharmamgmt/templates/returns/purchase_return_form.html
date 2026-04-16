@@ -29,7 +29,13 @@
                     <h6 class="ci-section-title">Return Invoice Details</h6>
                     
                     <div class="return-id-preview">
-                        <strong>Return ID:</strong> {{ preview_id }}
+                        <label style="font-weight:600;font-size:0.9rem;color:#2c3e50;">Return ID</label>
+                        <input type="text" name="return_id" id="return_id" class="form-control" 
+                               value="{{ preview_id }}" 
+                               placeholder="Enter Return ID" 
+                               style="max-width:300px;margin-top:4px;"
+                               title="You can edit this Return ID or keep the auto-generated one">
+                        <small style="color:#6c757d;font-size:0.78rem;">Auto-generated. You can change it.</small>
                     </div>
                     
                     <div class="ci-form-row">

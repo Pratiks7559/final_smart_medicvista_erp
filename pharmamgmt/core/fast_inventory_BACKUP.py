@@ -120,37 +120,6 @@ class FastInventory:
                 })
         
         return inventory
-
-    @staticmethod
-    def get_batch_inventory_grouped(search_query='', fy_product_ids=None):
-        """Returns inventory grouped by product for batch-wise report."""
-        flat = FastInventory.get_batch_inventory_data(search_query, fy_product_ids)
-        grouped = defaultdict(lambda: {
-            'product_id': None, 'product_name': '', 'product_company': '',
-            'product_packing': '', 'batches': [], 'total_stock': 0, 'total_value': 0
-        })
-        order = []
-        for item in flat:
-            pid = item['product_id']
-            if pid not in grouped:
-                order.append(pid)
-            g = grouped[pid]
-            g['product_id'] = pid
-            g['product_name'] = item['product_name']
-            g['product_company'] = item['product_company']
-            g['product_packing'] = item['product_packing']
-            g['batches'].append({
-                'batch_no': item['batch_no'],
-                'expiry': item['expiry'],
-                'mrp': item['mrp'],
-                'stock': item['stock'],
-                'free_qty': item['free_qty'],
-                'total_stock': item['total_stock'],
-                'value': item['value'],
-            })
-            g['total_stock'] += item['total_stock']
-            g['total_value'] += item['value']
-        return [grouped[pid] for pid in order]
     
     @staticmethod
     def get_dateexpiry_inventory_data(search_query='', start_date=None, end_date=None):

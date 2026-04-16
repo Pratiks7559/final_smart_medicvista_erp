@@ -52,7 +52,12 @@
             </div>
         </div>
         <div class="batch-report-card-body">
-            {% if grouped_data %}
+            {% if inventory_data %}
+            <div class="batch-info-alert" role="alert">
+                <span><i class="fas fa-info-circle me-2"></i>
+                This report shows ALL products from your product list, including those with zero stock (highlighted in yellow).</span>
+                <button type="button" class="batch-alert-close" data-bs-dismiss="alert" aria-label="Close">&times;</button>
+            </div>
             <div class="batch-table-container">
                 <table class="batch-inventory-table">
                     <thead class="batch-table-header">
@@ -69,37 +74,28 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for product in grouped_data %}
-                        {# Product header row #}
-                        <tr style="background:#e8f4fd;font-weight:700;border-top:2px solid #3498db;">
+                        {% for item in inventory_data %}
+                        <tr {% if item.stock <= 0 %}class="batch-zero-stock-row"{% endif %}>
                             <td>
-                                <a href="{% url 'product_detail' product.product_id %}" class="batch-product-link">
-                                    {{ product.product_name }}
+                                <a href="{% url 'product_detail' item.product_id %}" class="batch-product-link">
+                                    {{ item.product_name }}
                                 </a>
                             </td>
-                            <td>{{ product.product_company }}</td>
-                            <td>{{ product.product_packing }}</td>
-                            <td colspan="3" style="color:#555;font-size:0.85rem;">
-                                {{ product.batches|length }} batch{{ product.batches|length|pluralize }}
+                            <td>{{ item.product_company }}</td>
+                            <td>{{ item.product_packing }}</td>
+                            <td>{{ item.batch_no }}</td>
+                            <td>{{ item.expiry|expiry_mmyyyy }}</td>
+                            <td>
+                                {% if item.stock <= 0 %}
+                                    <span class="batch-zero-stock-badge">{{ item.stock }}</span>
+                                {% else %}
+                                    {{ item.stock }}
+                                {% endif %}
                             </td>
-                            <td></td>
-                            <td></td>
-                            <td style="color:#27ae60;">₹{{ product.total_value|floatformat:2 }}</td>
+                            <td>{{ item.free_qty|default:0 }}</td>
+                            <td>₹{{ item.mrp|floatformat:2 }}</td>
+                            <td>₹{{ item.value|floatformat:2 }}</td>
                         </tr>
-                        {# Batch rows under this product #}
-                        {% for batch in product.batches %}
-                        <tr style="background:#fafafa;">
-                            <td style="padding-left:24px;color:#555;font-size:0.9rem;">↳</td>
-                            <td></td>
-                            <td></td>
-                            <td>{{ batch.batch_no }}</td>
-                            <td>{{ batch.expiry|expiry_mmyyyy }}</td>
-                            <td>{{ batch.stock }}</td>
-                            <td>{{ batch.free_qty|default:0 }}</td>
-                            <td>₹{{ batch.mrp|floatformat:2 }}</td>
-                            <td>₹{{ batch.value|floatformat:2 }}</td>
-                        </tr>
-                        {% endfor %}
                         {% endfor %}
                     </tbody>
                     <tfoot class="batch-table-footer">
@@ -110,40 +106,44 @@
                     </tfoot>
                 </table>
             </div>
-
+            
             <!-- Pagination -->
-            {% if products_page.has_other_pages %}
+            {% if batches_page.has_other_pages %}
             <nav aria-label="Batch inventory pagination" class="no-print batch-pagination-container">
                 <div class="batch-pagination-info">
                     <div>
                         <small class="batch-pagination-text">
-                            Showing {{ products_page.start_index }}-{{ products_page.end_index }} of {{ products_page.paginator.count }} products
+                            Showing {{ batches_page.start_index }}-{{ batches_page.end_index }} of {{ batches_page.paginator.count }} batches
                         </small>
                     </div>
                     <ul class="batch-pagination-list">
-                        {% if products_page.has_previous %}
+                        {% if batches_page.has_previous %}
                             <li class="batch-pagination-item">
                                 <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}" class="batch-pagination-link">&laquo;&laquo;</a>
                             </li>
                             <li class="batch-pagination-item">
-                                <a href="?page={{ products_page.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="batch-pagination-link">&laquo;</a>
+                                <a href="?page={{ batches_page.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="batch-pagination-link">&laquo;</a>
                             </li>
                         {% endif %}
-                        {% for num in products_page.paginator.page_range %}
-                            {% if products_page.number == num %}
-                                <li class="batch-pagination-item"><span class="batch-pagination-active">{{ num }}</span></li>
-                            {% elif num > products_page.number|add:'-3' and num < products_page.number|add:'3' %}
+                        
+                        {% for num in batches_page.paginator.page_range %}
+                            {% if batches_page.number == num %}
+                                <li class="batch-pagination-item">
+                                    <span class="batch-pagination-active">{{ num }}</span>
+                                </li>
+                            {% elif num > batches_page.number|add:'-3' and num < batches_page.number|add:'3' %}
                                 <li class="batch-pagination-item">
                                     <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}" class="batch-pagination-link">{{ num }}</a>
                                 </li>
                             {% endif %}
                         {% endfor %}
-                        {% if products_page.has_next %}
+                        
+                        {% if batches_page.has_next %}
                             <li class="batch-pagination-item">
-                                <a href="?page={{ products_page.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="batch-pagination-link">&raquo;</a>
+                                <a href="?page={{ batches_page.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}" class="batch-pagination-link">&raquo;</a>
                             </li>
                             <li class="batch-pagination-item">
-                                <a href="?page={{ products_page.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}" class="batch-pagination-link">&raquo;&raquo;</a>
+                                <a href="?page={{ batches_page.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}" class="batch-pagination-link">&raquo;&raquo;</a>
                             </li>
                         {% endif %}
                     </ul>

@@ -265,23 +265,21 @@ def add_unified_payment(request):
 
 @login_required
 def search_supplier_invoices(request):
-    """Search supplier invoices for payment"""
+    """Search supplier invoices for payment - only show invoices with balance > 0"""
     query = request.GET.get('q', '').strip()
     
     if len(query) < 2:
-        return JsonResponse([])
+        return JsonResponse([], safe=False)
     
-    # Search unpaid supplier invoices
     invoices = InvoiceMaster.objects.filter(
-        supplierid__supplier_name__icontains=query,
-        invoice_paid__lt=models.F('invoice_total')
-    ).select_related('supplierid').order_by('-invoice_date')[:20]
+        supplierid__supplier_name__icontains=query
+    ).select_related('supplierid').order_by('-invoice_date')[:50]
     
     results = []
     for invoice in invoices:
-        balance = invoice.invoice_total - invoice.invoice_paid
-        balance_rounded = round(float(balance))
-        if balance_rounded > 0:
+        balance = float(invoice.invoice_total) - float(invoice.invoice_paid)
+        balance_rounded = round(balance)
+        if balance_rounded > 0:  # Only show invoices with pending balance
             results.append({
                 'supplier_id': invoice.supplierid.supplierid,
                 'supplier_name': invoice.supplierid.supplier_name,
@@ -291,29 +289,30 @@ def search_supplier_invoices(request):
                 'paid_amount': round(float(invoice.invoice_paid)),
                 'balance_amount': balance_rounded
             })
+        if len(results) >= 20:
+            break
     
     return JsonResponse(results, safe=False)
 
+
 @login_required
 def search_customer_invoices(request):
-    """Search customer invoices for receipt"""
+    """Search customer invoices for receipt - only show invoices with balance > 0"""
     query = request.GET.get('q', '').strip()
     
     if len(query) < 2:
-        return JsonResponse([])
+        return JsonResponse([], safe=False)
     
-    # Search unpaid customer invoices
     invoices = SalesInvoiceMaster.objects.filter(
         models.Q(customerid__customer_name__icontains=query) |
-        models.Q(customerid__customer_mobile__icontains=query),
-        sales_invoice_paid__lt=models.F('sales_invoice_total')
-    ).select_related('customerid').order_by('-sales_invoice_date')[:20]
+        models.Q(customerid__customer_mobile__icontains=query)
+    ).select_related('customerid').order_by('-sales_invoice_date')[:50]
     
     results = []
     for invoice in invoices:
-        balance = invoice.sales_invoice_total - invoice.sales_invoice_paid
-        balance_rounded = round(float(balance))
-        if balance_rounded > 0:
+        balance = float(invoice.sales_invoice_total) - float(invoice.sales_invoice_paid)
+        balance_rounded = round(balance)
+        if balance_rounded > 0:  # Only show invoices with pending balance
             results.append({
                 'customer_id': invoice.customerid.customerid,
                 'customer_name': invoice.customerid.customer_name,
@@ -323,5 +322,7 @@ def search_customer_invoices(request):
                 'paid_amount': round(float(invoice.sales_invoice_paid)),
                 'balance_amount': balance_rounded
             })
+        if len(results) >= 20:
+            break
     
     return JsonResponse(results, safe=False)

@@ -227,7 +227,8 @@
                 <div class="edit-return-header-row">
                     <div class="edit-return-field">
                         <label>Return ID</label>
-                        <input type="text" class="form-control" value="{{ return_invoice.returninvoiceid }}" readonly>
+                        <input type="text" id="editReturnIdInput" class="form-control" value="{{ return_invoice.returninvoiceid }}">
+                        <small style="color:#6c757d;font-size:0.78rem;">Change to rename Return ID</small>
                     </div>
                     <div class="edit-return-field">
                         <label>Supplier*</label>
@@ -628,9 +629,16 @@ function saveEditPurchaseReturn() {
     }
     
     const returnId = document.getElementById('editReturnId').value;
+    const newReturnId = document.getElementById('editReturnIdInput').value.trim();
     const supplierId = document.getElementById('editSupplierId').value;
     const returnDate = document.getElementById('editReturnDate').value;
     const returnCharges = document.getElementById('editReturnCharges').value;
+    
+    if (!newReturnId) {
+        alert('Return ID cannot be empty.');
+        document.getElementById('editReturnIdInput').focus();
+        return;
+    }
     
     const products = [];
     const seenProducts = new Set();
@@ -669,6 +677,7 @@ function saveEditPurchaseReturn() {
     
     const data = {
         return_id: returnId,
+        new_return_id: newReturnId,
         supplier_id: supplierId,
         return_date: returnDate,
         return_charges: returnCharges,
@@ -686,8 +695,11 @@ function saveEditPurchaseReturn() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Purchase return updated successfully!');
-            location.reload();
+            if (data.new_return_id && data.new_return_id !== returnId) {
+                window.location.href = '/purchase-returns/' + data.new_return_id + '/';
+            } else {
+                location.reload();
+            }
         } else {
             alert('Error: ' + data.error);
         }

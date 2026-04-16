@@ -16,7 +16,14 @@
             <div class="sr-header-content">
                 <h5 class="sr-title">{{ title }}</h5>
                 {% if preview_id %}
-                <small class="sr-return-number">Return ID: {{ preview_id }}</small>
+                <small class="sr-return-number">
+                        <label style="font-weight:600;font-size:0.85rem;color:#2c3e50;margin-right:6px;">Return ID:</label>
+                        <input type="text" name="return_id" id="return_id" class="form-control d-inline-block" 
+                               value="{{ preview_id }}"
+                               style="max-width:220px;display:inline-block !important;font-size:0.85rem;"
+                               title="Auto-generated. You can change it.">
+                        <small style="color:#6c757d;font-size:0.75rem;margin-left:4px;">Auto-generated. Editable.</small>
+                    </small>
                 {% endif %}
             </div>
         </div>

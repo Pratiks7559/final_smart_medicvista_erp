@@ -716,7 +716,8 @@ th, td { display: table-cell !important; }
                 <div class="edit-return-header-row">
                     <div class="edit-return-field">
                         <label>Return ID</label>
-                        <input type="text" class="form-control" value="{{ return_invoice.return_sales_invoice_no }}" readonly>
+                        <input type="text" id="editReturnIdInput" class="form-control" value="{{ return_invoice.return_sales_invoice_no }}">
+                        <small style="color:#6c757d;font-size:0.78rem;">Change to rename Return ID</small>
                     </div>
                     <div class="edit-return-field">
                         <label>Customer*</label>
@@ -1056,6 +1057,14 @@ function saveEditSalesReturn() {
     }
     
     const returnId = document.getElementById('editReturnId').value;
+    const newReturnId = document.getElementById('editReturnIdInput').value.trim();
+    
+    if (!newReturnId) {
+        alert('Return ID cannot be empty.');
+        document.getElementById('editReturnIdInput').focus();
+        return;
+    }
+    
     const customerId = document.getElementById('editCustomerId').value;
     const returnDate = document.getElementById('editReturnDate').value;
     const returnCharges = document.getElementById('editReturnCharges').value;
@@ -1096,6 +1105,7 @@ function saveEditSalesReturn() {
     
     const data = {
         return_id: returnId,
+        new_return_id: newReturnId,
         customer_id: customerId,
         return_date: returnDate,
         return_charges: returnCharges,
@@ -1105,7 +1115,7 @@ function saveEditSalesReturn() {
     
     // Add timeout to fetch request
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     
     fetch('/api/update-sales-return/', {
         method: 'POST',
@@ -1117,16 +1127,17 @@ function saveEditSalesReturn() {
         signal: controller.signal
     })
     .then(response => {
-        clearTimeout(timeoutId); // Clear timeout on successful response
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return response.json();
     })
     .then(data => {
         if (data.success) {
-            alert('Sales return updated successfully!');
-            window.location.reload();
+            if (data.new_return_id && data.new_return_id !== returnId) {
+                window.location.href = '/sales-returns/' + data.new_return_id + '/';
+            } else {
+                window.location.reload();
+            }
         } else {
             saveBtn.disabled = false;
             saveBtn.innerHTML = originalText;
@@ -1134,15 +1145,12 @@ function saveEditSalesReturn() {
         }
     })
     .catch(error => {
-        clearTimeout(timeoutId); // Clear timeout on error
+        clearTimeout(timeoutId);
         console.error('Error:', error);
         saveBtn.disabled = false;
         saveBtn.innerHTML = originalText;
-        
         if (error.name === 'AbortError') {
-            alert('Request timed out. The server might be busy. Please try again.');
-        } else if (error.message.includes('503')) {
-            alert('Database is temporarily busy. Please wait a moment and try again.');
+            alert('Request timed out. Please try again.');
         } else {
             alert('Network error: Please check your connection and try again.');
         }
