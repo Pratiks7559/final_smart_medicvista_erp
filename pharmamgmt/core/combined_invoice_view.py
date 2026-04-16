@@ -177,13 +177,8 @@ def add_invoice_with_products(request):
                                 if int(year) < 2000 or int(year) > (current_year + 50):
                                     raise ValueError("Invalid year")
                                 
-                                # Warn if expiry date is in the past
+                                # Skip expired batch warning - just continue processing
                                 expiry_date = datetime(int(year), int(month), 1).date()
-                                if expiry_date < datetime.now().date():
-                                    # Add warning but don't stop processing
-                                    warning_msg = f"⚠️ Row {i+1}: Product {product.product_name} has expired (Expiry: {expiry}). Please verify the date."
-                                    messages.warning(request, warning_msg)
-                                    logger.warning(warning_msg)
                                 
                             except (ValueError, IndexError) as e:
                                 error_detail = str(e)
@@ -361,10 +356,6 @@ def add_invoice_with_products(request):
                 # Allow invoice creation even without products
                 if products_added == 0:
                     logger.info(f"Invoice {invoice.invoice_no} created without products - header only")
-                    if errors:
-                        # Show errors as warnings but don't prevent invoice creation
-                        for error in errors[:3]:  # Show first 3 errors
-                            messages.warning(request, error)
                     messages.info(request, "📄 Invoice created without products. You can add products later by editing the invoice.")
                 
                 # Don't distribute transport charges - keep separate
@@ -440,10 +431,10 @@ def add_invoice_with_products(request):
                     if moved_count > 0:
                         logger.info(f"Total {moved_count} challan entries moved to SupplierChallanMaster2")
                 
-                # Show any non-critical errors as warnings
+                # Non-critical errors logged only, not shown to user
                 if errors:
-                    for error in errors[:3]:  # Show first 3 errors
-                        messages.warning(request, error)
+                    for error in errors[:3]:
+                        logger.warning(error)
                 
                 # Success message based on whether products were added
                 if products_added > 0:
