@@ -105,33 +105,32 @@
                             {% endfor %}
                         </tbody>
                         <tfoot>
-                            {% if challan.customer_transport_charges > 0 %}
-                            <tr class="subtotal-row">
-                                <td colspan="12" class="subtotal-label">Subtotal:</td>
-                                <td class="subtotal-value">₹{{ grand_total|floatformat:2 }}</td>
+                            <tr>
+                                <td colspan="12" style="text-align:right; font-weight:600;">Subtotal (before discount):</td>
+                                <td style="font-weight:600;">₹{{ subtotal_before_discount|floatformat:2 }}</td>
                             </tr>
+                            <tr>
+                                <td colspan="12" style="text-align:right; font-weight:600;">Total Discount:</td>
+                                <td style="font-weight:600;">- ₹{{ total_discount|floatformat:2 }} ({{ discount_pct|floatformat:2 }}%)</td>
+                            </tr>
+                            <tr>
+                                <td colspan="12" style="text-align:right; font-weight:600;">GST Total (CGST + SGST):</td>
+                                <td style="font-weight:600;">₹{{ total_gst|floatformat:2 }}</td>
+                            </tr>
+                            {% if challan.customer_transport_charges > 0 %}
                             <tr class="transport-row">
                                 <td colspan="12" class="transport-label">Transport Charges:</td>
                                 <td class="transport-value">₹{{ challan.customer_transport_charges|floatformat:2 }}</td>
                             </tr>
+                            {% endif %}
                             <tr class="total-row">
                                 <td colspan="12" class="total-label">Grand Total:</td>
                                 <td class="grand-total">₹{{ final_total|floatformat:0 }}</td>
                             </tr>
                             <tr>
-                                <td colspan="12" style="text-align: right; color: #6c757d; font-size: 0.9em;">Actual Amount:</td>
-                                <td style="color: #6c757d; font-size: 0.9em;">₹{{ final_total|floatformat:2 }}</td>
+                                <td colspan="12" style="text-align:right; color:#6c757d; font-size:0.9em;">Actual Amount:</td>
+                                <td style="color:#6c757d; font-size:0.9em;">₹{{ final_total|floatformat:2 }}</td>
                             </tr>
-                            {% else %}
-                            <tr class="total-row">
-                                <td colspan="12" class="total-label">Grand Total:</td>
-                                <td class="grand-total">₹{{ grand_total|floatformat:0 }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="12" style="text-align: right; color: #6c757d; font-size: 0.9em;">Actual Amount:</td>
-                                <td style="color: #6c757d; font-size: 0.9em;">₹{{ grand_total|floatformat:2 }}</td>
-                            </tr>
-                            {% endif %}
                         </tfoot>
                     </table>
                 </div>

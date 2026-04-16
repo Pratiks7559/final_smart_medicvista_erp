@@ -97,7 +97,24 @@
                                 <tbody id="productRows"></tbody>
                             </table>
                             <div class="cust-chal-total-section">
-                                <strong>Grand Total: ₹<span id="grandTotal">0.00</span></strong>
+                                <table style="margin-left:auto; border-collapse:collapse; min-width:300px;">
+                                    <tr>
+                                        <td style="padding:4px 12px; text-align:right;">Subtotal (before discount):</td>
+                                        <td style="padding:4px 12px; text-align:right;">₹<span id="challanSubtotal">0.00</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:4px 12px; text-align:right;">Total Discount:</td>
+                                        <td style="padding:4px 12px; text-align:right;">- ₹<span id="challanTotalDiscount">0.00</span> (<span id="challanDiscountPct">0.00</span>%)</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding:4px 12px; text-align:right;">GST Total (CGST + SGST):</td>
+                                        <td style="padding:4px 12px; text-align:right;">₹<span id="challanGstTotal">0.00</span></td>
+                                    </tr>
+                                    <tr style="border-top:2px solid #333;">
+                                        <td style="padding:6px 12px; text-align:right; font-weight:700;">Grand Total:</td>
+                                        <td style="padding:6px 12px; text-align:right; font-weight:700;">₹<span id="grandTotal">0.00</span></td>
+                                    </tr>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -317,33 +334,38 @@ function calculateRowTotal(index) {
 }
 
 function calculateGrandTotal() {
-    let grandTotal = 0;
-    document.querySelectorAll('.cust-chal-row-total').forEach(span => {
-        const amount = parseFloat(span.textContent.replace('₹', '')) || 0;
-        grandTotal += amount;
+    let subtotal = 0;
+    let totalDiscount = 0;
+    let totalGst = 0;
+
+    document.querySelectorAll('#productRows tr').forEach(row => {
+        const rate = parseFloat(row.querySelector('.cust-chal-rate')?.value) || 0;
+        const qty = parseFloat(row.querySelector('.cust-chal-quantity')?.value) || 0;
+        const discount = parseFloat(row.querySelector('.cust-chal-discount')?.value) || 0;
+        const cgst = parseFloat(row.querySelector('.cust-chal-cgst')?.value) || 0;
+        const sgst = parseFloat(row.querySelector('.cust-chal-sgst')?.value) || 0;
+
+        const base = rate * qty;
+        const afterDiscount = base - discount;
+        const gst = (afterDiscount * (cgst + sgst)) / 100;
+
+        subtotal += base;
+        totalDiscount += discount;
+        totalGst += gst;
     });
-    
+
+    const discountPct = subtotal > 0 ? (totalDiscount / subtotal * 100) : 0;
+    const productsTotal = subtotal - totalDiscount + totalGst;
     const transportCharges = parseFloat(document.getElementById('transport_charges').value) || 0;
-    const rawTotal = grandTotal + transportCharges;
+    const rawTotal = productsTotal + transportCharges;
     const roundedTotal = Math.round(rawTotal);
-    const roundoffAmount = roundedTotal - rawTotal;
-    
-    // Display rounded total with actual amount
-    if (transportCharges > 0) {
-        if (Math.abs(roundoffAmount) > 0.001) {
-            const sign = roundoffAmount > 0 ? '+' : '-';
-            document.getElementById('grandTotal').innerHTML = `${grandTotal.toFixed(2)} + ${transportCharges.toFixed(2)} ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>₹${roundedTotal}</strong> <small style="color: #6c757d;">(₹${rawTotal.toFixed(2)})</small>`;
-        } else {
-            document.getElementById('grandTotal').innerHTML = `${grandTotal.toFixed(2)} + ${transportCharges.toFixed(2)} = <strong>₹${roundedTotal}</strong> <small style="color: #6c757d;">(₹${rawTotal.toFixed(2)})</small>`;
-        }
-    } else {
-        if (Math.abs(roundoffAmount) > 0.001) {
-            const sign = roundoffAmount > 0 ? '+' : '-';
-            document.getElementById('grandTotal').innerHTML = `${grandTotal.toFixed(2)} ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>₹${roundedTotal}</strong> <small style="color: #6c757d;">(₹${rawTotal.toFixed(2)})</small>`;
-        } else {
-            document.getElementById('grandTotal').innerHTML = `<strong>₹${roundedTotal}</strong> <small style="color: #6c757d;">(₹${rawTotal.toFixed(2)})</small>`;
-        }
-    }
+
+    const setSpan = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setSpan('challanSubtotal', subtotal.toFixed(2));
+    setSpan('challanTotalDiscount', totalDiscount.toFixed(2));
+    setSpan('challanDiscountPct', discountPct.toFixed(2));
+    setSpan('challanGstTotal', totalGst.toFixed(2));
+    setSpan('grandTotal', roundedTotal.toFixed(2));
 }
 
 // Add event listener for transport charges input

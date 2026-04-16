@@ -645,6 +645,15 @@ def view_customer_challan(request, challan_id):
     grand_total = (challan_items_1.aggregate(total=Sum('sale_total_amount'))['total'] or 0) + (challan_items_2.aggregate(total=Sum('sale_total_amount'))['total'] or 0)
     final_total = grand_total + (challan.customer_transport_charges or 0)
     
+    # Calculate summary figures for the bill footer
+    subtotal_before_discount = sum(item.sale_rate * item.sale_quantity for item in challan_items)
+    total_discount = sum(item.sale_discount for item in challan_items)
+    discount_pct = (total_discount / subtotal_before_discount * 100) if subtotal_before_discount else 0
+    total_gst = sum(
+        (item.sale_rate * item.sale_quantity - item.sale_discount) * (item.sale_cgst + item.sale_sgst) / 100
+        for item in challan_items
+    )
+    
     customers = CustomerMaster.objects.all().order_by('customer_name')
     products = ProductMaster.objects.all().order_by('product_name')
     challan_series = ChallanSeries.objects.filter(is_active=True).order_by('series_name')
@@ -654,6 +663,10 @@ def view_customer_challan(request, challan_id):
         'challan_items': challan_items,
         'grand_total': grand_total,
         'final_total': final_total,
+        'subtotal_before_discount': subtotal_before_discount,
+        'total_discount': total_discount,
+        'discount_pct': discount_pct,
+        'total_gst': total_gst,
         'customers': customers,
         'products': products,
         'challan_series': challan_series,
