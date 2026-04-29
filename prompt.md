@@ -338,3 +338,7 @@ context = {
 Copy
 python
 Undo karna ho toh: 'today': date_today.today() aur from datetime import date as date_today hata do
+
+sales section ke sales list and sales detail me add payment me amount and balance due me amount round off hoke aaye with excedd amount bhi accept ho
+
+like dahsboard like css supplier challan form and customer challan form css also fistly check thier html files and link css files make changes with proper bg colour and compact css less siznihn and px

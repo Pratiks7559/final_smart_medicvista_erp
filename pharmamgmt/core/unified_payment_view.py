@@ -119,11 +119,8 @@ def add_unified_payment(request):
                         
                         print(f"Invoice balance: Rs.{balance} (rounded: Rs.{balance_rounded})")
                         
-                        # Check against rounded balance (user pays round off amount)
-                        if payment_amount > balance_rounded:
-                            print(f"Payment amount Rs.{payment_amount} exceeds rounded balance Rs.{balance_rounded}")
-                            messages.error(request, f'Payment amount cannot exceed balance of Rs.{balance_rounded}')
-                            return redirect('add_unified_payment')
+                        # Allow any amount (partial or excess payment)
+                        print(f"Payment amount Rs.{payment_amount} allowed (no restriction)")
                         
                         # Create payment record
                         print(f"Creating payment record...")
@@ -187,11 +184,8 @@ def add_unified_payment(request):
                         
                         print(f"Sales invoice balance: Rs.{balance} (rounded: Rs.{balance_rounded})")
                         
-                        # Check against rounded balance (user pays round off amount)
-                        if payment_amount > balance_rounded:
-                            print(f"Receipt amount Rs.{payment_amount} exceeds rounded balance Rs.{balance_rounded}")
-                            messages.error(request, f'Receipt amount cannot exceed balance of Rs.{balance_rounded}')
-                            return redirect('add_unified_payment')
+                        # Allow any amount (partial or excess receipt)
+                        print(f"Receipt amount Rs.{payment_amount} allowed (no restriction)")
                         
                         # Create receipt record
                         print(f"Creating receipt record...")

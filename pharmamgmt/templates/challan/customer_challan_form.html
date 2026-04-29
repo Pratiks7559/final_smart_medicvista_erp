@@ -3,8 +3,6 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/customer_challan_form.css' %}">
-<link rel="stylesheet" href="{% static 'css/customer_challan_modals.css' %}">
-
 {% include 'components/add_product_dialog.html' %}
 {% endblock %}
 
@@ -120,6 +118,7 @@
                     </div>
 
                     <input type="hidden" name="products_data" id="productsData">
+                    <input type="hidden" name="fy_year" id="fyYearHidden" value="{{ current_fy }}">
 
                     <!-- Form Actions -->
                     <div class="cust-chal-form-actions">
@@ -190,55 +189,31 @@ document.addEventListener('DOMContentLoaded', function() {
     addProductRow();
 });
 
-// Update challan preview when series or date changes
+// Update challan preview when series changes
 function updateChallanPreview() {
     const seriesSelect = document.getElementById('challan_series');
-    const dateField = document.getElementById('challan_date');
     const previewDiv = document.getElementById('challanPreview');
     const previewText = previewDiv.querySelector('.cust-chal-preview-text');
-    
-    if (seriesSelect.value && dateField.value) {
-        const selectedOption = seriesSelect.options[seriesSelect.selectedIndex];
-        const seriesName = selectedOption.getAttribute('data-series-name');
-        const challanDate = new Date(dateField.value);
-        
-        // Format date as DDMMYYYY
-        const day = String(challanDate.getDate()).padStart(2, '0');
-        const month = String(challanDate.getMonth() + 1).padStart(2, '0');
-        const year = challanDate.getFullYear();
-        const dateStr = `${day}${month}${year}`;
-        
-        // Fetch next counter from backend
-        fetch(`/api/get-next-challan-number/?series_name=${seriesName}&date=${dateField.value}`)
+    const fyYear = document.getElementById('fyYearHidden')?.value || '';
+
+    if (seriesSelect.value) {
+        fetch(`/api/get-next-challan-number/?series_id=${seriesSelect.value}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    previewText.innerHTML = `<i class="fas fa-file-invoice"></i> Next Challan: <strong>${data.challan_number}</strong>`;
+                    const fyLabel = data.fy_label ? ` (FY ${data.fy_label})` : '';
+                    previewText.innerHTML = `<i class="fas fa-file-invoice"></i> Next Challan: <strong>${data.challan_number}</strong>${fyLabel}`;
                     previewDiv.style.display = 'block';
                 } else {
-                    // Fallback preview
-                    previewText.innerHTML = `<i class="fas fa-file-invoice"></i> Next Challan: <strong>${seriesName}${dateStr}001</strong>`;
-                    previewDiv.style.display = 'block';
+                    previewDiv.style.display = 'none';
                 }
             })
-            .catch(error => {
-                console.error('Error:', error);
-                // Fallback preview
-                previewText.innerHTML = `<i class="fas fa-file-invoice"></i> Next Challan: <strong>${seriesName}${dateStr}001</strong>`;
-                previewDiv.style.display = 'block';
-            });
+            .catch(() => { previewDiv.style.display = 'none'; });
     } else {
         previewDiv.style.display = 'none';
     }
 }
 
-// Update preview when date changes
-document.addEventListener('DOMContentLoaded', function() {
-    const dateField = document.getElementById('challan_date');
-    if (dateField) {
-        dateField.addEventListener('change', updateChallanPreview);
-    }
-});
 
 // Show customer type when customer is selected
 function showCustomerType() {

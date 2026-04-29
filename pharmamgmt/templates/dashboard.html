@@ -3,125 +3,568 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+<style>
+/* ═══════════════════════════════════════════
+   DASHBOARD — PROFESSIONAL PHARMACY ERP
+═══════════════════════════════════════════ */
+
+:root {
+    --dash-bg:        #f0f2f8;
+    --card-bg:        #ffffff;
+    --primary:        #4f46e5;
+    --primary-light:  #eef2ff;
+    --success:        #059669;
+    --success-light:  #ecfdf5;
+    --danger:         #dc2626;
+    --danger-light:   #fef2f2;
+    --warning:        #d97706;
+    --warning-light:  #fffbeb;
+    --info:           #0284c7;
+    --info-light:     #f0f9ff;
+    --purple:         #7c3aed;
+    --purple-light:   #f5f3ff;
+    --pink:           #db2777;
+    --pink-light:     #fdf2f8;
+    --text-dark:      #111827;
+    --text-mid:       #374151;
+    --text-muted:     #6b7280;
+    --border:         #e5e7eb;
+    --shadow-sm:      0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md:      0 4px 16px rgba(0,0,0,0.10);
+    --shadow-lg:      0 8px 32px rgba(0,0,0,0.12);
+    --radius:         14px;
+    --radius-sm:      8px;
+}
+
+* { box-sizing: border-box; }
+
+.db-wrap {
+    background: var(--dash-bg);
+    min-height: 100vh;
+    padding: 1.5rem;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ── HEADER ── */
+.db-header {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
+    border-radius: var(--radius);
+    padding: 1.75rem 2rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    box-shadow: 0 8px 32px rgba(79,70,229,0.35);
+}
+
+.db-header-left h1 {
+    color: #fff;
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin: 0 0 0.25rem 0;
+    letter-spacing: -0.5px;
+}
+
+.db-header-left p {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.db-fy-badge {
+    background: rgba(255,255,255,0.18);
+    border: 1.5px solid rgba(255,255,255,0.35);
+    color: #fff;
+    padding: 0.5rem 1.25rem;
+    border-radius: 50px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    backdrop-filter: blur(8px);
+}
+
+/* ── STAT CARDS ROW ── */
+.db-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.db-stat {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-left: 4px solid var(--stat-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.db-stat::after {
+    content: '';
+    position: absolute;
+    right: -10px;
+    top: -10px;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: var(--stat-color);
+    opacity: 0.06;
+}
+
+.db-stat:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.db-stat-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    background: var(--stat-bg);
+    color: var(--stat-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+}
+
+.db-stat-info { flex: 1; min-width: 0; }
+
+.db-stat-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 0.3rem;
+}
+
+.db-stat-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    line-height: 1;
+}
+
+.db-stat-blue   { --stat-color: #4f46e5; --stat-bg: #eef2ff; }
+.db-stat-pink   { --stat-color: #db2777; --stat-bg: #fdf2f8; }
+.db-stat-teal   { --stat-color: #0d9488; --stat-bg: #f0fdfa; }
+.db-stat-orange { --stat-color: #ea580c; --stat-bg: #fff7ed; }
+
+/* ── FY SUMMARY BAR ── */
+.db-fy-bar {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.75rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    border: 1px solid var(--border);
+}
+
+.db-fy-item {
+    text-align: center;
+    padding: 0.75rem 0.5rem;
+    border-right: 1px solid var(--border);
+    transition: background 0.2s;
+}
+
+.db-fy-item:last-child { border-right: none; }
+.db-fy-item:hover { background: #f9fafb; border-radius: var(--radius-sm); }
+
+.db-fy-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+}
+
+.db-fy-val {
+    font-size: 1.3rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+/* ── FINANCIAL GRID ── */
+.db-financial {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+}
+
+.db-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.875rem;
+    border-bottom: 2px solid var(--dash-bg);
+}
+
+.db-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.db-section-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: #fff;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+.db-fin-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.875rem;
+}
+
+.db-fin-card {
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.1rem;
+    border: 1.5px solid var(--fc-border);
+    background: var(--fc-bg);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.db-fin-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--fc-border);
+    border-radius: 3px 3px 0 0;
+}
+
+.db-fin-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.db-fin-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.db-fin-val {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    line-height: 1;
+}
+
+.fc-green  { --fc-border: #10b981; --fc-bg: #f0fdf4; }
+.fc-blue   { --fc-border: #3b82f6; --fc-bg: #eff6ff; }
+.fc-amber  { --fc-border: #f59e0b; --fc-bg: #fffbeb; }
+.fc-red    { --fc-border: #ef4444; --fc-bg: #fef2f2; }
+.fc-violet { --fc-border: #8b5cf6; --fc-bg: #f5f3ff; }
+.fc-teal   { --fc-border: #14b8a6; --fc-bg: #f0fdfa; }
+
+/* ── RECENT TABLES ── */
+.db-tables {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+
+.db-table-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+}
+
+.db-table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 1rem;
+}
+
+.db-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.db-table thead tr {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+}
+
+.db-table th {
+    padding: 0.65rem 0.875rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+}
+
+.db-table td {
+    padding: 0.65rem 0.875rem;
+    border-bottom: 1px solid #f3f4f6;
+    color: var(--text-mid);
+    vertical-align: middle;
+}
+
+.db-table tbody tr:last-child td { border-bottom: none; }
+
+.db-table tbody tr:hover { background: #fafbff; }
+
+.db-link {
+    color: var(--primary);
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 0.8rem;
+}
+
+.db-link:hover { color: #3730a3; text-decoration: underline; }
+
+.db-badge-green { color: var(--success); font-weight: 700; }
+.db-badge-blue  { color: var(--info);    font-weight: 700; }
+
+.db-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1.1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-decoration: none;
+    color: #fff;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+}
+
+.db-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); color: #fff; text-decoration: none; }
+
+.db-btn-primary  { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
+.db-btn-pink     { background: linear-gradient(135deg, #db2777, #9d174d); }
+.db-btn-report   { background: linear-gradient(135deg, #059669, #047857); }
+
+.db-empty {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1200px) {
+    .db-stats { grid-template-columns: repeat(2, 1fr); }
+    .db-fin-grid { grid-template-columns: repeat(2, 1fr); }
+    .db-fy-bar { grid-template-columns: repeat(3, 1fr); }
+    .db-fy-item:nth-child(3) { border-right: none; }
+    .db-fy-item:nth-child(4) { border-top: 1px solid var(--border); }
+    .db-fy-item:nth-child(5) { border-top: 1px solid var(--border); border-right: none; }
+}
+
+@media (max-width: 900px) {
+    .db-tables { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+    .db-wrap { padding: 0.75rem; }
+    .db-stats { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .db-fin-grid { grid-template-columns: 1fr 1fr; }
+    .db-fy-bar { grid-template-columns: 1fr 1fr; }
+    .db-header { padding: 1.25rem; }
+    .db-header-left h1 { font-size: 1.35rem; }
+    .db-stat-value { font-size: 1.3rem; }
+}
+
+@media (max-width: 400px) {
+    .db-stats { grid-template-columns: 1fr; }
+    .db-fin-grid { grid-template-columns: 1fr; }
+}
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-    <!-- Header Section -->
-    <div class="dashboard-header">
-        <h1 class="dashboard-title">Dashboard</h1>
-        <p class="dashboard-subtitle">Welcome back! Here's what's happening with your pharmacy today.</p>
-    </div>
+<div class="db-wrap">
 
-    <!-- Stats Cards -->
-    <div class="stats-grid">
-        <!-- Products Card -->
-        <div class="stat-card stat-card-blue">
-            <div class="stat-card-content">
-                <div class="stat-info">
-                    <p class="stat-label">Total Products</p>
-                    <p class="stat-value">{{ product_count }}</p>
-                </div>
-                <div class="stat-icon stat-icon-blue">
-                    <i class="fas fa-pills"></i>
-                </div>
-            </div>
+    <!-- ── HEADER ── -->
+    <div class="db-header">
+        <div class="db-header-left">
+            <h1>📊 MedicVista Dashboard</h1>
+            <p>Real-time insights into your pharmacy operations</p>
         </div>
-
-        <!-- Suppliers Card -->
-        <div class="stat-card stat-card-green">
-            <div class="stat-card-content">
-                <div class="stat-info">
-                    <p class="stat-label">Suppliers</p>
-                    <p class="stat-value">{{ supplier_count }}</p>
-                </div>
-                <div class="stat-icon stat-icon-green">
-                    <i class="fas fa-truck"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Customers Card -->
-        <div class="stat-card stat-card-purple">
-            <div class="stat-card-content">
-                <div class="stat-info">
-                    <p class="stat-label">Customers</p>
-                    <p class="stat-value">{{ customer_count }}</p>
-                </div>
-                <div class="stat-icon stat-icon-purple">
-                    <i class="fas fa-users"></i>
-                </div>
-            </div>
+        <div class="db-fy-badge">
+            <i class="fas fa-calendar-alt"></i>
+            {{ fy_label }} &nbsp;·&nbsp; {{ fy_start|date:"d M Y" }} – {{ fy_end|date:"d M Y" }}
         </div>
     </div>
 
-    <!-- Main Content Grid -->
-    <div class="main-content-grid">
-        <!-- Financial Overview -->
-        <div class="content-card">
-            <div class="card-header">
-                <div class="card-icon card-icon-emerald">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <h2 class="card-title">Financial Overview</h2>
+    <!-- ── QUICK STATS ── -->
+    <div class="db-stats">
+        <div class="db-stat db-stat-blue">
+            <div class="db-stat-icon"><i class="fas fa-pills"></i></div>
+            <div class="db-stat-info">
+                <div class="db-stat-label">Total Products</div>
+                <div class="db-stat-value">{{ product_count }}</div>
             </div>
-            
-            <div class="financial-grid">
-                <div class="financial-item financial-item-emerald">
-                    <p class="financial-label">Monthly Sales</p>
-                    <p class="financial-value">{{ monthly_sales|currency }}</p>
-                </div>
-                <div class="financial-item financial-item-blue">
-                    <p class="financial-label">Monthly Purchases</p>
-                    <p class="financial-value">{{ monthly_purchases|currency }}</p>
-                </div>
-                <div class="financial-item financial-item-emerald" style="border-left: 3px solid #10b981;">
-                    <p class="financial-label">Today's Sales</p>
-                    <p class="financial-value">{{ today_sales|currency }}</p>
-                </div>
-                <div class="financial-item financial-item-blue" style="border-left: 3px solid #3b82f6;">
-                    <p class="financial-label">Today's Purchases</p>
-                    <p class="financial-value">{{ today_purchases|currency }}</p>
-                </div>
-                <div class="financial-item financial-item-emerald" style="border-left: 3px solid #059669;">
-                    <p class="financial-label">Today's Profit</p>
-                    <p class="financial-value" style="color: {% if today_profit >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ today_profit|currency }}</p>
-                </div>
-                <div class="financial-item financial-item-emerald" style="border-left: 3px solid #059669;">
-                    <p class="financial-label">Monthly Profit</p>
-                    <p class="financial-value" style="color: {% if monthly_profit >= 0 %}#059669{% else %}#dc2626{% endif %};">{{ monthly_profit|currency }}</p>
-                </div>
-                <div class="financial-item financial-item-amber">
-                    <p class="financial-label">Total Receivable</p>
-                    <p class="financial-value">{{ total_receivable|currency }}</p>
-                </div>
-                <div class="financial-item financial-item-rose">
-                    <p class="financial-label">Total Payable</p>
-                    <p class="financial-value">{{ total_payable|currency }}</p>
+        </div>
+        <div class="db-stat db-stat-pink">
+            <div class="db-stat-icon"><i class="fas fa-truck"></i></div>
+            <div class="db-stat-info">
+                <div class="db-stat-label">Suppliers</div>
+                <div class="db-stat-value">{{ supplier_count }}</div>
+            </div>
+        </div>
+        <div class="db-stat db-stat-teal">
+            <div class="db-stat-icon"><i class="fas fa-users"></i></div>
+            <div class="db-stat-info">
+                <div class="db-stat-label">Customers</div>
+                <div class="db-stat-value">{{ customer_count }}</div>
+            </div>
+        </div>
+        <div class="db-stat db-stat-orange">
+            <div class="db-stat-icon"><i class="fas fa-chart-line"></i></div>
+            <div class="db-stat-info">
+                <div class="db-stat-label">Monthly Profit</div>
+                <div class="db-stat-value" style="color:{% if monthly_profit >= 0 %}#059669{% else %}#dc2626{% endif %};">
+                    ₹{{ monthly_profit|floatformat:0 }}
                 </div>
             </div>
-            
-            <a href="{% url 'financial_report' %}" class="card-button card-button-emerald">
-                <i class="fas fa-chart-bar"></i>
-                View Full Report
+        </div>
+    </div>
+
+    <!-- ── FY SUMMARY BAR ── -->
+    <div class="db-fy-bar">
+        <div class="db-fy-item">
+            <div class="db-fy-label"><i class="fas fa-arrow-up" style="color:#10b981;"></i> {{ fy_label }} Sales</div>
+            <div class="db-fy-val" style="color:#059669;">₹{{ fy_total_sales|floatformat:0 }}</div>
+        </div>
+        <div class="db-fy-item">
+            <div class="db-fy-label"><i class="fas fa-arrow-down" style="color:#3b82f6;"></i> {{ fy_label }} Purchases</div>
+            <div class="db-fy-val" style="color:#2563eb;">₹{{ fy_total_purchases|floatformat:0 }}</div>
+        </div>
+        <div class="db-fy-item">
+            <div class="db-fy-label"><i class="fas fa-chart-pie" style="color:#8b5cf6;"></i> {{ fy_label }} Profit</div>
+            <div class="db-fy-val" style="color:{% if fy_profit >= 0 %}#059669{% else %}#dc2626{% endif %};">
+                ₹{{ fy_profit|floatformat:0 }}
+            </div>
+        </div>
+        <div class="db-fy-item">
+            <div class="db-fy-label"><i class="fas fa-hand-holding-usd" style="color:#f59e0b;"></i> Receivable</div>
+            <div class="db-fy-val" style="color:#d97706;">₹{{ total_receivable|floatformat:0 }}</div>
+        </div>
+        <div class="db-fy-item">
+            <div class="db-fy-label"><i class="fas fa-credit-card" style="color:#ef4444;"></i> Payable</div>
+            <div class="db-fy-val" style="color:#dc2626;">₹{{ total_payable|floatformat:0 }}</div>
+        </div>
+    </div>
+
+    <!-- ── FINANCIAL OVERVIEW ── -->
+    <div class="db-financial">
+        <div class="db-section-head">
+            <div class="db-section-title">
+                <div class="db-section-icon"><i class="fas fa-rupee-sign"></i></div>
+                Financial Overview
+            </div>
+            <a href="{% url 'financial_report' %}" class="db-btn db-btn-report">
+                <i class="fas fa-chart-bar"></i> Full Report
             </a>
         </div>
+
+        <div class="db-fin-grid">
+            <div class="db-fin-card fc-green">
+                <div class="db-fin-label">📈 Monthly Sales</div>
+                <div class="db-fin-val" style="color:#059669;">₹{{ monthly_sales|floatformat:0 }}</div>
+            </div>
+            <div class="db-fin-card fc-blue">
+                <div class="db-fin-label">📦 Monthly Purchases</div>
+                <div class="db-fin-val" style="color:#2563eb;">₹{{ monthly_purchases|floatformat:0 }}</div>
+            </div>
+            <div class="db-fin-card fc-teal">
+                <div class="db-fin-label">💰 Today's Sales</div>
+                <div class="db-fin-val" style="color:#0d9488;">₹{{ today_sales|floatformat:0 }}</div>
+            </div>
+            <div class="db-fin-card fc-violet">
+                <div class="db-fin-label">🛒 Today's Purchases</div>
+                <div class="db-fin-val" style="color:#7c3aed;">₹{{ today_purchases|floatformat:0 }}</div>
+            </div>
+            <div class="db-fin-card {% if today_profit >= 0 %}fc-green{% else %}fc-red{% endif %}">
+                <div class="db-fin-label">📊 Today's Profit</div>
+                <div class="db-fin-val" style="color:{% if today_profit >= 0 %}#059669{% else %}#dc2626{% endif %};">
+                    ₹{{ today_profit|floatformat:0 }}
+                </div>
+            </div>
+            <div class="db-fin-card {% if monthly_profit >= 0 %}fc-green{% else %}fc-red{% endif %}">
+                <div class="db-fin-label">💎 Monthly Profit</div>
+                <div class="db-fin-val" style="color:{% if monthly_profit >= 0 %}#059669{% else %}#dc2626{% endif %};">
+                    ₹{{ monthly_profit|floatformat:0 }}
+                </div>
+            </div>
+            <div class="db-fin-card fc-amber">
+                <div class="db-fin-label">💵 Total Receivable</div>
+                <div class="db-fin-val" style="color:#d97706;">₹{{ total_receivable|floatformat:0 }}</div>
+            </div>
+            <div class="db-fin-card fc-red">
+                <div class="db-fin-label">💳 Total Payable</div>
+                <div class="db-fin-val" style="color:#dc2626;">₹{{ total_payable|floatformat:0 }}</div>
+            </div>
+        </div>
     </div>
 
-    <!-- Recent Transactions -->
-    <div class="main-content-grid">
+    <!-- ── RECENT TRANSACTIONS ── -->
+    <div class="db-tables">
+
         <!-- Recent Sales -->
-        <div class="content-card">
-            <div class="card-header">
-                <div class="card-icon card-icon-blue">
-                    <i class="fas fa-shopping-cart"></i>
+        <div class="db-table-card">
+            <div class="db-section-head">
+                <div class="db-section-title">
+                    <div class="db-section-icon" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    Recent Sales
                 </div>
-                <h2 class="card-title">Recent Sales</h2>
             </div>
-            
-            <div class="data-table">
-                <table>
+            <div class="db-table-wrap">
+                <table class="db-table">
                     <thead>
                         <tr>
                             <th>Invoice #</th>
@@ -134,42 +577,37 @@
                         {% for sale in recent_sales %}
                         <tr>
                             <td>
-                                <a href="{% url 'sales_invoice_detail' pk=sale.sales_invoice_no %}" class="table-link">
+                                <a href="{% url 'sales_invoice_detail' pk=sale.sales_invoice_no %}" class="db-link">
                                     {{ sale.sales_invoice_no }}
                                 </a>
                             </td>
-                            <td class="text-gray-600">{{ sale.sales_invoice_date }}</td>
-                            <td class="text-gray-800">{{ sale.customerid.customer_name }}</td>
-                            <td class="font-semibold text-emerald-600">{{ sale.sales_invoice_total|currency }}</td>
+                            <td>{{ sale.sales_invoice_date|date:"d M, Y" }}</td>
+                            <td>{{ sale.customerid.customer_name }}</td>
+                            <td class="db-badge-green">₹{{ sale.annotated_total|floatformat:0 }}</td>
                         </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center text-gray-500" style="padding: 32px;">No recent sales</td>
-                        </tr>
+                        <tr><td colspan="4" class="db-empty">No recent sales in {{ fy_label }}</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            
-            <div class="card-footer">
-                <a href="{% url 'sales_invoice_list' %}" class="card-button card-button-blue">
-                    <i class="fas fa-list"></i>
-                    View All Sales
-                </a>
-            </div>
+            <a href="{% url 'sales_invoice_list' %}" class="db-btn db-btn-primary">
+                <i class="fas fa-list"></i> View All Sales
+            </a>
         </div>
 
         <!-- Recent Purchases -->
-        <div class="content-card">
-            <div class="card-header">
-                <div class="card-icon card-icon-purple">
-                    <i class="fas fa-truck"></i>
+        <div class="db-table-card">
+            <div class="db-section-head">
+                <div class="db-section-title">
+                    <div class="db-section-icon" style="background:linear-gradient(135deg,#db2777,#9d174d);">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    Recent Purchases
                 </div>
-                <h2 class="card-title">Recent Purchases</h2>
             </div>
-            
-            <div class="data-table">
-                <table>
+            <div class="db-table-wrap">
+                <table class="db-table">
                     <thead>
                         <tr>
                             <th>Invoice #</th>
@@ -182,30 +620,25 @@
                         {% for purchase in recent_purchases %}
                         <tr>
                             <td>
-                                <a href="{% url 'invoice_detail' pk=purchase.invoiceid %}" class="table-link">
+                                <a href="{% url 'invoice_detail' pk=purchase.invoiceid %}" class="db-link">
                                     {{ purchase.invoice_no }}
                                 </a>
                             </td>
-                            <td class="text-gray-600">{{ purchase.invoice_date }}</td>
-                            <td class="text-gray-800">{{ purchase.supplierid.supplier_name }}</td>
-                            <td class="font-semibold text-emerald-600">{{ purchase.invoice_total|currency }}</td>
+                            <td>{{ purchase.invoice_date|date:"d M, Y" }}</td>
+                            <td>{{ purchase.supplierid.supplier_name }}</td>
+                            <td class="db-badge-blue">₹{{ purchase.invoice_total|floatformat:0 }}</td>
                         </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center text-gray-500" style="padding: 32px;">No recent purchases</td>
-                        </tr>
+                        <tr><td colspan="4" class="db-empty">No recent purchases in {{ fy_label }}</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            
-            <div class="card-footer">
-                <a href="{% url 'invoice_list' %}" class="card-button card-button-purple">
-                    <i class="fas fa-list"></i>
-                    View All Purchases
-                </a>
-            </div>
+            <a href="{% url 'invoice_list' %}" class="db-btn db-btn-pink">
+                <i class="fas fa-list"></i> View All Purchases
+            </a>
         </div>
+
     </div>
 </div>
 {% endblock %}

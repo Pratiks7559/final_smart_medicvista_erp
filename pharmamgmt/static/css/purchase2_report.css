@@ -1,748 +1,96 @@
-/* Purchase2 Report - Comprehensive CSS */
-/* Theme Independent, Mobile Responsive, Compact Design */
+/* PURCHASE2 REPORT — Compact Dashboard Design */
+:root{--p:#4f46e5;--p-lite:#eef2ff;--purple:#7c3aed;--pink:#db2777;--green:#059669;--g-lite:#ecfdf5;--red:#dc2626;--r-lite:#fef2f2;--amber:#d97706;--dark:#111827;--mid:#374151;--muted:#6b7280;--border:#e5e7eb;--bg:#f0f2f8;--card:#fff;--r:10px;--rs:6px;--sh-sm:0 1px 3px rgba(0,0,0,.08);--sh-md:0 4px 12px rgba(0,0,0,.10)}
+*{box-sizing:border-box}
 
-/* Container & Layout */
-.purchase2-report-container {
-    max-width: 1400px;
-    margin: 15px auto;
-    padding: 15px;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: transparent;
+/* CONTAINER */
+.purchase2-report-container{padding:.75rem;background:var(--bg);min-height:100vh;font-family:'Segoe UI',system-ui,sans-serif}
+
+/* HEADER */
+.purchase2-header-card{background:linear-gradient(135deg,#4f46e5,#7c3aed 50%,#db2777);border-radius:var(--r);padding:.875rem 1.25rem;margin-bottom:.875rem;box-shadow:0 4px 16px rgba(79,70,229,.3)}
+.purchase2-header-content{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem}
+.purchase2-title{margin:0;font-size:1.1rem;font-weight:800;color:#fff!important;display:flex;align-items:center;gap:.5rem}
+.purchase2-action-buttons{display:flex;gap:.5rem;flex-wrap:wrap}
+.purchase2-export-btn{display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .875rem;border:none;border-radius:var(--rs);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s;color:#fff}
+.purchase2-pdf-btn{background:linear-gradient(135deg,#dc2626,#b91c1c)}
+.purchase2-excel-btn{background:linear-gradient(135deg,#059669,#047857)}
+.purchase2-export-btn:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}
+.purchase2-shortcut{background:rgba(255,255,255,.2);padding:.1rem .35rem;border-radius:3px;font-size:.62rem;font-family:monospace;margin-left:.25rem}
+
+/* FILTER */
+.purchase2-filter-card{background:var(--card);border-radius:var(--rs);padding:.75rem 1rem;margin-bottom:.875rem;box-shadow:var(--sh-sm);border:1px solid var(--border)}
+.purchase2-filter-form{display:flex;align-items:flex-end;gap:.75rem;flex-wrap:wrap}
+.purchase2-date-group{display:flex;flex-direction:column;gap:.25rem}
+.purchase2-date-label{font-size:.65rem;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.4px}
+.purchase2-date-input{padding:.35rem .625rem;border:1.5px solid var(--border);border-radius:var(--rs);font-size:.8rem;color:var(--dark);background:var(--card);height:32px;transition:border-color .2s}
+.purchase2-date-input:focus{outline:none;border-color:var(--p);box-shadow:0 0 0 2px rgba(79,70,229,.12)}
+.purchase2-filter-btn{background:linear-gradient(135deg,var(--p),var(--purple));color:#fff;border:none;padding:.35rem .875rem;border-radius:var(--rs);font-size:.78rem;font-weight:700;cursor:pointer;height:32px;display:flex;align-items:center;gap:.35rem;transition:all .2s}
+.purchase2-filter-btn:hover{transform:translateY(-1px);box-shadow:var(--sh-sm)}
+
+/* STATS */
+.purchase2-stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:.875rem}
+.purchase2-stat-card{background:var(--card);border-radius:var(--rs);padding:.875rem 1rem;box-shadow:var(--sh-sm);border:1px solid var(--border);border-left:4px solid var(--stat-color);transition:transform .2s}
+.purchase2-stat-card:hover{transform:translateY(-3px);box-shadow:var(--sh-md)}
+.purchase2-stat-purchases{--stat-color:#db2777}
+.purchase2-stat-paid{--stat-color:#059669}
+.purchase2-stat-pending{--stat-color:#d97706}
+.purchase2-stat-label{font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:.35rem}
+.purchase2-stat-value{font-size:1.3rem;font-weight:800;color:var(--dark)}
+
+/* TABLE */
+.purchase2-table-card{background:var(--card);border-radius:var(--rs);box-shadow:var(--sh-sm);border:1px solid var(--border);overflow:hidden;margin-bottom:.875rem}
+.purchase2-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.purchase2-table-head{background:linear-gradient(135deg,#1e1b4b,#312e81)}
+.purchase2-th{padding:.5rem .75rem;font-weight:700;color:#fff!important;font-size:.68rem;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid rgba(255,255,255,.15)}
+.purchase2-th-left{text-align:left}
+.purchase2-th-right{text-align:right}
+.purchase2-table-body tr{border-bottom:1px solid var(--border);transition:background .15s}
+.purchase2-table-body tr:hover{background:var(--p-lite)}
+.purchase2-td{padding:.5rem .75rem;color:var(--mid);vertical-align:middle}
+.purchase2-td-right{text-align:right;font-weight:600}
+.purchase2-balance-due{color:var(--red)!important;font-weight:700}
+.purchase2-balance-paid{color:var(--green)!important;font-weight:700}
+.purchase2-empty-row{text-align:center;padding:2rem;color:var(--muted);font-style:italic}
+.purchase2-table-foot{background:var(--bg);border-top:2px solid var(--pink)}
+.purchase2-total-label{padding:.5rem .75rem;font-weight:800;color:var(--dark);font-size:.8rem;text-align:right}
+.purchase2-total-value{padding:.5rem .75rem;font-weight:800;color:var(--pink);text-align:right;font-size:.85rem}
+
+/* PAGINATION */
+.purchase2-pagination-card{background:var(--card);border-radius:var(--rs);padding:.625rem 1rem;box-shadow:var(--sh-sm);border:1px solid var(--border)}
+.purchase2-pagination{display:flex;list-style:none;margin:0;padding:0;gap:.35rem;flex-wrap:wrap;align-items:center}
+.purchase2-page-link{display:inline-flex;align-items:center;padding:.3rem .75rem;border:1.5px solid var(--border);border-radius:var(--rs);font-size:.75rem;font-weight:600;color:var(--p);text-decoration:none;background:var(--card);transition:all .2s}
+.purchase2-page-link:hover{background:var(--p);color:#fff;border-color:var(--p)}
+.purchase2-page-current .purchase2-page-link{background:var(--p);color:#fff;border-color:var(--p)}
+
+/* PRINT */
+@media print{
+    .no-print{display:none!important}
+    .print-only{display:block!important}
+    .purchase2-print-container{font-family:'Segoe UI',sans-serif;padding:1rem}
+    .purchase2-print-header{text-align:center;margin-bottom:1rem;border-bottom:2px solid #333;padding-bottom:.75rem}
+    .purchase2-print-title{font-size:1.2rem;font-weight:800;margin:0 0 .25rem}
+    .purchase2-print-address,.purchase2-print-contact{margin:.15rem 0;font-size:.8rem;color:#555}
+    .purchase2-print-report-header{text-align:center;margin-bottom:.75rem}
+    .purchase2-print-report-title{font-size:1rem;font-weight:700;margin:0 0 .25rem}
+    .purchase2-print-period{font-size:.8rem;color:#555;margin:0}
+    .purchase2-print-table{width:100%;border-collapse:collapse;font-size:.75rem}
+    .purchase2-print-th{padding:.35rem .5rem;background:#1e1b4b;color:#fff;font-weight:700;font-size:.68rem;text-transform:uppercase;border:1px solid #333}
+    .purchase2-print-th-left{text-align:left}
+    .purchase2-print-th-right{text-align:right}
+    .purchase2-print-td{padding:.35rem .5rem;border:1px solid #ddd;font-size:.75rem}
+    .purchase2-print-td-right{text-align:right}
+    .purchase2-print-total-row{background:#f0f2f8;font-weight:800}
+    .purchase2-print-total-label,.purchase2-print-total-value{padding:.35rem .5rem;text-align:right;font-weight:800;border:1px solid #ddd}
+    .purchase2-print-footer{margin-top:.75rem;text-align:right;font-size:.7rem;color:#888}
 }
+.print-only{display:none}
 
-/* Header Card */
-.purchase2-header-card {
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    padding: 20px;
-    margin-bottom: 15px;
-    border: 1px solid #e5e7eb;
-}
-
-.purchase2-header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 15px;
-}
-
-.purchase2-action-buttons {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.purchase2-export-btn {
-    padding: 10px 16px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9rem;
-    position: relative;
-}
-
-.purchase2-pdf-btn {
-    background: #dc2626;
-    color: white;
-}
-
-.purchase2-pdf-btn:hover {
-    background: #b91c1c;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-}
-
-.purchase2-excel-btn {
-    background: #059669;
-    color: white;
-}
-
-.purchase2-excel-btn:hover {
-    background: #047857;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-}
-
-.purchase2-shortcut {
-    font-size: 0.75rem;
-    opacity: 0.8;
-    background: rgba(255, 255, 255, 0.2);
-    padding: 2px 6px;
-    border-radius: 3px;
-    margin-left: 4px;
-}
-
-.purchase2-title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #1f2937;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.purchase2-print-btn {
-    background: #10b981;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9rem;
-}
-
-.purchase2-print-btn:hover {
-    background: #059669;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-/* Filter Card */
-.purchase2-filter-card {
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    padding: 20px;
-    margin-bottom: 15px;
-    border: 1px solid #e5e7eb;
-}
-
-.purchase2-filter-form {
-    display: flex;
-    gap: 15px;
-    align-items: end;
-}
-
-.purchase2-date-group {
-    flex: 1;
-    min-width: 0;
-}
-
-.purchase2-date-label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 500;
-    color: #374151;
-    font-size: 0.9rem;
-}
-
-.purchase2-date-input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    transition: border-color 0.2s ease;
-    background: #ffffff;
-    color: #1f2937;
-}
-
-.purchase2-date-input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.purchase2-filter-btn {
-    background: #3b82f6;
-    color: white;
-    padding: 10px 24px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.9rem;
-    white-space: nowrap;
-}
-
-.purchase2-filter-btn:hover {
-    background: #2563eb;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-}
-
-/* Stats Grid */
-.purchase2-stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 15px;
-    margin-bottom: 20px;
-}
-
-.purchase2-stat-card {
-    border-radius: 12px;
-    padding: 20px;
-    color: white;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease;
-}
-
-.purchase2-stat-card:hover {
-    transform: translateY(-2px);
-}
-
-.purchase2-stat-purchases {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.purchase2-stat-paid {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.purchase2-stat-pending {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-}
-
-.purchase2-stat-label {
-    font-size: 0.9rem;
-    opacity: 0.9;
-    margin-bottom: 8px;
-    font-weight: 500;
-}
-
-.purchase2-stat-value {
-    font-size: 1.8rem;
-    font-weight: 700;
-    line-height: 1.2;
-}
-
-/* Table Card */
-.purchase2-table-card {
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    overflow: hidden;
-    border: 1px solid #e5e7eb;
-}
-
-.purchase2-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.9rem;
-}
-
-.purchase2-table-head {
-    background: #f8fafc;
-    border-bottom: 2px solid #e2e8f0;
-}
-
-.purchase2-th {
-    padding: 12px 15px;
-    font-weight: 600;
-    color: #374151;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.purchase2-th-left {
-    text-align: left;
-}
-
-.purchase2-th-right {
-    text-align: right;
-}
-
-.purchase2-table-body {
-    background: #ffffff;
-}
-
-.purchase2-table-row {
-    border-bottom: 1px solid #f1f5f9;
-    transition: background-color 0.15s ease;
-}
-
-.purchase2-table-row:hover {
-    background: #f8fafc;
-}
-
-.purchase2-td {
-    padding: 12px 15px;
-    color: #374151;
-    vertical-align: middle;
-}
-
-.purchase2-td-right {
-    text-align: right;
-    font-weight: 500;
-}
-
-.purchase2-balance-due {
-    color: #dc2626 !important;
-    font-weight: 600;
-}
-
-.purchase2-balance-paid {
-    color: #059669 !important;
-    font-weight: 600;
-}
-
-.purchase2-empty-row {
-    padding: 40px;
-    text-align: center;
-    color: #9ca3af;
-    font-style: italic;
-}
-
-.purchase2-table-foot {
-    background: #f8fafc;
-    border-top: 2px solid #e2e8f0;
-    font-weight: 600;
-}
-
-.purchase2-total-label {
-    padding: 15px;
-    color: #374151;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.purchase2-total-value {
-    padding: 15px;
-    text-align: right;
-    color: #1f2937;
-    font-weight: 700;
-    font-size: 1rem;
-}
-
-/* Print Styles */
-.purchase2-print-container {
-    display: none;
-}
-
-@media print {
-    * {
-        -webkit-print-color-adjust: exact !important;
-        color-adjust: exact !important;
-    }
-    
-    body {
-        margin: 0;
-        padding: 0;
-        font-family: Arial, sans-serif;
-        font-size: 11px;
-        line-height: 1.3;
-    }
-    
-    .no-print {
-        display: none !important;
-    }
-    
-    .purchase2-print-container {
-        display: block !important;
-    }
-    
-    .purchase2-print-wrapper {
-        max-width: 210mm;
-        margin: 0 auto;
-        padding: 10mm;
-    }
-    
-    .purchase2-print-header {
-        text-align: center;
-        border-bottom: 3px double #000;
-        padding-bottom: 10px;
-        margin-bottom: 15px;
-    }
-    
-    .purchase2-print-title {
-        margin: 0;
-        font-size: 20px;
-        font-weight: bold;
-        color: #000;
-    }
-    
-    .purchase2-print-address,
-    .purchase2-print-contact {
-        margin: 3px 0;
-        font-size: 10px;
-        color: #000;
-    }
-    
-    .purchase2-print-report-header {
-        text-align: center;
-        margin-bottom: 15px;
-    }
-    
-    .purchase2-print-report-title {
-        margin: 0;
-        font-size: 16px;
-        text-decoration: underline;
-        color: #000;
-    }
-    
-    .purchase2-print-period {
-        margin: 5px 0;
-        font-size: 10px;
-        color: #000;
-    }
-    
-    .purchase2-print-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 9px;
-        margin-bottom: 15px;
-    }
-    
-    .purchase2-print-header-row {
-        background: #f0f0f0 !important;
-        border-top: 2px solid #000;
-        border-bottom: 2px solid #000;
-    }
-    
-    .purchase2-print-th {
-        padding: 5px 3px;
-        font-weight: bold;
-        color: #000;
-        border: 1px solid #000;
-    }
-    
-    .purchase2-print-th-left {
-        text-align: left;
-    }
-    
-    .purchase2-print-th-right {
-        text-align: right;
-    }
-    
-    .purchase2-print-row {
-        border-bottom: 1px solid #ccc;
-    }
-    
-    .purchase2-print-td {
-        padding: 4px 3px;
-        color: #000;
-        border: 1px solid #ccc;
-    }
-    
-    .purchase2-print-td-right {
-        text-align: right;
-    }
-    
-    .purchase2-print-total-row {
-        border-top: 2px solid #000;
-        border-bottom: 2px solid #000;
-        font-weight: bold;
-        background: #f0f0f0 !important;
-    }
-    
-    .purchase2-print-total-label {
-        padding: 6px 3px;
-        text-align: right;
-        font-weight: bold;
-        color: #000;
-        border: 1px solid #000;
-    }
-    
-    .purchase2-print-total-value {
-        padding: 6px 3px;
-        text-align: right;
-        font-weight: bold;
-        color: #000;
-        border: 1px solid #000;
-    }
-    
-    .purchase2-print-footer {
-        text-align: center;
-        margin-top: 20px;
-        border-top: 1px solid #ccc;
-        padding-top: 10px;
-    }
-    
-    .purchase2-print-footer-text {
-        font-size: 8px;
-        color: #666;
-        margin: 0;
-    }
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 768px) {
-    .purchase2-report-container {
-        margin: 10px;
-        padding: 10px;
-    }
-    
-    .purchase2-header-card,
-    .purchase2-filter-card,
-    .purchase2-pagination-card {
-        padding: 15px;
-        margin-bottom: 10px;
-    }
-    
-    .purchase2-pagination {
-        flex-wrap: wrap;
-        gap: 5px;
-    }
-    
-    .purchase2-page-link {
-        padding: 6px 10px;
-        font-size: 0.8rem;
-    }
-    
-    .purchase2-header-content {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-    }
-    
-    .purchase2-action-buttons {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    
-    .purchase2-export-btn {
-        padding: 8px 12px;
-        font-size: 0.85rem;
-    }
-    
-    .purchase2-shortcut {
-        display: none;
-    }
-    
-    .purchase2-title {
-        font-size: 1.3rem;
-        text-align: center;
-    }
-    
-    .purchase2-filter-form {
-        flex-direction: column;
-        gap: 12px;
-    }
-    
-    .purchase2-stats-grid {
-        grid-template-columns: 1fr;
-        gap: 10px;
-        margin-bottom: 15px;
-    }
-    
-    .purchase2-stat-card {
-        padding: 15px;
-    }
-    
-    .purchase2-stat-value {
-        font-size: 1.5rem;
-    }
-    
-    .purchase2-table-card {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    
-    .purchase2-table {
-        min-width: 600px;
-        font-size: 0.8rem;
-    }
-    
-    .purchase2-th,
-    .purchase2-td {
-        padding: 8px 10px;
-    }
-    
-    .purchase2-total-label,
-    .purchase2-total-value {
-        padding: 12px 10px;
-    }
-}
-
-@media (max-width: 480px) {
-    .purchase2-report-container {
-        margin: 5px;
-        padding: 5px;
-    }
-    
-    .purchase2-header-card,
-    .purchase2-filter-card {
-        padding: 12px;
-    }
-    
-    .purchase2-title {
-        font-size: 1.2rem;
-    }
-    
-    .purchase2-print-btn,
-    .purchase2-filter-btn {
-        padding: 8px 16px;
-        font-size: 0.85rem;
-    }
-    
-    .purchase2-stat-card {
-        padding: 12px;
-    }
-    
-    .purchase2-stat-label {
-        font-size: 0.8rem;
-    }
-    
-    .purchase2-stat-value {
-        font-size: 1.3rem;
-    }
-    
-    .purchase2-table {
-        font-size: 0.75rem;
-    }
-    
-    .purchase2-th,
-    .purchase2-td {
-        padding: 6px 8px;
-    }
-}
-
-/* Dark Mode Support (Optional) */
-@media (prefers-color-scheme: dark) {
-    .purchase2-header-card,
-    .purchase2-filter-card,
-    .purchase2-table-card {
-        background: #1f2937;
-        border-color: #374151;
-    }
-    
-    .purchase2-title {
-        color: #f9fafb;
-    }
-    
-    .purchase2-date-label {
-        color: #d1d5db;
-    }
-    
-    .purchase2-date-input {
-        background: #374151;
-        border-color: #4b5563;
-        color: #f9fafb;
-    }
-    
-    .purchase2-table-head {
-        background: #374151;
-    }
-    
-    .purchase2-th {
-        color: #d1d5db;
-    }
-    
-    .purchase2-table-body {
-        background: #1f2937;
-    }
-    
-    .purchase2-td {
-        color: #d1d5db;
-    }
-    
-    .purchase2-table-row:hover {
-        background: #374151;
-    }
-    
-    .purchase2-table-foot {
-        background: #374151;
-    }
-    
-    .purchase2-total-label,
-    .purchase2-total-value {
-        color: #f9fafb;
-    }
-}
-
-/* High Contrast Mode */
-@media (prefers-contrast: high) {
-    .purchase2-header-card,
-    .purchase2-filter-card,
-    .purchase2-table-card {
-        border: 2px solid #000;
-    }
-    
-    .purchase2-table-row {
-        border-bottom: 1px solid #000;
-    }
-    
-    .purchase2-balance-due {
-        color: #000 !important;
-        background: #ffeb3b;
-    }
-    
-    .purchase2-balance-paid {
-        color: #000 !important;
-        background: #4caf50;
-    }
-}
-
-/* Pagination Styles */
-.purchase2-pagination-card {
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    padding: 15px;
-    margin-top: 15px;
-    border: 1px solid #e5e7eb;
-}
-
-.purchase2-pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.purchase2-page-item {
-    margin: 0;
-}
-
-.purchase2-page-link {
-    display: block;
-    padding: 8px 12px;
-    color: #3b82f6;
-    text-decoration: none;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
-}
-
-.purchase2-page-link:hover {
-    background: #3b82f6;
-    color: white;
-    border-color: #3b82f6;
-}
-
-.purchase2-page-current .purchase2-page-link {
-    background: #3b82f6;
-    color: white;
-    border-color: #3b82f6;
-    cursor: default;
-}
-
-/* Reduced Motion */
-@media (prefers-reduced-motion: reduce) {
-    .purchase2-print-btn,
-    .purchase2-filter-btn,
-    .purchase2-stat-card,
-    .purchase2-table-row {
-        transition: none;
-    }
-    
-    .purchase2-print-btn:hover,
-    .purchase2-filter-btn:hover,
-    .purchase2-stat-card:hover {
-        transform: none;
-    }
+/* RESPONSIVE */
+@media(max-width:768px){
+    .purchase2-report-container{padding:.5rem}
+    .purchase2-stats-grid{grid-template-columns:1fr}
+    .purchase2-header-content{flex-direction:column;align-items:flex-start}
+    .purchase2-filter-form{flex-direction:column;align-items:stretch}
+    .purchase2-filter-btn{width:100%;justify-content:center}
+    .purchase2-table{font-size:.72rem}
+    .purchase2-th,.purchase2-td{padding:.4rem .5rem}
 }

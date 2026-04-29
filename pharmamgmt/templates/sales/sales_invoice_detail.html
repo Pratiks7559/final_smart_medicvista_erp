@@ -102,11 +102,14 @@
                         <h5 class="total-paid-value">{{ invoice.sales_invoice_paid|currency }}</h5>
                     </div>
                     <div class="balance-due-display">
-                        <h6 class="balance-due-label">Balance Due</h6>
-                        <h5 class="balance-due-value {% if invoice.sales_invoice_total > invoice.sales_invoice_paid %}text-danger{% else %}text-success{% endif %}">
-                            ₹<span class="rounded-amount" data-actual="{{ invoice.sales_invoice_total|subtract:invoice.sales_invoice_paid }}">{{ invoice.sales_invoice_total|subtract:invoice.sales_invoice_paid|floatformat:0 }}</span>
+                        <h6 class="balance-due-label">{% if invoice.balance_due < 0 %}Advance Paid{% else %}Balance Due{% endif %}</h6>
+                        <h5 class="balance-due-value {% if invoice.balance_due > 0 %}text-danger{% else %}text-success{% endif %}">
+                            {% if invoice.balance_due >= 0 %}
+                            ₹<span class="rounded-amount" data-actual="{{ invoice.balance_due }}">{{ invoice.balance_due|floatformat:0 }}</span>
+                            {% else %}
+                            ₹0 <small style="color:#27ae60;font-size:0.8em;">(Adv: ₹{{ invoice.sales_invoice_paid|subtract:invoice.sales_invoice_total|floatformat:0 }})</small>
+                            {% endif %}
                         </h5>
-                        <small style="color: #6c757d; font-size: 0.85em;">(₹{{ invoice.sales_invoice_total|subtract:invoice.sales_invoice_paid|floatformat:2 }})</small>
                     </div>
                 </div>
             </div>
@@ -557,12 +560,12 @@ function openAddSalesPaymentDialog() {
                         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
                         <div style="background: linear-gradient(135deg, #e8f5e9, #c8e6c9); padding: 0.9rem; border-radius: 10px; margin-bottom: 1.1rem; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #27ae60;">
                             <span style="font-weight: 500; color: #2c3e50; font-size: 0.95rem;">Balance Due:</span>
-                            <strong style="color: #27ae60; font-size: 1.35rem; font-weight: 700;">₹${balance.toFixed(2)}</strong>
+                            <strong style="color: #27ae60; font-size: 1.35rem; font-weight: 700;">₹${Math.round(balance)}</strong>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin-bottom: 0.9rem;">
                             <div style="display: flex; flex-direction: column;">
                                 <label style="font-weight: 600; margin-bottom: 0.4rem; color: #2c3e50; font-size: 0.85rem;">Amount <span style="color: #e74c3c;">*</span></label>
-                                <input type="number" name="sales_payment_amount" step="0.01" min="0.01" max="${balance}" value="${balance}" required autofocus style="padding: 0.7rem; border: 2px solid #ddd; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s;" onfocus="this.style.borderColor='#27ae60'" onblur="this.style.borderColor='#ddd'">
+                                <input type="number" name="sales_payment_amount" step="0.01" min="0.01" value="${Math.round(balance)}" required autofocus style="padding: 0.7rem; border: 2px solid #ddd; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s;" onfocus="this.style.borderColor='#27ae60'" onblur="this.style.borderColor='#ddd'">
                             </div>
                             <div style="display: flex; flex-direction: column;">
                                 <label style="font-weight: 600; margin-bottom: 0.4rem; color: #2c3e50; font-size: 0.85rem;">Date <span style="color: #e74c3c;">*</span></label>

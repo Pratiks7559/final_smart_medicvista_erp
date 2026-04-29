@@ -405,51 +405,46 @@ def add_customer_challan(request):
                 
                 customer = CustomerMaster.objects.get(customerid=customer_id)
                 
-                # Get series and generate challan number with date
+                # Generate FY-wise challan number from session
                 series = None
-                from datetime import datetime
+                from datetime import datetime, date as _date
                 from core.models import ChallanSeries
+                from core.year_filter_utils import get_current_financial_year
+                from django.db import transaction as _tx
+                
+                fy_year = request.session.get('selected_year', get_current_financial_year())
+                fy_start = _date(fy_year, 4, 1)
+                fy_end = _date(fy_year + 1, 3, 31)
                 
                 if series_id:
                     series = ChallanSeries.objects.get(series_id=series_id)
-                    series_name = series.series_name
-                    
-                    # Parse challan date
-                    challan_date_obj = datetime.strptime(challan_date, '%Y-%m-%d')
-                    date_str = challan_date_obj.strftime('%d%m%Y')
-                    
-                    # Find last challan with same series and date
-                    prefix = f'{series_name}{date_str}'
-                    last_challan = CustomerChallan.objects.filter(
-                        customer_challan_no__startswith=prefix
-                    ).order_by('-customer_challan_no').first()
-                    
-                    if last_challan:
-                        # Extract counter from last challan number
-                        last_counter = int(last_challan.customer_challan_no[-3:])
-                        new_counter = last_counter + 1
-                    else:
-                        # First challan for this date
-                        new_counter = 1
-                    
-                    challan_no = f'{prefix}{new_counter:03d}'
+                    prefix = series.series_name
                 else:
-                    # Fallback if no series selected
-                    challan_date_obj = datetime.strptime(challan_date, '%Y-%m-%d')
-                    date_str = challan_date_obj.strftime('%d%m%Y')
-                    prefix = f'CH{date_str}'
+                    prefix = 'CH'
+                
+                with _tx.atomic():
+                    fy_challans = CustomerChallan.objects.select_for_update().filter(
+                        challan_series=series if series_id else None,
+                        customer_challan_date__gte=fy_start,
+                        customer_challan_date__lte=fy_end,
+                    ).values_list('customer_challan_no', flat=True)
                     
-                    last_challan = CustomerChallan.objects.filter(
-                        customer_challan_no__startswith=prefix
-                    ).order_by('-customer_challan_no').first()
+                    max_num = 0
+                    for ch_no in fy_challans:
+                        try:
+                            num = int(ch_no.replace(prefix, '', 1))
+                            if num > max_num:
+                                max_num = num
+                        except (ValueError, TypeError):
+                            continue
                     
-                    if last_challan:
-                        last_counter = int(last_challan.customer_challan_no[-3:])
-                        new_counter = last_counter + 1
-                    else:
-                        new_counter = 1
+                    next_num = max_num + 1
+                    challan_no = f'{prefix}{next_num:06d}'
                     
-                    challan_no = f'{prefix}{new_counter:03d}'
+                    # Ensure uniqueness
+                    while CustomerChallan.objects.filter(customer_challan_no=challan_no).exists():
+                        next_num += 1
+                        challan_no = f'{prefix}{next_num:06d}'
                 
                 # Calculate products total
                 products_total = sum(
@@ -524,14 +519,19 @@ def add_customer_challan(request):
             return redirect('add_customer_challan')
     
     from core.models import ChallanSeries
+    from core.year_filter_utils import get_current_financial_year
     customers = CustomerMaster.objects.all().order_by('customer_name')
     products = ProductMaster.objects.all().order_by('product_name')
     invoice_series = ChallanSeries.objects.filter(is_active=True).order_by('series_name')
+    current_fy = request.session.get('selected_year', get_current_financial_year())
+    fy_label = f'{current_fy}-{str(current_fy+1)[2:]}'
     
     context = {
         'customers': customers,
         'products': products,
         'invoice_series': invoice_series,
+        'current_fy': current_fy,
+        'fy_label': fy_label,
         'title': 'Add Customer Challan with Products'
     }
     return render(request, 'challan/customer_challan_form.html', context)
@@ -692,40 +692,52 @@ def delete_customer_challan(request, challan_id):
 
 @login_required
 def get_next_challan_number(request):
-    """API endpoint to get next challan number preview"""
-    from core.models import CustomerChallan
-    from datetime import datetime
+    """API endpoint to get next FY-wise challan number preview"""
+    from core.models import CustomerChallan, ChallanSeries
+    from datetime import date as _date
+    from core.year_filter_utils import get_current_financial_year
     
     try:
+        series_id = request.GET.get('series_id', '')
         series_name = request.GET.get('series_name', '')
-        date_str = request.GET.get('date', '')
         
-        if not series_name or not date_str:
-            return JsonResponse({'success': False, 'error': 'Missing parameters'})
+        fy_year = request.session.get('selected_year', get_current_financial_year())
+        fy_start = _date(fy_year, 4, 1)
+        fy_end = _date(fy_year + 1, 3, 31)
+        fy_label = f'{fy_year}-{str(fy_year+1)[2:]}'
         
-        # Parse date
-        challan_date = datetime.strptime(date_str, '%Y-%m-%d')
-        date_formatted = challan_date.strftime('%d%m%Y')
-        
-        # Generate prefix
-        prefix = f'{series_name}{date_formatted}'
-        
-        # Find last challan with same prefix
-        last_challan = CustomerChallan.objects.filter(
-            customer_challan_no__startswith=prefix
-        ).order_by('-customer_challan_no').first()
-        
-        if last_challan:
-            last_counter = int(last_challan.customer_challan_no[-3:])
-            new_counter = last_counter + 1
+        series = None
+        if series_id:
+            try:
+                series = ChallanSeries.objects.get(series_id=series_id)
+                prefix = series.series_name
+            except ChallanSeries.DoesNotExist:
+                prefix = series_name or 'CH'
         else:
-            new_counter = 1
+            prefix = series_name or 'CH'
         
-        challan_number = f'{prefix}{new_counter:03d}'
+        fy_challans = CustomerChallan.objects.filter(
+            challan_series=series,
+            customer_challan_date__gte=fy_start,
+            customer_challan_date__lte=fy_end,
+        ).values_list('customer_challan_no', flat=True)
+        
+        max_num = 0
+        for ch_no in fy_challans:
+            try:
+                num = int(ch_no.replace(prefix, '', 1))
+                if num > max_num:
+                    max_num = num
+            except (ValueError, TypeError):
+                continue
+        
+        next_num = max_num + 1
+        challan_number = f'{prefix}{next_num:06d}'
         
         return JsonResponse({
             'success': True,
-            'challan_number': challan_number
+            'challan_number': challan_number,
+            'fy_label': fy_label,
         })
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

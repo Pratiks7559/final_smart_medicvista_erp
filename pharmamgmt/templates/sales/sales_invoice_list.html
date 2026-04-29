@@ -81,7 +81,11 @@
                         <td class="sales-invoice-list-table-cell sales-invoice-list-total-cell">₹<span class="rounded-amount" data-actual="{{ invoice.sales_invoice_total }}">{{ invoice.sales_invoice_total|floatformat:0 }}</span></td>
                         <td class="sales-invoice-list-table-cell sales-invoice-list-paid-cell">{{ invoice.sales_invoice_paid|currency }}</td>
                         <td class="sales-invoice-list-table-cell sales-invoice-list-balance-cell {% if invoice.balance_due > 0 %}sales-invoice-list-balance-due{% else %}sales-invoice-list-balance-paid{% endif %}">
+                            {% if invoice.balance_due >= 0 %}
                             ₹<span class="rounded-amount" data-actual="{{ invoice.balance_due }}">{{ invoice.balance_due|floatformat:0 }}</span>
+                            {% else %}
+                            <span style="color:#27ae60;font-weight:600;">₹0 <small style="font-size:0.8em;">(Adv: ₹{{ invoice.sales_invoice_paid|subtract:invoice.sales_invoice_total|floatformat:0 }})</small></span>
+                            {% endif %}
                         </td>
                         <td class="sales-invoice-list-table-cell sales-invoice-list-actions-cell">
                             <a href="{% url 'sales_invoice_detail' pk=invoice.sales_invoice_no %}" class="sales-invoice-list-view-btn">
@@ -723,11 +727,9 @@ function hideBulkPaymentModal() {
 // Payment Modal Functions
 function showPaymentDialog(invoiceId, invoiceNo, balance) {
     document.getElementById('paymentInvoiceNo').textContent = invoiceNo;
-    document.getElementById('paymentBalance').textContent = parseFloat(balance).toFixed(2);
-    document.getElementById('paymentAmount').value = parseFloat(balance).toFixed(2);
-    document.getElementById('paymentAmount').max = parseFloat(balance).toFixed(2);
-    
-    // Set today's date
+    document.getElementById('paymentBalance').textContent = Math.round(parseFloat(balance));
+    document.getElementById('paymentAmount').value = Math.round(parseFloat(balance));
+        // Set today's date
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('paymentDate').value = today;
     
@@ -781,15 +783,6 @@ function setupPaymentFormHandler() {
         const formData = new FormData(form);
         const submitBtn = document.querySelector('.payment-btn-save');
         const isBulk = form.getAttribute('data-is-bulk') === 'true';
-        
-        // Validate amount
-        const amount = parseFloat(formData.get('sales_payment_amount'));
-        const maxAmount = parseFloat(document.getElementById('paymentAmount').max);
-        
-        if (amount > maxAmount + 0.01) {
-            alert(`Payment amount cannot exceed balance due of ₹${maxAmount.toFixed(2)}`);
-            return;
-        }
         
         // Show loading state
         submitBtn.disabled = true;

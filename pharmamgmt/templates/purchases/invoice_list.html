@@ -75,7 +75,7 @@
                     {% for invoice in invoices %}
                     <tr class="purchase-invoice-row">
                         <td class="purchase-invoice-cell purchase-checkbox-cell">
-                            {% if invoice.balance_due > 0 %}
+                            {% if invoice.balance_due > 0.5 %}
                             <input type="checkbox" class="invoice-checkbox" 
                                    data-invoice-id="{{ invoice.invoiceid }}" 
                                    data-invoice-no="{{ invoice.invoice_no }}" 
@@ -91,7 +91,7 @@
                         <td class="purchase-invoice-cell purchase-date-cell">{{ invoice.invoice_date|date:"d M, Y" }}</td>
                         <td class="purchase-invoice-cell purchase-supplier-cell">{{ invoice.supplierid.supplier_name }}</td>
                         <td class="purchase-invoice-cell purchase-total-cell purchase-amount-display">₹{{ invoice.invoice_total|floatformat:0 }}</td>
-                        <td class="purchase-invoice-cell purchase-paid-cell purchase-amount-small">{{ invoice.invoice_paid|currency }}</td>
+                        <td class="purchase-invoice-cell purchase-paid-cell purchase-amount-small">₹{{ invoice.invoice_paid|floatformat:0 }}</td>
                         <td class="purchase-invoice-cell purchase-balance-cell {% if invoice.balance_due > 0 %}purchase-amount-small{% else %}purchase-amount-display{% endif %}">
                             ₹{{ invoice.balance_due|floatformat:0 }}
                         </td>
@@ -114,7 +114,7 @@
                                 <a href="{% url 'print_gst_purchase_invoice' invoice_id=invoice.invoiceid %}" target="_blank" class="purchase-btn-action purchase-btn-print" title="Print Receipt">
                                     <i class="fas fa-print purchase-action-icon"></i>
                                 </a>
-                                {% if invoice.balance_due > 0 %}
+                                {% if invoice.balance_due > 0.5 %}
                                 <button type="button" class="purchase-btn-action purchase-btn-payment" 
                                         onclick="showPaymentDialog('{{ invoice.invoiceid }}', '{{ invoice.invoice_no }}', '{{ invoice.balance_due }}')" 
                                         title="Add Payment">
@@ -261,7 +261,7 @@
                 {% csrf_token %}
                 <div class="payment-info">
                     <p><strong>Invoice:</strong> <span id="paymentInvoiceNo"></span></p>
-                    <p><strong>Balance Due:</strong> ₹<span id="paymentBalance"></span></p>
+                    <p><strong>Balance Due:</strong> ₹<span id="paymentBalance"></span> <small style="color:#6c757d;">(Rounded)</small></p>
                 </div>
                 
                 <div class="payment-field">
@@ -273,6 +273,7 @@
                     <label for="paymentAmount" class="payment-label">Payment Amount *</label>
                     <input type="number" id="paymentAmount" name="payment_amount" class="payment-input" 
                            step="0.01" min="0.01" placeholder="0.00" required>
+                    <small style="color:#6c757d;font-size:11px;">Any amount allowed (partial or excess)</small>
                 </div>
                 
                 <div class="payment-field">
@@ -784,9 +785,9 @@ function showNextBulkPayment() {
     
     // Show payment dialog for current invoice
     document.getElementById('paymentInvoiceNo').textContent = invoice.no;
-    document.getElementById('paymentBalance').textContent = invoice.balance.toFixed(2);
-    document.getElementById('paymentAmount').value = invoice.balance.toFixed(2);
-    document.getElementById('paymentAmount').max = invoice.balance.toFixed(2);
+    const roundedBal = Math.round(invoice.balance);
+    document.getElementById('paymentBalance').textContent = roundedBal;
+    document.getElementById('paymentAmount').value = roundedBal;
     
     // Set today's date
     const today = new Date().toISOString().split('T')[0];
@@ -814,9 +815,9 @@ function hideBulkPaymentModal() {
 // Payment Modal Functions
 function showPaymentDialog(invoiceId, invoiceNo, balance) {
     document.getElementById('paymentInvoiceNo').textContent = invoiceNo;
-    document.getElementById('paymentBalance').textContent = parseFloat(balance).toFixed(2);
-    document.getElementById('paymentAmount').value = parseFloat(balance).toFixed(2);
-    document.getElementById('paymentAmount').max = parseFloat(balance).toFixed(2);
+    const roundedBalance = Math.round(parseFloat(balance));
+    document.getElementById('paymentBalance').textContent = roundedBalance;
+    document.getElementById('paymentAmount').value = roundedBalance;
     
     // Set today's date
     const today = new Date().toISOString().split('T')[0];
@@ -872,15 +873,6 @@ function setupPaymentFormHandler() {
         const formData = new FormData(form);
         const submitBtn = document.querySelector('.payment-btn-save');
         const isBulk = form.getAttribute('data-is-bulk') === 'true';
-        
-        // Validate amount
-        const amount = parseFloat(formData.get('payment_amount'));
-        const maxAmount = parseFloat(document.getElementById('paymentAmount').max);
-        
-        if (amount > maxAmount + 0.01) {
-            alert(`Payment amount cannot exceed balance due of ₹${maxAmount.toFixed(2)}`);
-            return;
-        }
         
         // Show loading state
         submitBtn.disabled = true;

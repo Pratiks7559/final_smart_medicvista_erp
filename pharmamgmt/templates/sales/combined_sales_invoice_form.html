@@ -159,6 +159,7 @@
 
                         <!-- Hidden field for products data -->
                         <input type="hidden" name="products_data" id="productsData">
+                        <input type="hidden" name="fy_year" id="fyYearHidden" value="{{ current_fy }}">
 
                         <!-- Submit Button -->
                         <div class="form-actions">
@@ -3048,17 +3049,25 @@ function deleteSeries(seriesId, seriesName) {
     });
 }
 
+function onFYChange() {
+    const seriesVal = document.getElementById('invoice_series').value;
+    if (seriesVal) updateInvoicePreview();
+}
+
 function updateInvoicePreview() {
     const seriesSelect = document.getElementById('invoice_series');
+    const fyHidden = document.getElementById('fyYearHidden');
     const previewDiv = document.getElementById('invoicePreview');
     const previewText = previewDiv.querySelector('.preview-text');
-    
+
     if (seriesSelect.value) {
-        fetch(`/api/get-next-invoice-number/?series_id=${seriesSelect.value}`)
+        const fyParam = fyHidden ? `&fy_year=${fyHidden.value}` : '';
+        fetch(`/api/get-next-invoice-number/?series_id=${seriesSelect.value}${fyParam}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    previewText.innerHTML = `<i class="fas fa-file-invoice"></i> Next Invoice: <strong>${data.invoice_number}</strong>`;
+                    const fyLabel = data.fy_label ? ` (FY ${data.fy_label})` : '';
+                    previewText.innerHTML = `<i class="fas fa-file-invoice"></i> Next Invoice: <strong>${data.invoice_number}</strong>${fyLabel}`;
                     previewDiv.style.display = 'block';
                 } else {
                     previewDiv.style.display = 'none';

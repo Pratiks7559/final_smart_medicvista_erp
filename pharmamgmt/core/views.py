@@ -181,92 +181,107 @@ def profile(request):
 # Dashboard
 @login_required
 def dashboard(request):
+    from django.db.models import OuterRef, Subquery, FloatField, ExpressionWrapper
+    from django.db.models.functions import Coalesce
+    from .year_filter_utils import get_current_financial_year, get_financial_year_dates
+
     product_count = ProductMaster.objects.count()
     supplier_count = SupplierMaster.objects.count()
     customer_count = CustomerMaster.objects.count()
-    
-    recent_sales = SalesInvoiceMaster.objects.select_related('customerid').order_by('-sales_invoice_date')
-    recent_sales = apply_year_filter(recent_sales, request, 'sales_invoice_date')[:5]
-    
-    recent_purchases = InvoiceMaster.objects.select_related('supplierid').order_by('-invoice_date')
-    recent_purchases = apply_year_filter(recent_purchases, request, 'invoice_date')[:5]
-    
+
     today = timezone.now().date()
-    
-    # Calculate financial overview
     current_month_start = today.replace(day=1)
-    
-    # Monthly sales - with FY filter
-    monthly_sales_invoices = SalesInvoiceMaster.objects.filter(
-        sales_invoice_date__gte=current_month_start
-    )
-    monthly_sales_invoices = apply_year_filter(monthly_sales_invoices, request, 'sales_invoice_date')
-    monthly_sales = SalesMaster.objects.filter(
-        sales_invoice_no__in=monthly_sales_invoices
-    ).aggregate(total=Sum('sale_total_amount'))['total'] or 0
-    
-    # Monthly purchases - with FY filter
-    monthly_purchases_qs = InvoiceMaster.objects.filter(
-        invoice_date__gte=current_month_start
-    )
-    monthly_purchases_qs = apply_year_filter(monthly_purchases_qs, request, 'invoice_date')
-    monthly_purchases = monthly_purchases_qs.aggregate(total=Sum('invoice_total'))['total'] or 0
-    
-    # Today's sales - with FY filter
-    today_sales_invoices = SalesInvoiceMaster.objects.filter(
-        sales_invoice_date=today
-    )
-    today_sales_invoices = apply_year_filter(today_sales_invoices, request, 'sales_invoice_date')
-    today_sales = SalesMaster.objects.filter(
-        sales_invoice_no__in=today_sales_invoices
-    ).aggregate(total=Sum('sale_total_amount'))['total'] or 0
-    
-    # Today's purchases - with FY filter
-    today_purchases_qs = InvoiceMaster.objects.filter(
-        invoice_date=today
-    )
-    today_purchases_qs = apply_year_filter(today_purchases_qs, request, 'invoice_date')
-    today_purchases = today_purchases_qs.aggregate(total=Sum('invoice_total'))['total'] or 0
-    
-    # Calculate profit: Sales - Purchases (using invoice totals)
-    today_profit = today_sales - today_purchases
-    monthly_profit = monthly_sales - monthly_purchases
-    
-    # Total outstanding payments from customers - with FY filter
-    # Calculate total sales amounts
-    sales_totals = SalesMaster.objects.values('sales_invoice_no').annotate(
-        invoice_total=Sum('sale_total_amount')
-    )
-    
-    # Create a dictionary mapping invoice numbers to their total amounts
-    invoice_totals = {item['sales_invoice_no']: item['invoice_total'] for item in sales_totals}
-    
-    # OPTIMIZED: Calculate total receivable in single query with FY filter
-    from django.db.models import OuterRef, Subquery, DecimalField, FloatField
-    from django.db.models.functions import Coalesce
-    
-    sales_subquery = SalesMaster.objects.filter(
+
+    # FY info for display
+    selected_year = request.session.get('selected_year', get_current_financial_year())
+    fy_start, fy_end = get_financial_year_dates(selected_year)
+    fy_label = f"FY {selected_year}-{str(selected_year + 1)[2:]}"
+
+    # Subquery for sales total
+    sales_total_sub = SalesMaster.objects.filter(
         sales_invoice_no=OuterRef('sales_invoice_no')
     ).values('sales_invoice_no').annotate(
-        total=Sum('sale_total_amount', output_field=FloatField())
-    ).values('total')
-    
-    sales_invoices_fy = SalesInvoiceMaster.objects.all()
-    sales_invoices_fy = apply_year_filter(sales_invoices_fy, request, 'sales_invoice_date')
-    
-    total_receivable = sales_invoices_fy.annotate(
-        invoice_total=Coalesce(Subquery(sales_subquery, output_field=FloatField()), 0.0),
-        balance=F('invoice_total') - F('sales_invoice_paid')
-    ).filter(balance__gt=0).aggregate(total=Sum('balance', output_field=FloatField()))['total'] or 0
-    
-    # Total outstanding payments to suppliers - with FY filter
-    purchase_invoices_fy = InvoiceMaster.objects.all()
-    purchase_invoices_fy = apply_year_filter(purchase_invoices_fy, request, 'invoice_date')
-    
-    total_payable = purchase_invoices_fy.aggregate(
-        total=Sum(F('invoice_total') - F('invoice_paid'))
+        t=Sum('sale_total_amount', output_field=FloatField())
+    ).values('t')
+
+    # Recent Sales
+    recent_sales = SalesInvoiceMaster.objects.select_related('customerid').annotate(
+        annotated_total=Coalesce(Subquery(sales_total_sub, output_field=FloatField()), 0.0)
+    ).order_by('-sales_invoice_date')
+    recent_sales = apply_year_filter(recent_sales, request, 'sales_invoice_date')[:5]
+
+    # Recent Purchases
+    recent_purchases = InvoiceMaster.objects.select_related('supplierid').order_by('-invoice_date')
+    recent_purchases = apply_year_filter(recent_purchases, request, 'invoice_date')[:5]
+
+    # Monthly Sales
+    monthly_sales_invoice_nos = apply_year_filter(
+        SalesInvoiceMaster.objects.filter(sales_invoice_date__gte=current_month_start),
+        request, 'sales_invoice_date'
+    ).values_list('sales_invoice_no', flat=True)
+    monthly_sales = SalesMaster.objects.filter(
+        sales_invoice_no__in=monthly_sales_invoice_nos
+    ).aggregate(total=Sum('sale_total_amount'))['total'] or 0
+
+    # Monthly Purchases
+    monthly_purchases = apply_year_filter(
+        InvoiceMaster.objects.filter(invoice_date__gte=current_month_start),
+        request, 'invoice_date'
+    ).aggregate(total=Sum('invoice_total'))['total'] or 0
+
+    # Today Sales
+    today_invoice_nos = apply_year_filter(
+        SalesInvoiceMaster.objects.filter(sales_invoice_date=today),
+        request, 'sales_invoice_date'
+    ).values_list('sales_invoice_no', flat=True)
+    today_sales = SalesMaster.objects.filter(
+        sales_invoice_no__in=today_invoice_nos
+    ).aggregate(total=Sum('sale_total_amount'))['total'] or 0
+
+    # Today Purchases
+    today_purchases = apply_year_filter(
+        InvoiceMaster.objects.filter(invoice_date=today),
+        request, 'invoice_date'
+    ).aggregate(total=Sum('invoice_total'))['total'] or 0
+
+    today_profit = today_sales - today_purchases
+    monthly_profit = monthly_sales - monthly_purchases
+
+    # FY Total Sales & Purchases
+    fy_sales_invoice_nos = apply_year_filter(
+        SalesInvoiceMaster.objects.all(), request, 'sales_invoice_date'
+    ).values_list('sales_invoice_no', flat=True)
+    fy_total_sales = SalesMaster.objects.filter(
+        sales_invoice_no__in=fy_sales_invoice_nos
+    ).aggregate(total=Sum('sale_total_amount'))['total'] or 0
+
+    fy_total_purchases = apply_year_filter(
+        InvoiceMaster.objects.all(), request, 'invoice_date'
+    ).aggregate(total=Sum('invoice_total'))['total'] or 0
+
+    fy_profit = fy_total_sales - fy_total_purchases
+
+    # Total Receivable (only positive balances)
+    total_receivable = apply_year_filter(
+        SalesInvoiceMaster.objects.all(), request, 'sales_invoice_date'
+    ).annotate(
+        balance=ExpressionWrapper(
+            Coalesce(Subquery(sales_total_sub, output_field=FloatField()), 0.0) - F('sales_invoice_paid'),
+            output_field=FloatField()
+        )
+    ).filter(balance__gt=0.5).aggregate(
+        total=Sum('balance', output_field=FloatField())
     )['total'] or 0
-    
+
+    # Total Payable (only positive balances)
+    total_payable = apply_year_filter(
+        InvoiceMaster.objects.all(), request, 'invoice_date'
+    ).annotate(
+        bal=ExpressionWrapper(F('invoice_total') - F('invoice_paid'), output_field=FloatField())
+    ).filter(bal__gt=0.5).aggregate(
+        total=Sum('bal', output_field=FloatField())
+    )['total'] or 0
+
     context = {
         'title': 'Dashboard',
         'product_count': product_count,
@@ -280,8 +295,14 @@ def dashboard(request):
         'today_purchases': today_purchases,
         'today_profit': today_profit,
         'monthly_profit': monthly_profit,
+        'fy_total_sales': fy_total_sales,
+        'fy_total_purchases': fy_total_purchases,
+        'fy_profit': fy_profit,
         'total_receivable': total_receivable,
-        'total_payable': total_payable
+        'total_payable': total_payable,
+        'fy_label': fy_label,
+        'fy_start': fy_start,
+        'fy_end': fy_end,
     }
     return render(request, 'dashboard.html', context)
 
@@ -1600,14 +1621,6 @@ def add_invoice_payment(request, invoice_id):
                         'error': 'Invalid payment amount'
                     })
                 
-                # Validate payment amount
-                balance = float(invoice.invoice_total) - float(invoice.invoice_paid)
-                if payment_amount > balance + 0.01:  # Add small tolerance for floating point
-                    return JsonResponse({
-                        'success': False,
-                        'error': f'Payment amount cannot exceed balance due of ₹{balance:.2f}'
-                    })
-                
                 if payment_amount <= 0:
                     return JsonResponse({
                         'success': False,
@@ -1637,9 +1650,10 @@ def add_invoice_payment(request, invoice_id):
                 # Update invoice paid amount and payment status
                 invoice.invoice_paid += payment_amount
                 
-                # Update payment status based on balance
+                # Update payment status based on rounded balance
                 balance = invoice.invoice_total - invoice.invoice_paid
-                if balance <= 0.01:
+                balance_rounded = round(balance)
+                if balance_rounded <= 0:
                     invoice.payment_status = 'paid'
                 elif invoice.invoice_paid > 0:
                     invoice.payment_status = 'partial'
@@ -1674,11 +1688,6 @@ def add_invoice_payment(request, invoice_id):
         if form.is_valid():
             payment = form.save(commit=False)
             payment.ip_invoiceid = invoice
-            
-            # Check if payment amount is valid
-            if payment.payment_amount > (invoice.invoice_total - invoice.invoice_paid):
-                messages.error(request, "Payment amount cannot exceed the remaining balance.")
-                return redirect('add_invoice_payment', invoice_id=invoice_id)
             
             payment.save()
             
@@ -2586,7 +2595,9 @@ def add_sales_invoice_with_products(request):
                 invoice = invoice_form.save(commit=False)
                 # Get series from form data
                 series_id = request.POST.get('invoice_series')
-                invoice.sales_invoice_no = generate_sales_invoice_number(series_id)
+                from .year_filter_utils import get_current_financial_year as _get_fy
+                fy_year_val = request.session.get('selected_year', _get_fy())
+                invoice.sales_invoice_no = generate_sales_invoice_number(series_id, fy_year=fy_year_val)
                 
                 # Set series if provided
                 if series_id:
@@ -2859,12 +2870,16 @@ def add_sales_invoice_with_products(request):
     customers = CustomerMaster.objects.select_related().order_by('customer_name')
     products = ProductMaster.objects.only('productid', 'product_name', 'product_company').order_by('product_name')
     
+    from .year_filter_utils import get_current_financial_year
+    current_fy = request.session.get('selected_year', get_current_financial_year())
+
     context = {
         'invoice_form': invoice_form,
         'customers': customers,
         'products': products,
         'preview_invoice_no': 'Will be generated based on series selection',
         'invoice_series': InvoiceSeries.objects.filter(is_active=True).order_by('series_name'),
+        'current_fy': current_fy,
         'title': 'Add Sales Invoice with Products'
     }
     return render(request, 'sales/combined_sales_invoice_form.html', context)
@@ -2909,14 +2924,6 @@ def add_sales_payment(request, invoice_id):
                         'error': 'Invalid payment amount'
                     })
                 
-                # Validate payment amount
-                balance = float(invoice.sales_invoice_total) - float(invoice.sales_invoice_paid)
-                if payment_amount > balance + 0.01:  # Add small tolerance for floating point
-                    return JsonResponse({
-                        'success': False,
-                        'error': f'Payment amount cannot exceed balance due of ₹{balance:.2f}'
-                    })
-                
                 if payment_amount <= 0:
                     return JsonResponse({
                         'success': False,
@@ -2943,10 +2950,7 @@ def add_sales_payment(request, invoice_id):
                     sales_payment_ref_no=payment_ref_no
                 )
                 
-                # Update invoice paid amount
-                invoice.sales_invoice_paid += payment_amount
-                invoice.save()
-                
+                # Signal auto-updates invoice.sales_invoice_paid via post_save
                 return JsonResponse({
                     'success': True,
                     'message': f'Payment of ₹{payment_amount:.2f} added successfully!'
@@ -2967,13 +2971,8 @@ def add_sales_payment(request, invoice_id):
             payment = form.save(commit=False)
             payment.sales_ip_invoice_no = invoice
             
-            if payment.sales_payment_amount > (invoice.sales_invoice_total - invoice.sales_invoice_paid):
-                messages.error(request, "Payment amount cannot exceed the remaining balance.")
-                return redirect('add_sales_payment', invoice_id=invoice_id)
-            
             payment.save()
-            invoice.sales_invoice_paid += payment.sales_payment_amount
-            invoice.save()
+            # Signal auto-updates invoice.sales_invoice_paid via post_save
             
             messages.success(request, f"Payment of {payment.sales_payment_amount} added successfully!")
             return redirect('sales_invoice_detail', pk=invoice_id)
@@ -3004,10 +3003,6 @@ def edit_sales_payment(request, invoice_id, payment_id):
             # No timezone handling needed for DateField
             
             difference = new_payment.sales_payment_amount - original_amount
-            
-            if invoice.sales_invoice_paid + difference > invoice.sales_invoice_total:
-                messages.error(request, "Payment amount cannot exceed the invoice total.")
-                return redirect('edit_sales_payment', invoice_id=invoice_id, payment_id=payment_id)
             
             new_payment.save()
             
@@ -4263,30 +4258,37 @@ def get_invoice_series(request):
 @login_required
 def get_next_invoice_number(request):
     series_id = request.GET.get('series_id')
-    
+    fy_year = request.GET.get('fy_year')
     if not series_id:
         return JsonResponse({'success': False, 'error': 'Series ID is required'})
-    
     try:
+        from .year_filter_utils import get_current_financial_year
+        from .utils import get_fy_date_range
         series = InvoiceSeries.objects.get(series_id=series_id, is_active=True)
-        
-        # Generate preview number (don't increment yet)
-        if series.series_prefix:
-            preview_number = f"{series.series_prefix}{series.current_number:07d}"
-        else:
-            preview_number = f"{series.series_name}{series.current_number:07d}"
-        
-        return JsonResponse({
-            'success': True,
-            'invoice_number': preview_number,
-            'series_name': series.series_name
-        })
-        
+        fy_year = int(fy_year) if fy_year else request.session.get('selected_year', get_current_financial_year())
+        fy_start, fy_end = get_fy_date_range(fy_year)
+        prefix = series.series_prefix or series.series_name
+        fy_invoices = SalesInvoiceMaster.objects.filter(
+            invoice_series=series,
+            sales_invoice_date__gte=fy_start,
+            sales_invoice_date__lte=fy_end,
+        ).values_list('sales_invoice_no', flat=True)
+        max_num = 0
+        for inv_no in fy_invoices:
+            try:
+                num = int(inv_no.replace(prefix, '', 1))
+                if num > max_num:
+                    max_num = num
+            except (ValueError, TypeError):
+                continue
+        next_num = max_num + 1
+        preview_number = f"{prefix}{next_num:06d}"
+        fy_label = f"{fy_year}-{str(fy_year+1)[2:]}"
+        return JsonResponse({'success': True, 'invoice_number': preview_number, 'series_name': series.series_name, 'fy_label': fy_label})
     except InvoiceSeries.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Series not found'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
-
 @login_required
 def product_search_suggestions(request):
     """API endpoint for product search autocomplete suggestions"""

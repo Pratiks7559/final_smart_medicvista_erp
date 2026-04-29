@@ -1021,7 +1021,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const roundedBalance = Math.round(invoice.balance_amount);
         if (amountField) {
             amountField.value = roundedBalance;
-            amountField.max = roundedBalance;
             console.log('Set amount field value to (rounded):', roundedBalance);
         }
         
@@ -1051,16 +1050,6 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             if (dateField) dateField.focus();
         }, 100);
-        
-        // Validate amount doesn't exceed rounded balance
-        if (amountField) {
-            amountField.addEventListener('input', function() {
-                const amount = parseInt(this.value) || 0;
-                if (amount > roundedBalance) {
-                    this.value = roundedBalance;
-                }
-            });
-        }
     }
     
     function resetForm() {

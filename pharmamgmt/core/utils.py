@@ -315,90 +315,81 @@ def generate_sales_invoice_pdf(invoice):
     return None
 
 
-def generate_sales_invoice_number(series_id=None):
+def get_fy_label(fy_year):
+    """Return FY label string e.g. 2026-27 for fy_year=2026"""
+    return f"{fy_year}-{str(fy_year + 1)[2:]}"
+
+
+def get_fy_date_range(fy_year):
+    """Return (start_date, end_date) for a financial year starting April 1."""
+    from datetime import date
+    return date(fy_year, 4, 1), date(fy_year + 1, 3, 31)
+
+
+def generate_sales_invoice_number(series_id=None, fy_year=None):
     """
-    Generate next sales invoice number with proper sequence handling
+    Generate next FY-wise sales invoice number.
+    Format: <PREFIX><6-digit>  e.g. GVP000001
+
+    Logic:
+      - Filter SalesInvoiceMaster by series + FY date range
+      - Find MAX numeric suffix from existing invoice numbers
+      - Increment by 1, pad to 6 digits
+      - Reset to 000001 for each new FY
     """
     from .models import InvoiceSeries, SalesInvoiceMaster
-    
+    from .year_filter_utils import get_current_financial_year
+    from django.db import transaction
+
+    if fy_year is None:
+        fy_year = get_current_financial_year()
+
+    fy_start, fy_end = get_fy_date_range(fy_year)
+
+    def _next_number_for_series(series):
+        prefix = series.series_prefix or series.series_name
+        with transaction.atomic():
+            # Get all invoices for this series in this FY
+            fy_invoices = SalesInvoiceMaster.objects.select_for_update().filter(
+                invoice_series=series,
+                sales_invoice_date__gte=fy_start,
+                sales_invoice_date__lte=fy_end,
+            ).values_list('sales_invoice_no', flat=True)
+
+            # Extract numeric suffix and find max
+            max_num = 0
+            for inv_no in fy_invoices:
+                try:
+                    suffix = inv_no.replace(prefix, '', 1)
+                    num = int(suffix)
+                    if num > max_num:
+                        max_num = num
+                except (ValueError, TypeError):
+                    continue
+
+            next_num = max_num + 1
+            invoice_no = f"{prefix}{next_num:06d}"
+
+            # Ensure uniqueness (edge case guard)
+            while SalesInvoiceMaster.objects.filter(sales_invoice_no=invoice_no).exists():
+                next_num += 1
+                invoice_no = f"{prefix}{next_num:06d}"
+
+        return invoice_no
+
     if series_id:
         try:
             series = InvoiceSeries.objects.get(series_id=series_id, is_active=True)
-            
-            # Check existing invoices to determine next number
-            existing_invoices = SalesInvoiceMaster.objects.filter(
-                invoice_series=series
-            ).order_by('-sales_invoice_no')
-            
-            if existing_invoices.exists():
-                # Get the last used number from existing invoices
-                last_invoice = existing_invoices.first()
-                last_invoice_no = last_invoice.sales_invoice_no
-                
-                # Extract number from invoice number
-                try:
-                    number_part = last_invoice_no.replace(series.series_name, '')
-                    last_number = int(number_part)
-                    next_number = last_number + 1
-                except (ValueError, TypeError):
-                    next_number = series.current_number
-            else:
-                next_number = series.current_number
-            
-            # Generate invoice number
-            if series.series_prefix:
-                invoice_no = f"{series.series_prefix}{next_number:07d}"
-            else:
-                invoice_no = f"{series.series_name}{next_number:07d}"
-            
-            # Update series current_number
-            series.current_number = next_number + 1
-            series.save()
-            
-            return invoice_no
-            
+            return _next_number_for_series(series)
         except InvoiceSeries.DoesNotExist:
             pass
-    
-    # Fallback to ABC series or create it
-    try:
-        abc_series = InvoiceSeries.objects.get(series_name='ABC', is_active=True)
-        
-        # Check existing invoices for ABC series
-        existing_invoices = SalesInvoiceMaster.objects.filter(
-            invoice_series=abc_series
-        ).order_by('-sales_invoice_no')
-        
-        if existing_invoices.exists():
-            last_invoice = existing_invoices.first()
-            last_invoice_no = last_invoice.sales_invoice_no
-            try:
-                number_part = last_invoice_no.replace('ABC', '')
-                last_number = int(number_part)
-                next_number = last_number + 1
-            except (ValueError, TypeError):
-                next_number = abc_series.current_number
-        else:
-            next_number = abc_series.current_number
-        
-        invoice_no = f"ABC{next_number:07d}"
-        abc_series.current_number = next_number + 1
-        abc_series.save()
-        
-        return invoice_no
-        
-    except InvoiceSeries.DoesNotExist:
-        # Create ABC series if it doesn't exist
-        abc_series = InvoiceSeries.objects.create(
-            series_name='ABC',
-            series_prefix='ABC',
-            current_number=1,
-            is_active=True
-        )
-        invoice_no = "ABC0000001"
-        abc_series.current_number = 2
-        abc_series.save()
-        return invoice_no
+
+    # Fallback: ABC series
+    abc_series, _ = InvoiceSeries.objects.get_or_create(
+        series_name='ABC',
+        defaults={'series_prefix': 'ABC', 'current_number': 1, 'is_active': True}
+    )
+    return _next_number_for_series(abc_series)
 
 
 def get_avg_mrp(product_id):
