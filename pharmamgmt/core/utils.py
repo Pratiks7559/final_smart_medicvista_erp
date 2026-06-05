@@ -331,11 +331,10 @@ def generate_sales_invoice_number(series_id=None, fy_year=None):
     Generate next FY-wise sales invoice number.
     Format: <PREFIX><6-digit>  e.g. GVP000001
 
-    Logic:
-      - Filter SalesInvoiceMaster by series + FY date range
-      - Find MAX numeric suffix from existing invoice numbers
-      - Increment by 1, pad to 6 digits
-      - Reset to 000001 for each new FY
+    Gap-filling logic:
+      - Finds the lowest available number not currently in use for this series+FY
+      - Deleted invoice numbers are reusable (fills gaps from 000001 upward)
+      - Resets to 000001 for each new FY
     """
     from .models import InvoiceSeries, SalesInvoiceMaster
     from .year_filter_utils import get_current_financial_year
@@ -349,33 +348,26 @@ def generate_sales_invoice_number(series_id=None, fy_year=None):
     def _next_number_for_series(series):
         prefix = series.series_prefix or series.series_name
         with transaction.atomic():
-            # Get all invoices for this series in this FY
             fy_invoices = SalesInvoiceMaster.objects.select_for_update().filter(
                 invoice_series=series,
                 sales_invoice_date__gte=fy_start,
                 sales_invoice_date__lte=fy_end,
             ).values_list('sales_invoice_no', flat=True)
 
-            # Extract numeric suffix and find max
-            max_num = 0
+            # Collect all used numbers for this series+FY
+            used_numbers = set()
             for inv_no in fy_invoices:
                 try:
-                    suffix = inv_no.replace(prefix, '', 1)
-                    num = int(suffix)
-                    if num > max_num:
-                        max_num = num
+                    used_numbers.add(int(inv_no.replace(prefix, '', 1)))
                 except (ValueError, TypeError):
                     continue
 
-            next_num = max_num + 1
-            invoice_no = f"{prefix}{next_num:06d}"
-
-            # Ensure uniqueness (edge case guard)
-            while SalesInvoiceMaster.objects.filter(sales_invoice_no=invoice_no).exists():
+            # Find first gap starting from 1 (reuses deleted numbers)
+            next_num = 1
+            while next_num in used_numbers:
                 next_num += 1
-                invoice_no = f"{prefix}{next_num:06d}"
 
-        return invoice_no
+            return f"{prefix}{next_num:06d}"
 
     if series_id:
         try:
@@ -390,7 +382,6 @@ def generate_sales_invoice_number(series_id=None, fy_year=None):
         defaults={'series_prefix': 'ABC', 'current_number': 1, 'is_active': True}
     )
     return _next_number_for_series(abc_series)
-
 
 def get_avg_mrp(product_id):
     """

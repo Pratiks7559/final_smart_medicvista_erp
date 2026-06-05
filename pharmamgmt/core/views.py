@@ -4268,20 +4268,25 @@ def get_next_invoice_number(request):
         fy_year = int(fy_year) if fy_year else request.session.get('selected_year', get_current_financial_year())
         fy_start, fy_end = get_fy_date_range(fy_year)
         prefix = series.series_prefix or series.series_name
+
+        # Gap-filling: find lowest available number
         fy_invoices = SalesInvoiceMaster.objects.filter(
             invoice_series=series,
             sales_invoice_date__gte=fy_start,
             sales_invoice_date__lte=fy_end,
         ).values_list('sales_invoice_no', flat=True)
-        max_num = 0
+
+        used_numbers = set()
         for inv_no in fy_invoices:
             try:
-                num = int(inv_no.replace(prefix, '', 1))
-                if num > max_num:
-                    max_num = num
+                used_numbers.add(int(inv_no.replace(prefix, '', 1)))
             except (ValueError, TypeError):
                 continue
-        next_num = max_num + 1
+
+        next_num = 1
+        while next_num in used_numbers:
+            next_num += 1
+
         preview_number = f"{prefix}{next_num:06d}"
         fy_label = f"{fy_year}-{str(fy_year+1)[2:]}"
         return JsonResponse({'success': True, 'invoice_number': preview_number, 'series_name': series.series_name, 'fy_label': fy_label})
@@ -4289,6 +4294,7 @@ def get_next_invoice_number(request):
         return JsonResponse({'success': False, 'error': 'Series not found'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
 @login_required
 def product_search_suggestions(request):
     """API endpoint for product search autocomplete suggestions"""
