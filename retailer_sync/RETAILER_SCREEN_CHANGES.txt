@@ -1,0 +1,77 @@
+RETAILER SCREEN — EXACT 3 CHANGES NEEDED
+=========================================
+
+No UI changes. No layout changes. Only these 3 things.
+
+-----------------------------------------------------------------------
+CHANGE 1 — Fix _generate_report status check
+-----------------------------------------------------------------------
+
+FIND this line in _generate_report:
+
+    if status not in ("Pending", "Failed"):
+
+REPLACE with:
+
+    if status.lower() not in ("pending", "failed"):
+
+Reason: Status coming from MySQL is "Pending" but after a failed attempt
+it could be "Failed". Case-insensitive check handles both safely.
+
+
+-----------------------------------------------------------------------
+CHANGE 2 — Wire generate_report through bridge instead of runner directly
+-----------------------------------------------------------------------
+
+FIND this entire block in _generate_report:
+
+    self._status_var.set(f"Generating report for #{reference_id}…")
+
+    def _run():
+        result = bridge._runner.fetch_and_generate(int(reference_id))
+        self.after(0, lambda: self._on_generate_done(reference_id, result))
+
+    threading.Thread(target=_run, daemon=True, name="GenerateReportThread").start()
+
+REPLACE with:
+
+    self._status_var.set(f"Generating report for #{reference_id}…")
+    bridge.on_generate_done = self._on_generate_done
+    bridge.generate_report(int(reference_id))
+
+Reason: The bridge now handles threading, MySQL status update, and
+wholesaler API status push in one place. You do not need to manage
+the thread yourself.
+
+
+-----------------------------------------------------------------------
+CHANGE 3 — Wire on_update in __init__ after _build()
+-----------------------------------------------------------------------
+
+FIND in __init__:
+
+    self._build()
+
+ADD immediately after:
+
+    bridge = getattr(self.app, 'sync_bridge', None)
+    if bridge:
+        bridge.on_update = lambda _: self.on_show()
+
+Reason: After every 60-second sync cycle the table auto-refreshes.
+Without this, new requests appear in MySQL but the screen stays stale
+until the user manually clicks Sync Now.
+
+
+-----------------------------------------------------------------------
+THAT IS ALL — nothing else changes
+-----------------------------------------------------------------------
+
+Your on_show() — unchanged
+Your _mark_processed() — unchanged  
+Your _sync_now() — unchanged
+Your _on_generate_done() — unchanged
+Your fetch_requests() in DB class — unchanged
+Your mark_request_processed() in DB class — unchanged
+Your table columns — unchanged
+Your tree tags — unchanged

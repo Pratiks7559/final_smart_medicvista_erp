@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Retailer Sync — Server Configuration{% endblock %}
+
+{% block extra_css %}
+<style>
+.sc-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.sc-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #4a4e69;
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.sc-mode-badge {
+    display: inline-block;
+    padding: 0.3rem 1rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 1px;
+}
+.sc-mode-LOCAL  { background: #dbeafe; color: #1e40af; }
+.sc-mode-CLOUD  { background: #d1fae5; color: #065f46; }
+.sc-url-box {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-family: monospace;
+    font-size: 1rem;
+    color: #374151;
+    word-break: break-all;
+}
+.sc-copy-btn {
+    background: #667eea;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.82rem;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.sc-copy-btn:hover { background: #5a67d8; }
+.sc-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.sc-table th {
+    background: #f9fafb;
+    padding: 0.55rem 0.8rem;
+    text-align: left;
+    font-weight: 600;
+    color: #6b7280;
+    border-bottom: 2px solid #e5e7eb;
+    white-space: nowrap;
+}
+.sc-table td {
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+    font-family: monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
+}
+.sc-table tr:hover td { background: #f9fafb; }
+.sc-note {
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    font-size: 0.88rem;
+    color: #78350f;
+    margin-top: 1rem;
+}
+.sc-env-block {
+    background: #1f2937;
+    color: #d1fae5;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    font-family: monospace;
+    font-size: 0.88rem;
+    line-height: 1.8;
+    margin-top: 0.5rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+.sc-inactive { opacity: 0.45; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="padding: 1.5rem;">
+
+    <!-- Page header -->
+    <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+        <a href="{% url 'retailer_report_requests' %}"
+           style="color:#667eea; text-decoration:none; font-size:0.9rem;">
+            <i class="fas fa-arrow-left"></i> Back to Requests
+        </a>
+        <div style="font-size:1.4rem; font-weight:700; color:#4a4e69;">
+            <i class="fas fa-server" style="color:#764ba2;"></i>
+            Retailer Sync — Server Configuration
+        </div>
+    </div>
+
+    <!-- Current mode + URL -->
+    <div class="sc-card">
+        <div class="sc-title"><i class="fas fa-broadcast-tower" style="color:#667eea;"></i> Active Configuration</div>
+
+        <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+            <div style="font-size:0.85rem; color:#6b7280; font-weight:600;">SERVER MODE</div>
+            <span class="sc-mode-badge sc-mode-{{ server_mode }}">{{ server_mode }}</span>
+        </div>
+
+        <div style="font-size:0.85rem; color:#6b7280; font-weight:600; margin-bottom:0.4rem;">SERVER URL</div>
+        <div class="sc-url-box">
+            <span id="serverUrlText">{{ server_url }}</span>
+            <button class="sc-copy-btn" onclick="copyText('serverUrlText', this)">
+                <i class="fas fa-copy"></i> Copy
+            </button>
+        </div>
+
+        <div class="sc-note">
+            <i class="fas fa-info-circle"></i>
+            To switch modes, set environment variables on the wholesaler server:<br>
+            <code>RETAILER_SYNC_MODE=LOCAL</code> or <code>RETAILER_SYNC_MODE=CLOUD</code><br>
+            <code>RETAILER_SYNC_SERVER_URL=https://erp.company.com</code>
+        </div>
+    </div>
+
+    <!-- Retailer credentials table -->
+    <div class="sc-card">
+        <div class="sc-title"><i class="fas fa-key" style="color:#667eea;"></i> Retailer API Keys</div>
+        <p style="font-size:0.88rem; color:#6b7280; margin-bottom:1rem;">
+            Share the correct row with each retailer operator to paste into their
+            <code>retailer_sync_config.json</code>.
+        </p>
+        <div style="overflow-x:auto;">
+            <table class="sc-table">
+                <thead>
+                    <tr>
+                        <th>Retailer ID</th>
+                        <th>Name</th>
+                        <th>Code</th>
+                        <th>API Key</th>
+                        <th>Active</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in retailers %}
+                    <tr class="{% if not r.is_active %}sc-inactive{% endif %}">
+                        <td>{{ r.retailer_id }}</td>
+                        <td style="font-family:sans-serif;">{{ r.retailer_name }}</td>
+                        <td>{{ r.retailer_code }}</td>
+                        <td>
+                            <span id="apiKey{{ r.retailer_id }}">{{ r.api_key }}</span>
+                            <button class="sc-copy-btn"
+                                    onclick="copyText('apiKey{{ r.retailer_id }}', this)"
+                                    style="margin-left:0.5rem;">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </td>
+                        <td>{% if r.is_active %}✅{% else %}❌{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:2rem;">
+                        No retailers found. Add retailers in Django Admin → RetailerMaster.
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Config snippet for retailer -->
+    <div class="sc-card">
+        <div class="sc-title"><i class="fas fa-file-code" style="color:#667eea;"></i> Retailer Config Snippet</div>
+        <p style="font-size:0.88rem; color:#6b7280; margin-bottom:0.5rem;">
+            Send this as a starting point. Retailer must replace <code>YOUR_API_KEY_HERE</code>
+            with their own key from the table above.
+        </p>
+        <div class="sc-env-block" id="configSnippet">{
+    "server_mode": "{{ server_mode }}",
+    "server_url": "{{ server_url }}",
+    "api_key": "YOUR_API_KEY_HERE",
+    "retailer_id": 1,
+    "retailer_code": "R1",
+    "sync_interval_seconds": 60,
+    "request_timeout_seconds": 10,
+    "max_retry_attempts": 3,
+    "log_file": "retailer_sync.log",
+    "cache_db_file": "retailer_request_cache.db"
+}</div>
+        <button class="sc-copy-btn" style="margin-top:0.75rem;"
+                onclick="copyBlock('configSnippet', this)">
+            <i class="fas fa-copy"></i> Copy Config
+        </button>
+    </div>
+
+    <!-- Environment variable reference -->
+    <div class="sc-card">
+        <div class="sc-title"><i class="fas fa-terminal" style="color:#667eea;"></i> Deployment Reference</div>
+        <p style="font-size:0.88rem; color:#6b7280; margin-bottom:0.5rem;">
+            Set these on the <strong>wholesaler</strong> server to switch modes without touching code:
+        </p>
+        <div class="sc-env-block"># LOCAL (same LAN)
+RETAILER_SYNC_MODE=LOCAL
+RETAILER_SYNC_SERVER_URL=http://192.168.1.100:8000
+
+# CLOUD (internet HTTPS)
+RETAILER_SYNC_MODE=CLOUD
+RETAILER_SYNC_SERVER_URL=https://erp.company.com</div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyText(spanId, btn) {
+    const text = document.getElementById(spanId).innerText.trim();
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        btn.style.background = '#059669';
+        setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 1800);
+    });
+}
+function copyBlock(divId, btn) {
+    const text = document.getElementById(divId).innerText.trim();
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        btn.style.background = '#059669';
+        setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 1800);
+    });
+}
+</script>
+{% endblock %}

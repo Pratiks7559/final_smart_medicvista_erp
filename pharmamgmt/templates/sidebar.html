@@ -267,6 +267,14 @@
                 </li>
                 
                 <!-- Enhanced Admin Menu (Conditional) -->
+                <!-- Retailer Report Requests -->
+                <li class="nav-item">
+                    <a href="{% url 'retailer_report_requests' %}" class="nav-link" style="text-decoration: none;">
+                        <i class="fas fa-store"></i>
+                        <span class="nav-text">Retailer Reports</span>
+                    </a>
+                </li>
+
                 {% if user.user_type == 'admin' %}
                 <li class="nav-item" role="none">
                     <button type="button" class="nav-menu-button" onclick="toggleSubmenu('adminSubmenu')" aria-expanded="false" aria-controls="adminSubmenu" role="menuitem">

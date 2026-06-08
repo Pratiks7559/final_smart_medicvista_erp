@@ -1,0 +1,32 @@
+{
+    "_comment": "Copy this file to retailer_sync_config.json and fill in your values.",
+    "_comment_server_mode": "LOCAL = same LAN as wholesaler. CLOUD = internet HTTPS server.",
+    "server_mode": "LOCAL",
+
+    "_comment_server_url": "Base URL of the wholesaler ERP. No trailing slash. LOCAL example: http://192.168.1.100:8000  CLOUD example: https://erp.company.com",
+    "server_url": "http://127.0.0.1:8000",
+
+    "_comment_api_key": "The API key shown on wholesaler Admin > RetailerMaster for THIS retailer.",
+    "api_key": "PASTE-YOUR-API-KEY-HERE",
+
+    "_comment_retailer_id": "Numeric retailer_id from wholesaler Admin > RetailerMaster.",
+    "retailer_id": 1,
+
+    "_comment_retailer_code": "Human-readable code, e.g. R1, R2, R3, R4.",
+    "retailer_code": "R1",
+
+    "_comment_sync_interval_seconds": "How often to poll wholesaler for new requests (60 recommended).",
+    "sync_interval_seconds": 60,
+
+    "_comment_request_timeout_seconds": "HTTP timeout per API call.",
+    "request_timeout_seconds": 10,
+
+    "_comment_max_retry_attempts": "How many times to retry a failed status push before queuing it.",
+    "max_retry_attempts": 3,
+
+    "_comment_log_file": "Path to the log file. Use relative path or absolute path.",
+    "log_file": "retailer_sync.log",
+
+    "_comment_cache_db_file": "SQLite file used for local request cache and pending update queue.",
+    "cache_db_file": "retailer_request_cache.db"
+}

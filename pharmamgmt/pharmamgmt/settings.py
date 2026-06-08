@@ -79,7 +79,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': os.getenv('DB_NAME', 'pharma_db'),
         'USER': os.getenv('DB_USER', 'root'),
-        'PASSWORD': os.getenv('DB_PASSWORD', 'Pratik@123'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'abcdef'),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
         'CONN_MAX_AGE': 600,
@@ -173,6 +173,17 @@ else:
             'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
         }
     }
+
+# ============================================================
+# RETAILER SYNC CONFIGURATION
+# Change only these two values when moving from LOCAL → CLOUD.
+# RETAILER_SYNC_MODE : 'LOCAL' or 'CLOUD'
+# RETAILER_SYNC_SERVER_URL : base URL of THIS server (no trailing slash)
+#   LOCAL  → 'http://127.0.0.1:8000'
+#   CLOUD  → 'https://erp.company.com'
+# ============================================================
+RETAILER_SYNC_MODE = os.getenv('RETAILER_SYNC_MODE', 'LOCAL')
+RETAILER_SYNC_SERVER_URL = os.getenv('RETAILER_SYNC_SERVER_URL', 'http://127.0.0.1:8000')
 
 # ============================================================
 # LOGGING

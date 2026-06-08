@@ -146,3 +146,23 @@ class ContraEntryAdmin(admin.ModelAdmin):
 
 admin.site.register(ContraEntry, ContraEntryAdmin)
 # ============================================
+
+# ============================================
+# RETAILER REPORT REQUEST MODULE - ADMIN
+# ============================================
+from .retailer_models import RetailerMaster, RetailerReportRequest
+
+@admin.register(RetailerMaster)
+class RetailerMasterAdmin(admin.ModelAdmin):
+    list_display = ('retailer_id', 'retailer_name', 'retailer_code', 'is_active', 'created_at')
+    list_filter = ('is_active',)
+    search_fields = ('retailer_name', 'retailer_code')
+    readonly_fields = ('api_key', 'created_at')
+
+@admin.register(RetailerReportRequest)
+class RetailerReportRequestAdmin(admin.ModelAdmin):
+    list_display = ('request_id', 'retailer', 'request_type', 'from_date', 'to_date', 'status', 'created_by', 'created_at')
+    list_filter = ('status', 'request_type', 'retailer')
+    search_fields = ('retailer__retailer_name', 'created_by')
+    readonly_fields = ('created_at',)
+# ============================================

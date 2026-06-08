@@ -16,6 +16,7 @@ class LoginRequiredMiddleware:
             '/admin/login/',
             '/static/',
             '/media/',
+            '/api/retailer/',   # API key auth — no session needed
         ]
     
     def __call__(self, request):

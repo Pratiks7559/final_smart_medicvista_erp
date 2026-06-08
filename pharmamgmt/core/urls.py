@@ -43,6 +43,7 @@ from .contra_views import contra_list, add_contra, edit_contra, delete_contra, c
 # ============================================
 
 from .year_filter_views import set_year_filter
+from .retailer_urls import urlpatterns as retailer_urlpatterns
 
 urlpatterns = [
     # Landing Page (Root URL)
@@ -357,5 +358,11 @@ urlpatterns = [
     # ====================
     # ========================
 ]
+
+# ============================================
+# RETAILER REPORT REQUEST MODULE - URLS
+# ============================================
+urlpatterns += retailer_urlpatterns
+# ============================================
 
 

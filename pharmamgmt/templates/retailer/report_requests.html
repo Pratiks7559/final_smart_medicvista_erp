@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Retailer Report Requests{% endblock %}
+
+{% block extra_css %}
+<style>
+.rrr-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.rrr-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #4a4e69;
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.rrr-form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.rrr-form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6b7280;
+    display: block;
+    margin-bottom: 0.3rem;
+}
+.rrr-form-group input,
+.rrr-form-group select,
+.rrr-form-group textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+.rrr-form-group textarea { resize: vertical; min-height: 60px; }
+.rrr-btn-row {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+.btn-create {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    border: none;
+    padding: 0.55rem 1.4rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.btn-create:hover { opacity: 0.9; }
+.btn-refresh {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 0.55rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.btn-refresh:hover { background: #e5e7eb; color: #374151; }
+.status-badge {
+    padding: 0.2rem 0.65rem;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.status-PENDING   { background: #fef3c7; color: #92400e; }
+.status-PROCESSING{ background: #dbeafe; color: #1e40af; }
+.status-COMPLETED { background: #d1fae5; color: #065f46; }
+.status-FAILED    { background: #fee2e2; color: #991b1b; }
+.rrr-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.rrr-table th {
+    background: #f9fafb;
+    padding: 0.6rem 0.8rem;
+    text-align: left;
+    font-weight: 600;
+    color: #6b7280;
+    border-bottom: 2px solid #e5e7eb;
+    white-space: nowrap;
+}
+.rrr-table td {
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+}
+.rrr-table tr:hover td { background: #f9fafb; }
+.empty-row td { text-align: center; color: #9ca3af; padding: 2rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="padding: 1.5rem;">
+
+    <!-- Page Header -->
+    <div class="rrr-title" style="margin-bottom: 1.5rem;">
+        <i class="fas fa-store" style="color:#764ba2;"></i>
+        Retailer Report Requests
+    </div>
+
+    <!-- Create Request Form -->
+    <div class="rrr-card">
+        <div class="rrr-title" style="font-size:1.1rem;">
+            <i class="fas fa-plus-circle" style="color:#667eea;"></i> Create New Request
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <div class="rrr-form-row">
+                <div class="rrr-form-group">
+                    <label>Retailer *</label>
+                    <select name="retailer" required>
+                        <option value="">-- Select Retailer --</option>
+                        {% for r in retailers %}
+                        <option value="{{ r.retailer_id }}">{{ r.retailer_name }} ({{ r.retailer_code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="rrr-form-group">
+                    <label>Report Type *</label>
+                    <select name="request_type" required>
+                        <option value="">-- Select Type --</option>
+                        <option value="STOCK">Stock</option>
+                        <option value="PURCHASE">Purchase</option>
+                        <option value="SALES">Sales</option>
+                    </select>
+                </div>
+                <div class="rrr-form-group">
+                    <label>From Date *</label>
+                    <input type="date" name="from_date" required>
+                </div>
+                <div class="rrr-form-group">
+                    <label>To Date *</label>
+                    <input type="date" name="to_date" required>
+                </div>
+                <div class="rrr-form-group" style="grid-column: 1 / -1;">
+                    <label>Remarks</label>
+                    <textarea name="remarks" placeholder="Optional notes..."></textarea>
+                </div>
+            </div>
+            <div class="rrr-btn-row">
+                <button type="submit" class="btn-create">
+                    <i class="fas fa-paper-plane"></i> Create Request
+                </button>
+                <a href="{% url 'retailer_report_requests' %}" class="btn-refresh">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Request History Table -->
+    <div class="rrr-card">
+        <div class="rrr-title" style="font-size:1.1rem;">
+            <i class="fas fa-history" style="color:#667eea;"></i> Request History
+        </div>
+        <div style="overflow-x: auto;">
+            <table class="rrr-table">
+                <thead>
+                    <tr>
+                        <th>Request ID</th>
+                        <th>Retailer</th>
+                        <th>Report Type</th>
+                        <th>From Date</th>
+                        <th>To Date</th>
+                        <th>Status</th>
+                        <th>Created Date</th>
+                        <th>Completed Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in report_requests %}
+                    <tr>
+                        <td>#{{ req.request_id }}</td>
+                        <td>{{ req.retailer.retailer_name }}</td>
+                        <td>{{ req.get_request_type_display }}</td>
+                        <td>{{ req.from_date }}</td>
+                        <td>{{ req.to_date }}</td>
+                        <td>
+                            <span class="status-badge status-{{ req.status }}">
+                                {{ req.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ req.created_at|date:"d-m-Y H:i" }}</td>
+                        <td>
+                            {% if req.completed_at %}
+                                {{ req.completed_at|date:"d-m-Y H:i" }}
+                            {% else %}
+                                <span style="color:#9ca3af;">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="empty-row">
+                        <td colspan="8">No requests found. Create your first request above.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
