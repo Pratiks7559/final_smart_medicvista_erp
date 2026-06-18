@@ -15,8 +15,8 @@
     "_comment_retailer_code": "Human-readable code, e.g. R1, R2, R3, R4.",
     "retailer_code": "R1",
 
-    "_comment_sync_interval_seconds": "How often to poll wholesaler for new requests (60 recommended).",
-    "sync_interval_seconds": 60,
+    "_comment_sync_interval_seconds": "How often to poll wholesaler for new requests (10 recommended).",
+    "sync_interval_seconds": 10,
 
     "_comment_request_timeout_seconds": "HTTP timeout per API call.",
     "request_timeout_seconds": 10,

@@ -38,20 +38,22 @@ _STATUS_MAP = {
 
 
 class SyncBridge:
-    def __init__(self, tk_root, config: dict, app_db):
+    def __init__(self, tk_root, config: dict, app_db=None):
         """
         Parameters
         ----------
         tk_root : tk.Tk
         config  : dict from _load_config()
-        app_db  : your existing DB class instance (has upsert_wholesaler_requests,
-                  update_request_status_by_reference)
+        app_db  : optional existing DB class instance. If None, requests are
+                  cached in-memory only (standalone panel mode).
         """
         self._root   = tk_root
         self._config = config
         self._app_db = app_db
         self._lock   = threading.Lock()
-        self.on_update = None   # set to on_show() after construction
+        self._cached_requests = []   # in-memory cache for standalone mode
+        self.on_update        = None
+        self.on_generate_done = None
 
         self._runner = RetailerSyncRunner(
             config=config,
@@ -87,6 +89,7 @@ class SyncBridge:
 
     def force_sync_now(self):
         """Sync Now button — triggers immediate cycle, non-blocking."""
+        self._runner.force_wake()
         threading.Thread(
             target=self._runner.run_once,
             daemon=True,
@@ -108,14 +111,22 @@ class SyncBridge:
         def _do():
             # Send to wholesaler
             self._runner._send_status(reference_id, wholesaler_status.upper())
-            # Update retailer MySQL
-            try:
-                self._app_db.update_request_status_by_reference(
-                    reference_id, mysql_status, retailer_id
-                )
-                logger.info("MySQL updated: ref=%s → %s", reference_id, mysql_status)
-            except Exception:
-                logger.exception("MySQL update failed: ref=%s", reference_id)
+            # Update retailer MySQL if app_db available
+            if self._app_db and hasattr(self._app_db, 'update_request_status_by_reference'):
+                try:
+                    self._app_db.update_request_status_by_reference(
+                        reference_id, mysql_status, retailer_id
+                    )
+                    logger.info("MySQL updated: ref=%s -> %s", reference_id, mysql_status)
+                except Exception:
+                    logger.exception("MySQL update failed: ref=%s", reference_id)
+            else:
+                # Standalone mode — update in-memory cache
+                with self._lock:
+                    for r in self._cached_requests:
+                        if r['request_id'] == reference_id:
+                            r['status'] = mysql_status
+                            break
             # Refresh UI on main thread
             if self.on_update:
                 self._root.after(0, lambda: self.on_update({}))
@@ -160,22 +171,43 @@ class SyncBridge:
     # Internal — background thread → main thread
     # ------------------------------------------------------------------
 
+    def get_cached_requests(self) -> list:
+        """Return the latest list of requests for table display."""
+        if self._app_db and hasattr(self._app_db, 'get_requests'):
+            try:
+                return self._app_db.get_requests(self._config['retailer_id'])
+            except Exception:
+                logger.exception("app_db.get_requests failed, falling back to cache")
+        with self._lock:
+            return list(self._cached_requests)
+
     def _thread_callback(self, result: dict):
         """
         Called from background thread after every sync cycle.
-        Writes new requests into retailer MySQL then schedules UI refresh.
-        NEVER touch Tkinter here.
+        Writes new requests into retailer MySQL (if app_db provided),
+        otherwise caches in-memory. NEVER touch Tkinter here.
         """
         new_requests = result.get('new_requests', [])
         if new_requests:
-            retailer_id = self._config['retailer_id']
-            try:
-                count = self._app_db.upsert_wholesaler_requests(
-                    new_requests, retailer_id
-                )
-                logger.info("Wrote %d new request(s) into retailer MySQL.", count)
-            except Exception:
-                logger.exception("Failed writing requests to retailer MySQL.")
+            if self._app_db and hasattr(self._app_db, 'upsert_wholesaler_requests'):
+                retailer_id = self._config['retailer_id']
+                try:
+                    count = self._app_db.upsert_wholesaler_requests(
+                        new_requests, retailer_id
+                    )
+                    logger.info("Wrote %d new request(s) into retailer MySQL.", count)
+                except Exception:
+                    logger.exception("Failed writing requests to retailer MySQL.")
+            else:
+                # Standalone mode — merge into in-memory cache
+                with self._lock:
+                    existing_ids = {r['request_id'] for r in self._cached_requests}
+                    for r in new_requests:
+                        if r['request_id'] not in existing_ids:
+                            r.setdefault('status', 'PENDING')
+                            r.setdefault('sync_time', result.get('last_sync_time', ''))
+                            self._cached_requests.append(r)
+                    logger.info("Cached %d new request(s) in memory.", len(new_requests))
 
         with self._lock:
             self._last_result = result

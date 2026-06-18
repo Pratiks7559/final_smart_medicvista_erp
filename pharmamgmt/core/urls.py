@@ -15,6 +15,7 @@ from core.bulk_upload_view import bulk_upload_invoices
 from .ledger_views import customer_ledger, supplier_ledger, ledger_selection, customer_ledger_print, supplier_ledger_print, export_supplier_ledger_pdf, export_supplier_ledger_excel, export_customer_ledger_pdf, export_customer_ledger_excel
 from .sales2_views import sales2_report, sales2_report_pdf, sales2_report_excel
 from .purchase2_views import purchase2_report, purchase2_report_pdf, purchase2_report_excel
+from .reorder_level_views import reorder_level_report, export_reorder_level_excel
 from .customer_sales_views import customer_wise_sales_report, quick_customer_search, customer_sales_summary
 from .stock_report_views import stock_statement_report, stock_statement_batch_detail, export_stock_statement_pdf
 from .balance_check_view import check_invoice_balance, fix_small_balance
@@ -232,6 +233,8 @@ urlpatterns = [
     path('reports/purchase2/', purchase2_report, name='purchase2_report'),
     path('reports/purchase2/pdf/', purchase2_report_pdf, name='purchase2_report_pdf'),
     path('reports/purchase2/excel/', purchase2_report_excel, name='purchase2_report_excel'),
+    path('reports/reorder-level/', reorder_level_report, name='reorder_level_report'),
+    path('reports/reorder-level/excel/', export_reorder_level_excel, name='export_reorder_level_excel'),
     path('reports/financial/', financial_report, name='financial_report'),
     path('reports/financial/pdf/', export_financial_pdf, name='export_financial_pdf'),
     path('reports/financial/excel/', export_financial_excel, name='export_financial_excel'),

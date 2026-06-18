@@ -1,0 +1,741 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block title %}CSV Preview — {{ upload.file_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ==============================================
+       1. DESIGN SYSTEM (CSS Variables)
+    ============================================== */
+    :root {
+        --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        --gradient-info: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        --gradient-dark: linear-gradient(135deg, #4a4e69 0%, #22223b 100%);
+        
+        --color-primary-50: #f5f3ff;
+        --color-primary-100: #ede9fe;
+        --color-primary-500: #8b5cf6;
+        --color-primary-600: #7c3aed;
+        --color-primary-700: #6d28d9;
+        
+        --color-gray-50: #f9fafb;
+        --color-gray-100: #f3f4f6;
+        --color-gray-200: #e5e7eb;
+        --color-gray-300: #d1d5db;
+        --color-gray-400: #9ca3af;
+        --color-gray-500: #6b7280;
+        --color-gray-600: #4b5563;
+        --color-gray-700: #374151;
+        --color-gray-800: #1f2937;
+        --color-gray-900: #111827;
+        
+        --color-success-50: #ecfdf5;
+        --color-success-500: #10b981;
+        --color-success-600: #059669;
+        
+        --color-warning-50: #fffbeb;
+        --color-warning-500: #f59e0b;
+        
+        --color-danger-50: #fef2f2;
+        --color-danger-500: #ef4444;
+        
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        
+        --radius-sm: 0.375rem;
+        --radius-md: 0.5rem;
+        --radius-lg: 0.75rem;
+        --radius-xl: 1rem;
+        --radius-2xl: 1.5rem;
+        
+        --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ==============================================
+       2. GLOBAL & UTILITY STYLES
+    ============================================== */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #f3f4f6 100%);
+        font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+
+    .preview-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    /* ==============================================
+       3. PAGE HEADER
+    ============================================== */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        letter-spacing: -0.025em;
+    }
+
+    .page-title i {
+        background: none;
+        -webkit-background-clip: unset;
+        background-clip: unset;
+        color: var(--color-primary-600);
+        font-size: 1.4rem;
+    }
+
+    .page-title span {
+        background: var(--color-gray-100);
+        color: var(--color-gray-700);
+        font-size: 0.8rem;
+        font-weight: 500;
+        padding: 0.2rem 0.6rem;
+        border-radius: 50px;
+        letter-spacing: normal;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-download-csv {
+        background: var(--gradient-success);
+        color: white;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: var(--radius-lg);
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all var(--transition-fast);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn-download-csv:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        filter: brightness(1.05);
+    }
+
+    .btn-back {
+        background: white;
+        color: var(--color-gray-700);
+        border: 2px solid var(--color-gray-200);
+        padding: 0.6rem 1.2rem;
+        border-radius: var(--radius-lg);
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all var(--transition-fast);
+    }
+
+    .btn-back:hover {
+        background: var(--color-gray-50);
+        border-color: var(--color-gray-300);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* ==============================================
+       4. METADATA CARD
+    ============================================== */
+    .meta-card {
+        background: white;
+        border-radius: var(--radius-2xl);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-lg);
+        transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .meta-card:hover {
+        box-shadow: var(--shadow-xl);
+        transform: translateY(-2px);
+    }
+
+    .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .meta-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .meta-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-gray-500);
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .meta-label i {
+        font-size: 0.75rem;
+        color: var(--color-primary-500);
+    }
+
+    .meta-value {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--color-gray-800);
+        word-break: break-word;
+    }
+
+    /* Report Type Badges */
+    .type-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.3rem 0.9rem;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+
+    .type-badge i {
+        font-size: 0.7rem;
+    }
+
+    .badge-SALES {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        color: #1e40af;
+    }
+
+    .badge-PURCHASE {
+        background: linear-gradient(135deg, #fed7aa, #fdba74);
+        color: #9a3412;
+    }
+
+    .badge-STOCK {
+        background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        color: #065f46;
+    }
+
+    /* ==============================================
+       5. CSV TABLE (Enhanced)
+    ============================================== */
+    .csv-table-wrapper {
+        overflow-x: auto;
+        max-height: 600px;
+        overflow-y: auto;
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-lg);
+        background: white;
+        border: 1px solid var(--color-gray-200);
+    }
+
+    .csv-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+        font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+    }
+
+    .csv-table thead th {
+        background: var(--gradient-dark);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 1rem 1rem;
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .csv-table tbody td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--color-gray-100);
+        color: var(--color-gray-700);
+        white-space: nowrap;
+    }
+
+    .csv-table tbody tr {
+        transition: all var(--transition-fast);
+    }
+
+    .csv-table tbody tr:hover td {
+        background: var(--color-primary-50);
+    }
+
+    .csv-table tbody tr:nth-child(even) td {
+        background: var(--color-gray-50);
+    }
+
+    .csv-table tbody tr:nth-child(even):hover td {
+        background: var(--color-primary-50);
+    }
+
+    /* ==============================================
+       6. PAGINATION (Enhanced)
+    ============================================== */
+    .pagination-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 1.5rem;
+        padding: 1rem 1.5rem;
+        background: white;
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow-md);
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .pagination-info {
+        font-size: 0.8rem;
+        color: var(--color-gray-500);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .pagination-info i {
+        color: var(--color-primary-500);
+    }
+
+    .pagination-links {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .page-link-modern {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius-lg);
+        background: white;
+        border: 2px solid var(--color-gray-200);
+        color: var(--color-gray-700);
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-decoration: none;
+        transition: all var(--transition-fast);
+    }
+
+    .page-link-modern:hover {
+        background: var(--color-primary-50);
+        border-color: var(--color-primary-300);
+        transform: translateY(-1px);
+    }
+
+    .page-current {
+        background: var(--gradient-primary);
+        color: white;
+        border: none;
+    }
+
+    .page-current:hover {
+        background: var(--gradient-primary);
+        transform: translateY(-1px);
+        filter: brightness(1.05);
+    }
+
+    /* ==============================================
+       7. EMPTY STATE
+    ============================================== */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: var(--radius-2xl);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        margin-bottom: 1rem;
+        display: inline-block;
+    }
+
+    .empty-state p {
+        color: var(--color-gray-500);
+        font-size: 1rem;
+    }
+
+    /* ==============================================
+       8. TOOLTIP & DATA CELL HOVER EFFECTS
+    ============================================== */
+    .csv-table td[title] {
+        cursor: help;
+        position: relative;
+    }
+
+    .csv-table td[title]:hover::after {
+        content: attr(title);
+        position: absolute;
+        background: var(--color-gray-800);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-md);
+        font-size: 0.7rem;
+        white-space: nowrap;
+        z-index: 20;
+        bottom: 100%;
+        left: 0;
+        margin-bottom: 5px;
+        box-shadow: var(--shadow-md);
+    }
+
+    /* ==============================================
+       9. SCROLLBAR STYLING
+    ============================================== */
+    .csv-table-wrapper::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    .csv-table-wrapper::-webkit-scrollbar-track {
+        background: var(--color-gray-100);
+        border-radius: 10px;
+    }
+
+    .csv-table-wrapper::-webkit-scrollbar-thumb {
+        background: var(--color-gray-400);
+        border-radius: 10px;
+    }
+
+    .csv-table-wrapper::-webkit-scrollbar-thumb:hover {
+        background: var(--color-gray-500);
+    }
+
+    /* ==============================================
+       10. RESPONSIVE DESIGN
+    ============================================== */
+    @media (max-width: 768px) {
+        .preview-container {
+            padding: 1rem;
+        }
+        
+        .page-title {
+            font-size: 1.2rem;
+        }
+        
+        .page-title span {
+            font-size: 0.7rem;
+        }
+        
+        .meta-grid {
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+        
+        .action-buttons {
+            width: 100%;
+            justify-content: flex-start;
+        }
+        
+        .btn-download-csv,
+        .btn-back {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+        
+        .csv-table thead th,
+        .csv-table tbody td {
+            padding: 0.5rem 0.75rem;
+        }
+        
+        .pagination-container {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .page-link-modern {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.75rem;
+        }
+    }
+
+    /* ==============================================
+       11. ANIMATIONS
+    ============================================== */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes shimmer {
+        0% { background-position: -1000px 0; }
+        100% { background-position: 1000px 0; }
+    }
+
+    .meta-card {
+        animation: fadeInUp 0.4s ease-out;
+    }
+
+    .csv-table-wrapper {
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    .csv-table tbody tr {
+        animation: fadeInUp 0.3s ease-out backwards;
+        animation-delay: calc(var(--animation-order, 0) * 0.01s);
+    }
+
+    /* Loading skeleton (optional utility) */
+    .skeleton {
+        background: linear-gradient(90deg, var(--color-gray-100) 25%, var(--color-gray-200) 50%, var(--color-gray-100) 75%);
+        background-size: 1000px 100%;
+        animation: shimmer 2s infinite;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="preview-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="page-title">
+            <i class="fas fa-file-csv"></i>
+            CSV Preview
+            <span>{{ upload.file_name|truncatechars:30 }}</span>
+        </div>
+        <div class="action-buttons">
+            <a href="{% url 'retailer_upload_download' upload.id %}" class="btn-download-csv">
+                <i class="fas fa-download"></i> Download CSV
+            </a>
+            <a href="{% url 'retailer_uploads_list' %}" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    <!-- Metadata Card -->
+    <div class="meta-card">
+        <div class="meta-grid">
+            <div class="meta-item">
+                <div class="meta-label">
+                    <i class="fas fa-store"></i> Retailer
+                </div>
+                <div class="meta-value">
+                    {{ upload.retailer.retailer_name }}
+                    <span style="color: var(--color-gray-400); font-size: 0.8rem;">({{ upload.retailer.retailer_code }})</span>
+                </div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">
+                    <i class="fas fa-chart-line"></i> Report Type
+                </div>
+                <div class="meta-value">
+                    <span class="type-badge badge-{{ upload.request_type }}">
+                        <i class="fas {% if upload.request_type == 'SALES' %}fa-chart-line{% elif upload.request_type == 'PURCHASE' %}fa-shopping-cart{% else %}fa-boxes{% endif %}"></i>
+                        {{ upload.get_request_type_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">
+                    <i class="fas fa-calendar-alt"></i> Date Range
+                </div>
+                <div class="meta-value">
+                    <i class="far fa-calendar-alt" style="color: var(--color-primary-500);"></i>
+                    {{ upload.request.from_date|date:"d M Y" }} — {{ upload.request.to_date|date:"d M Y" }}
+                </div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">
+                    <i class="fas fa-clock"></i> Uploaded At
+                </div>
+                <div class="meta-value">
+                    {{ upload.uploaded_at|date:"d M Y H:i:s" }}
+                </div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">
+                    <i class="fas fa-table"></i> Total Rows
+                </div>
+                <div class="meta-value">
+                    <span class="type-badge" style="background: var(--color-gray-100); color: var(--color-gray-700);">
+                        <i class="fas fa-database"></i> {{ upload.row_count }} rows
+                    </span>
+                </div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">
+                    <i class="fas fa-hdd"></i> File Size
+                </div>
+                <div class="meta-value">
+                    {{ upload.file_size_kb }} KB
+                    {% if upload.file_size_kb > 1024 %}
+                        ({{ upload.file_size_kb|floatformat:2|divisibleby:1024 }} MB)
+                    {% endif %}
+                </div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">
+                    <i class="fas fa-file"></i> Filename
+                </div>
+                <div class="meta-value" style="font-family: monospace; font-size: 0.85rem;">
+                    <i class="fas fa-file-csv" style="color: #10b981;"></i> {{ upload.file_name }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CSV Table -->
+    {% if headers %}
+    <div class="csv-table-wrapper">
+        <table class="csv-table">
+            <thead>
+                <tr>
+                    {% for h in headers %}
+                    <th>
+                        <i class="fas fa-columns" style="margin-right: 0.3rem; opacity: 0.7;"></i>
+                        {{ h }}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in page_obj %}
+                <tr style="--animation-order: {{ forloop.counter }}">
+                    {% for h in headers %}
+                    <td>{{ row|get_item:h }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination-container">
+        <div class="pagination-info">
+            <i class="fas fa-info-circle"></i>
+            Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            ({{ page_obj.paginator.count }} total rows)
+        </div>
+        <div class="pagination-links">
+            {% if page_obj.has_previous %}
+            <a class="page-link-modern prev-page" href="?page={{ page_obj.previous_page_number }}">
+                <i class="fas fa-chevron-left"></i> Previous
+            </a>
+            {% endif %}
+            
+            <span class="page-link-modern page-current">
+                {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+            </span>
+            
+            {% if page_obj.has_next %}
+            <a class="page-link-modern next-page" href="?page={{ page_obj.next_page_number }}">
+                Next <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-eye-slash"></i>
+        <p>No preview data available for this upload.</p>
+        <p style="font-size: 0.8rem; margin-top: 0.5rem;">
+            <i class="fas fa-info-circle"></i> The file may be empty or in an unsupported format
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    (function() {
+        'use strict';
+        
+        // Add copy functionality for table cells (optional feature)
+        document.querySelectorAll('.csv-table td').forEach(cell => {
+            cell.addEventListener('click', function(e) {
+                // Only copy if user double-clicks (prevents accidental copies)
+                if (e.detail === 2) {
+                    const text = this.innerText;
+                    if (text && text !== 'NULL') {
+                        navigator.clipboard.writeText(text).then(() => {
+                            // Show temporary tooltip
+                            const originalTitle = this.getAttribute('title') || '';
+                            this.setAttribute('title', '✓ Copied!');
+                            setTimeout(() => {
+                                this.setAttribute('title', originalTitle);
+                            }, 1500);
+                        }).catch(() => {});
+                    }
+                }
+            });
+        });
+        
+        // Keyboard navigation for pagination
+        document.addEventListener('keydown', function(e) {
+            const prevLink = document.querySelector('.page-link-modern.prev-page');
+            const nextLink = document.querySelector('.page-link-modern.next-page');
+            if (e.key === 'ArrowLeft' && prevLink) {
+                e.preventDefault();
+                window.location.href = prevLink.href;
+            } else if (e.key === 'ArrowRight' && nextLink) {
+                e.preventDefault();
+                window.location.href = nextLink.href;
+            }
+        });
+        
+        // Display summary in console
+        console.log(`📊 CSV Preview Loaded: {{ upload.row_count }} rows, {{ headers|length }} columns`);
+    })();
+</script>
+{% endblock %}

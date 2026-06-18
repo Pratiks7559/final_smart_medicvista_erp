@@ -1,6 +1,24 @@
 import uuid
 from django.db import models
 from django.utils import timezone
+import logging
+
+logger = logging.getLogger('retailer_sync')
+
+
+class RetailerSession(models.Model):
+    """Tracks real-time online/offline status of each retailer via last health check."""
+    retailer   = models.OneToOneField(
+        'RetailerMaster', on_delete=models.CASCADE, related_name='session'
+    )
+    is_online  = models.BooleanField(default=False)
+    last_seen  = models.DateTimeField(null=True, blank=True)
+    last_login  = models.DateTimeField(null=True, blank=True)
+    last_logout = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        status = 'Online' if self.is_online else 'Offline'
+        return f"{self.retailer.retailer_name} — {status}"
 
 
 class RetailerMaster(models.Model):
@@ -44,3 +62,27 @@ class RetailerReportRequest(models.Model):
 
     def __str__(self):
         return f"Request #{self.request_id} - {self.retailer} - {self.request_type}"
+
+
+class RetailerCSVUpload(models.Model):
+    REPORT_TYPE_CHOICES = [
+        ('STOCK', 'Stock'),
+        ('PURCHASE', 'Purchase'),
+        ('SALES', 'Sales'),
+    ]
+
+    request    = models.ForeignKey(RetailerReportRequest, on_delete=models.CASCADE, related_name='csv_uploads')
+    retailer   = models.ForeignKey(RetailerMaster, on_delete=models.CASCADE, related_name='csv_uploads')
+    csv_file   = models.FileField(upload_to='retailer_csv_uploads/%Y/%m/')
+    file_name  = models.CharField(max_length=255)
+    file_size_kb = models.FloatField(default=0)
+    request_type = models.CharField(max_length=10, choices=REPORT_TYPE_CHOICES)
+    uploaded_at  = models.DateTimeField(auto_now_add=True)
+    row_count    = models.IntegerField(default=0)
+    preview_data = models.JSONField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-uploaded_at']
+
+    def __str__(self):
+        return f"{self.retailer.retailer_code} | {self.request_type} | {self.file_name}"

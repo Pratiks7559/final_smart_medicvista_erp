@@ -166,3 +166,71 @@ class RetailerReportRequestAdmin(admin.ModelAdmin):
     search_fields = ('retailer__retailer_name', 'created_by')
     readonly_fields = ('created_at',)
 # ============================================
+
+
+# ============================================
+# RETAILER CSV UPLOAD - ADMIN
+# ============================================
+from .retailer_models import RetailerCSVUpload
+from django.utils.html import format_html
+from django.urls import reverse
+import zipfile, io
+from django.http import HttpResponse
+
+
+def _download_zip_action(modeladmin, request, queryset):
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+        for upload in queryset:
+            try:
+                with open(upload.csv_file.path, 'rb') as f:
+                    zf.writestr(upload.file_name, f.read())
+            except Exception:
+                pass
+    buf.seek(0)
+    response = HttpResponse(buf.read(), content_type='application/zip')
+    response['Content-Disposition'] = 'attachment; filename="retailer_csv_uploads.zip"'
+    return response
+_download_zip_action.short_description = 'Download Selected CSV Files as ZIP'
+
+
+@admin.register(RetailerCSVUpload)
+class RetailerCSVUploadAdmin(admin.ModelAdmin):
+    list_display   = ('id', 'retailer', 'request_type', 'file_name', 'row_count', 'file_size_kb', 'uploaded_at', 'request_link')
+    list_filter    = ('request_type', 'uploaded_at', 'retailer')
+    search_fields  = ('file_name', 'retailer__retailer_name')
+    readonly_fields = ('retailer', 'request', 'csv_file', 'file_name', 'file_size_kb',
+                       'request_type', 'uploaded_at', 'row_count', 'preview_data', 'csv_preview_table')
+    actions = [_download_zip_action]
+
+    def request_link(self, obj):
+        url = reverse('admin:core_retailerreportrequest_change', args=[obj.request.request_id])
+        return format_html('<a href="{}">#{}</a>', url, obj.request.request_id)
+    request_link.short_description = 'Request'
+
+    def csv_preview_table(self, obj):
+        rows = obj.preview_data or []
+        if not rows:
+            return 'No preview data available.'
+        headers = list(rows[0].keys())
+        th = ''.join(
+            f'<th style="white-space:nowrap;padding:4px 8px;background:#4a4e69;color:#fff">{h}</th>'
+            for h in headers
+        )
+        body = ''
+        for i, row in enumerate(rows):
+            bg  = '#f9fafb' if i % 2 == 0 else '#fff'
+            tds = ''.join(f'<td style="padding:3px 8px;font-size:12px">{row.get(h, "")}</td>' for h in headers)
+            body += f'<tr style="background:{bg}">{tds}</tr>'
+        return format_html(
+            '<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12px">'
+            '<thead><tr>{}</tr></thead><tbody>{}</tbody></table></div>',
+            th, body
+        )
+    csv_preview_table.short_description = 'CSV Preview (first 50 rows)'
+
+    fieldsets = (
+        ('File Info', {'fields': ('retailer', 'request', 'request_type', 'file_name', 'file_size_kb', 'row_count', 'uploaded_at', 'csv_file')}),
+        ('CSV Preview', {'fields': ('csv_preview_table',)}),
+    )
+# ============================================

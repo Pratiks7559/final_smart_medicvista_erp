@@ -74,6 +74,7 @@ class RetailerSyncRunner:
         self._connected      = False
         self._last_sync_time = None
         self._stop_flag      = False
+        self._wake_event     = __import__('threading').Event()
 
     # ------------------------------------------------------------------
     # Called by SyncBridge when user clicks Generate Report
@@ -206,25 +207,29 @@ class RetailerSyncRunner:
             except Exception:
                 self.logger.exception("Error in on_sync_complete callback")
 
+    def force_wake(self):
+        """Called by SyncBridge.force_sync_now() — interrupts current sleep immediately."""
+        self._wake_event.set()
+
     def run_forever(self):
         self.logger.info(
             "Sync runner started. Server: %s | Interval: %ds",
             self.config['server_url'], self.sync_interval,
         )
         self._stop_flag = False
+        self._wake_event.clear()
         while not self._stop_flag:
             try:
                 self.run_once()
             except Exception:
                 self.logger.exception("Unexpected error in sync cycle — continuing.")
-            for _ in range(self.sync_interval):
-                if self._stop_flag:
-                    break
-                time.sleep(1)
+            self._wake_event.wait(timeout=self.sync_interval)
+            self._wake_event.clear()
         self.logger.info("Sync runner stopped.")
 
     def stop(self):
         self._stop_flag = True
+        self._wake_event.set()   # unblock wait() immediately
 
     def _on_queue_success(self, queue_id: int, request_id: int, new_status: str):
         self.db.remove_pending_update(queue_id)
@@ -258,9 +263,9 @@ def main():
     if args.test_conn:
         result = runner.service.test_connection()
         if result['connected']:
-            print(f"✅ Connected  |  Mode: {result['server_mode']}  |  Server time: {result['server_time']}")
+            print(f"[OK] Connected  |  Mode: {result['server_mode']}  |  Server time: {result['server_time']}")
         else:
-            print(f"❌ Disconnected  |  Error: {result['error']}")
+            print(f"[FAIL] Disconnected  |  Error: {result['error']}")
         sys.exit(0 if result['connected'] else 1)
 
     if args.status:

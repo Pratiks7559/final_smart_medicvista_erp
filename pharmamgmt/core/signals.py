@@ -1,11 +1,52 @@
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.db import models
+from django.contrib.auth.signals import user_logged_in, user_logged_out
 from .models import (
     InvoicePaid, InvoiceMaster, SalesInvoicePaid, SalesInvoiceMaster,
     SupplierChallanMaster, PurchaseMaster, SalesMaster
 )
+from .retailer_models import RetailerMaster, RetailerSession
 # REMOVED: InventoryMaster, InventoryTransaction - no longer needed
+
+
+# ---------------------------------------------------------------------------
+# Retailer Online / Offline tracking
+# ---------------------------------------------------------------------------
+
+def _get_or_create_session(retailer):
+    session, _ = RetailerSession.objects.get_or_create(retailer=retailer)
+    return session
+
+
+@receiver(user_logged_in)
+def retailer_login_handler(sender, request, user, **kwargs):
+    """Mark retailer as Online when they log in."""
+    from django.utils import timezone as tz
+    try:
+        retailer = RetailerMaster.objects.get(retailer_code=user.username, is_active=True)
+        session = _get_or_create_session(retailer)
+        session.is_online = True
+        session.last_login = tz.now()
+        session.save(update_fields=['is_online', 'last_login'])
+    except RetailerMaster.DoesNotExist:
+        pass
+
+
+@receiver(user_logged_out)
+def retailer_logout_handler(sender, request, user, **kwargs):
+    """Mark retailer as Offline when they log out."""
+    if user is None:
+        return
+    try:
+        retailer = RetailerMaster.objects.get(retailer_code=user.username, is_active=True)
+        session = _get_or_create_session(retailer)
+        session.is_online = False
+        from django.utils import timezone as tz
+        session.last_logout = tz.now()
+        session.save(update_fields=['is_online', 'last_logout'])
+    except RetailerMaster.DoesNotExist:
+        pass
 
 @receiver(post_save, sender=InvoicePaid)
 def update_invoice_payment_status_on_save(sender, instance, **kwargs):

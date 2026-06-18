@@ -1,0 +1,12 @@
+{
+    "server_mode": "LOCAL",
+    "server_url": "http://127.0.0.1:8000",
+    "api_key": "RTL001_TEST_KEY",
+    "retailer_id": 1,
+    "retailer_code": "RTL001",
+    "sync_interval_seconds": 10,
+    "request_timeout_seconds": 10,
+    "max_retry_attempts": 3,
+    "log_file": "retailer_sync.log",
+    "cache_db_file": "retailer_request_cache.db"
+}

@@ -114,3 +114,25 @@
 2026-04-29 17:19:31,220 - core.combined_invoice_view - INFO - PURCHASE CREATED: 1ST AID TRANSPORE TAPE .5"", Batch: 00000000, Qty: 1.0, Free Qty: 0.0
 2026-04-29 17:19:31,231 - core.combined_invoice_view - INFO - Saved invoice: Total=1.0, RoundOff=0.0 (added)
 2026-04-29 17:19:31,231 - core.combined_invoice_view - INFO - Invoice 1234222 created successfully with 1 products
+2026-06-16 18:10:35,818 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['xpagcf1dqJTNEdlTe4bnoBBh2sNQmZufTOggFmZiFmMyovOT8ccWv1273tc9G4hK'], 'invoice_no': ['13323242'], 'invoice_date': ['2026-06-16'], 'supplierid': ['1'], 'transport_charges': ['0'], 'invoice_total': ['1.05'], 'products_data': ['[{"productid":"361","batch_no":"123","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-06-16 18:10:35,834 - core.combined_invoice_view - INFO - Products data received: [{"productid":"361","batch_no":"123","expiry":"12-2034","mrp":"1","purchase_rate":"1","quantity":"1","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-06-16 18:10:35,835 - core.combined_invoice_view - INFO - Challan flag: false
+2026-06-16 18:10:35,840 - core.combined_invoice_view - INFO - Invoice created with ID: 134999
+2026-06-16 18:10:35,844 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-06-16 18:10:35,845 - core.combined_invoice_view - INFO - Setting rates for bandage roll 6*5m 5 m"""": A=1.0, B=2.0, C=3.0
+2026-06-16 18:10:35,846 - core.combined_invoice_view - INFO - Product bandage roll 6*5m 5 m"""": Base=1.0, CGST=0.03, SGST=0.03, Total=1.06
+2026-06-16 18:10:36,157 - core.combined_invoice_view - INFO - Product bandage roll 6*5m 5 m"""" added to invoice
+2026-06-16 18:10:36,157 - core.combined_invoice_view - INFO - PURCHASE CREATED: bandage roll 6*5m 5 m"""", Batch: 123, Qty: 1.0, Free Qty: 2.0
+2026-06-16 18:10:36,173 - core.combined_invoice_view - INFO - Saved invoice: Total=1.05, RoundOff=0.0 (added)
+2026-06-16 18:10:36,174 - core.combined_invoice_view - INFO - Invoice 13323242 created successfully with 1 products
+2026-06-17 11:45:36,786 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['27K8hmUt0Zzw0eh6GxcrDkL30vPutMK45D63BbduX4qXznjlsoAC9QUdHz2kMPDA'], 'invoice_no': ['12346'], 'invoice_date': ['2026-06-17'], 'supplierid': ['1'], 'transport_charges': ['0'], 'invoice_total': ['4.20'], 'products_data': ['[{"productid":"13","batch_no":"123443","expiry":"12-2034","mrp":"3","purchase_rate":"2","quantity":"2","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-06-17 11:45:36,809 - core.combined_invoice_view - INFO - Products data received: [{"productid":"13","batch_no":"123443","expiry":"12-2034","mrp":"3","purchase_rate":"2","quantity":"2","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-06-17 11:45:36,819 - core.combined_invoice_view - INFO - Challan flag: false
+2026-06-17 11:45:36,826 - core.combined_invoice_view - INFO - Invoice created with ID: 135000
+2026-06-17 11:45:36,837 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-06-17 11:45:36,845 - core.combined_invoice_view - INFO - Setting rates for ABIXIM O TAB 10 TAB: A=1.0, B=2.0, C=3.0
+2026-06-17 11:45:36,854 - core.combined_invoice_view - INFO - Product ABIXIM O TAB 10 TAB: Base=4.0, CGST=0.1, SGST=0.1, Total=4.2
+2026-06-17 11:45:37,010 - core.combined_invoice_view - INFO - Product ABIXIM O TAB 10 TAB added to invoice
+2026-06-17 11:45:37,014 - core.combined_invoice_view - INFO - PURCHASE CREATED: ABIXIM O TAB 10 TAB, Batch: 123443, Qty: 2.0, Free Qty: 2.0
+2026-06-17 11:45:37,029 - core.combined_invoice_view - INFO - Saved invoice: Total=4.2, RoundOff=0.0 (added)
+2026-06-17 11:45:37,031 - core.combined_invoice_view - INFO - Invoice 12346 created successfully with 1 products

@@ -5,155 +5,820 @@
 
 {% block extra_css %}
 <style>
-.rrr-card {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-.rrr-title {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #4a4e69;
-    margin-bottom: 1.2rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-.rrr-form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-.rrr-form-group label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #6b7280;
-    display: block;
-    margin-bottom: 0.3rem;
-}
-.rrr-form-group input,
-.rrr-form-group select,
-.rrr-form-group textarea {
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 0.9rem;
-}
-.rrr-form-group textarea { resize: vertical; min-height: 60px; }
-.rrr-btn-row {
-    display: flex;
-    gap: 0.75rem;
-    margin-top: 0.5rem;
-}
-.btn-create {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: #fff;
-    border: none;
-    padding: 0.55rem 1.4rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-.btn-create:hover { opacity: 0.9; }
-.btn-refresh {
-    background: #f3f4f6;
-    color: #374151;
-    border: 1px solid #d1d5db;
-    padding: 0.55rem 1.2rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 0.9rem;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-}
-.btn-refresh:hover { background: #e5e7eb; color: #374151; }
-.status-badge {
-    padding: 0.2rem 0.65rem;
-    border-radius: 20px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-.status-PENDING   { background: #fef3c7; color: #92400e; }
-.status-PROCESSING{ background: #dbeafe; color: #1e40af; }
-.status-COMPLETED { background: #d1fae5; color: #065f46; }
-.status-FAILED    { background: #fee2e2; color: #991b1b; }
-.rrr-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-.rrr-table th {
-    background: #f9fafb;
-    padding: 0.6rem 0.8rem;
-    text-align: left;
-    font-weight: 600;
-    color: #6b7280;
-    border-bottom: 2px solid #e5e7eb;
-    white-space: nowrap;
-}
-.rrr-table td {
-    padding: 0.6rem 0.8rem;
-    border-bottom: 1px solid #f3f4f6;
-    color: #374151;
-}
-.rrr-table tr:hover td { background: #f9fafb; }
-.empty-row td { text-align: center; color: #9ca3af; padding: 2rem; }
+    /* ==============================================
+       1. DESIGN SYSTEM - CSS VARIABLES
+    ============================================== */
+    :root {
+        /* Gradients */
+        --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        --gradient-info: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        --gradient-dark: linear-gradient(135deg, #4a4e69 0%, #22223b 100%);
+        
+        /* Primary Colors */
+        --color-primary-50: #f5f3ff;
+        --color-primary-100: #ede9fe;
+        --color-primary-200: #ddd6fe;
+        --color-primary-300: #c4b5fd;
+        --color-primary-400: #a78bfa;
+        --color-primary-500: #8b5cf6;
+        --color-primary-600: #7c3aed;
+        --color-primary-700: #6d28d9;
+        --color-primary-800: #5b21b6;
+        --color-primary-900: #4c1d95;
+        
+        /* Gray Colors */
+        --color-gray-50: #f9fafb;
+        --color-gray-100: #f3f4f6;
+        --color-gray-200: #e5e7eb;
+        --color-gray-300: #d1d5db;
+        --color-gray-400: #9ca3af;
+        --color-gray-500: #6b7280;
+        --color-gray-600: #4b5563;
+        --color-gray-700: #374151;
+        --color-gray-800: #1f2937;
+        --color-gray-900: #111827;
+        
+        /* Status Colors */
+        --color-success: #10b981;
+        --color-success-light: #d1fae5;
+        --color-warning: #f59e0b;
+        --color-warning-light: #fef3c7;
+        --color-danger: #ef4444;
+        --color-danger-light: #fee2e2;
+        --color-info: #3b82f6;
+        --color-info-light: #dbeafe;
+        
+        /* Shadows */
+        --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+        
+        /* Border Radius */
+        --radius-sm: 0.375rem;
+        --radius-md: 0.5rem;
+        --radius-lg: 0.75rem;
+        --radius-xl: 1rem;
+        --radius-2xl: 1.5rem;
+        
+        /* Transitions */
+        --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+        
+        /* Spacing */
+        --spacing-1: 0.25rem;
+        --spacing-2: 0.5rem;
+        --spacing-3: 0.75rem;
+        --spacing-4: 1rem;
+        --spacing-5: 1.25rem;
+        --spacing-6: 1.5rem;
+        --spacing-8: 2rem;
+        --spacing-10: 2.5rem;
+        --spacing-12: 3rem;
+    }
+
+    /* ==============================================
+       2. GLOBAL STYLES
+    ============================================== */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #f3f4f6 100%);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        color: var(--color-gray-800);
+        line-height: 1.5;
+    }
+
+    /* ==============================================
+       3. MAIN CONTAINER
+    ============================================== */
+    .rrr-main-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: var(--spacing-6);
+    }
+
+    /* ==============================================
+       4. CARD COMPONENT (Enhanced)
+    ============================================== */
+    .rrr-card {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(0px);
+        border-radius: var(--radius-2xl);
+        box-shadow: var(--shadow-lg);
+        padding: var(--spacing-6);
+        margin-bottom: var(--spacing-6);
+        transition: all var(--transition-normal);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .rrr-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--gradient-primary);
+    }
+
+    .rrr-card:hover {
+        box-shadow: var(--shadow-xl);
+        transform: translateY(-2px);
+    }
+
+    /* ==============================================
+       5. TITLE COMPONENTS
+    ============================================== */
+    .rrr-title {
+        font-size: 1.5rem;
+        font-weight: 800;
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        margin-bottom: var(--spacing-5);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-3);
+        letter-spacing: -0.025em;
+    }
+
+    .rrr-title i {
+        background: none;
+        -webkit-background-clip: unset;
+        background-clip: unset;
+        color: var(--color-primary-600);
+        font-size: 1.4rem;
+    }
+
+    .rrr-title-small {
+        font-size: 1.2rem;
+        margin-bottom: var(--spacing-4);
+    }
+
+    .rrr-title-small i {
+        font-size: 1.1rem;
+    }
+
+    /* Header Actions */
+    .header-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-3);
+    }
+
+    .btn-outline-custom {
+        background: transparent;
+        border: 2px solid var(--color-gray-200);
+        color: var(--color-gray-600);
+        padding: var(--spacing-2) var(--spacing-4);
+        border-radius: var(--radius-lg);
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all var(--transition-fast);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-2);
+    }
+
+    .btn-outline-custom:hover {
+        background: var(--color-gray-50);
+        border-color: var(--color-primary-300);
+        transform: translateY(-1px);
+    }
+
+    /* ==============================================
+       6. FORM STYLES (Modern)
+    ============================================== */
+    .rrr-form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: var(--spacing-5);
+        margin-bottom: var(--spacing-5);
+    }
+
+    .rrr-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-2);
+    }
+
+    .rrr-form-group label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-gray-500);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-2);
+    }
+
+    .rrr-form-group label i {
+        color: var(--color-primary-500);
+        font-size: 0.8rem;
+    }
+
+    .rrr-form-group input[type="date"],
+    .rrr-form-group textarea {
+        width: 100%;
+        padding: var(--spacing-3) var(--spacing-4);
+        border: 2px solid var(--color-gray-200);
+        border-radius: var(--radius-lg);
+        font-size: 0.9rem;
+        transition: all var(--transition-fast);
+        background: white;
+        font-family: inherit;
+    }
+
+    .rrr-form-group input[type="date"]:focus,
+    .rrr-form-group textarea:focus {
+        outline: none;
+        border-color: var(--color-primary-500);
+        box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+    }
+
+    .rrr-form-group textarea {
+        resize: vertical;
+        min-height: 80px;
+    }
+
+    /* ==============================================
+       7. CHECKBOX PANEL (Enhanced)
+    ============================================== */
+    .checkbox-panel {
+        border: 2px solid var(--color-gray-200);
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-3);
+        max-height: 260px;
+        overflow-y: auto;
+        background: var(--color-gray-50);
+        transition: all var(--transition-fast);
+    }
+
+    .checkbox-panel:hover {
+        border-color: var(--color-primary-300);
+        background: white;
+    }
+
+    .checkbox-panel label {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-3);
+        padding: var(--spacing-2) var(--spacing-3);
+        font-size: 0.88rem;
+        color: var(--color-gray-700);
+        font-weight: 500;
+        cursor: pointer;
+        border-radius: var(--radius-md);
+        transition: all var(--transition-fast);
+    }
+
+    .checkbox-panel label:hover {
+        background: var(--color-primary-50);
+        transform: translateX(4px);
+    }
+
+    .checkbox-panel input[type="checkbox"] {
+        width: 1.1rem;
+        height: 1.1rem;
+        cursor: pointer;
+        accent-color: var(--color-primary-600);
+    }
+
+    /* Select All Row */
+    .select-all-row {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        margin-bottom: var(--spacing-3);
+        padding: var(--spacing-2) var(--spacing-3);
+        background: white;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-gray-200);
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--color-primary-700);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+
+    .select-all-row:hover {
+        background: var(--color-primary-50);
+        border-color: var(--color-primary-300);
+    }
+
+    .select-all-row input[type="checkbox"] {
+        width: 1rem;
+        height: 1rem;
+        accent-color: var(--color-primary-600);
+    }
+
+    /* ==============================================
+       8. STATUS INDICATORS (Enhanced)
+    ============================================== */
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+        transition: all var(--transition-fast);
+    }
+
+    .dot-online {
+        background: var(--color-success);
+        box-shadow: 0 0 6px var(--color-success);
+        animation: pulse-online 2s infinite;
+    }
+
+    @keyframes pulse-online {
+        0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+        50% { opacity: 0.8; transform: scale(1.1); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2); }
+    }
+
+    .dot-offline {
+        background: var(--color-danger);
+        animation: none;
+    }
+
+    .status-text-online {
+        color: var(--color-success);
+        font-size: 0.7rem;
+        font-weight: 700;
+        background: var(--color-success-light);
+        padding: 0.2rem 0.5rem;
+        border-radius: 50px;
+    }
+
+    .status-text-offline {
+        color: var(--color-danger);
+        font-size: 0.7rem;
+        font-weight: 700;
+        background: var(--color-danger-light);
+        padding: 0.2rem 0.5rem;
+        border-radius: 50px;
+    }
+
+    /* Status Badges for Table */
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        padding: 0.25rem 0.9rem;
+        border-radius: 50px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .status-PENDING {
+        background: var(--color-warning-light);
+        color: #92400e;
+        border-left: 3px solid var(--color-warning);
+    }
+
+    .status-PROCESSING {
+        background: var(--color-info-light);
+        color: #1e40af;
+        border-left: 3px solid var(--color-info);
+    }
+
+    .status-COMPLETED {
+        background: var(--color-success-light);
+        color: #065f46;
+        border-left: 3px solid var(--color-success);
+    }
+
+    .status-FAILED {
+        background: var(--color-danger-light);
+        color: #991b1b;
+        border-left: 3px solid var(--color-danger);
+    }
+
+    /* ==============================================
+       9. BUTTONS (Modern)
+    ============================================== */
+    .rrr-btn-row {
+        display: flex;
+        gap: var(--spacing-3);
+        margin-top: var(--spacing-4);
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .btn-create {
+        background: var(--gradient-primary);
+        color: white;
+        border: none;
+        padding: 0.7rem 1.8rem;
+        border-radius: var(--radius-lg);
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-2);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        filter: brightness(1.05);
+    }
+
+    .btn-create:active {
+        transform: translateY(0);
+    }
+
+    .btn-refresh {
+        background: white;
+        color: var(--color-gray-700);
+        border: 2px solid var(--color-gray-200);
+        padding: 0.7rem 1.5rem;
+        border-radius: var(--radius-lg);
+        font-weight: 700;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-2);
+    }
+
+    .btn-refresh:hover {
+        background: var(--color-gray-50);
+        border-color: var(--color-gray-300);
+        transform: translateY(-1px);
+    }
+
+    .btn-delete {
+        background: var(--color-danger-light);
+        color: #991b1b;
+        border: none;
+        padding: 0.35rem 1rem;
+        border-radius: var(--radius-md);
+        font-size: 0.75rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-2);
+    }
+
+    .btn-delete:hover {
+        background: #fecaca;
+        transform: scale(1.02);
+    }
+
+    .btn-csv-link {
+        color: #065f46;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-1);
+        padding: var(--spacing-1) var(--spacing-2);
+        border-radius: var(--radius-md);
+        transition: all var(--transition-fast);
+    }
+
+    .btn-csv-link:hover {
+        background: var(--color-success-light);
+        transform: translateX(2px);
+    }
+
+    /* ==============================================
+       10. TABLE STYLES (Modern)
+    ============================================== */
+    .table-wrapper {
+        overflow-x: auto;
+        border-radius: var(--radius-xl);
+    }
+
+    .rrr-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.85rem;
+    }
+
+    .rrr-table th {
+        background: var(--color-gray-50);
+        padding: var(--spacing-3) var(--spacing-4);
+        text-align: left;
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--color-gray-500);
+        border-bottom: 2px solid var(--color-gray-200);
+        white-space: nowrap;
+    }
+
+    .rrr-table td {
+        padding: var(--spacing-3) var(--spacing-4);
+        border-bottom: 1px solid var(--color-gray-100);
+        color: var(--color-gray-700);
+        vertical-align: middle;
+    }
+
+    .rrr-table tbody tr {
+        transition: all var(--transition-fast);
+    }
+
+    .rrr-table tbody tr:hover {
+        background: var(--color-primary-50);
+        transform: scale(1.01);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .empty-row td {
+        text-align: center;
+        padding: var(--spacing-12) !important;
+        color: var(--color-gray-400);
+        font-style: italic;
+    }
+
+    /* Last Updated Text */
+    .last-updated {
+        font-size: 0.7rem;
+        color: var(--color-gray-400);
+        margin-left: auto;
+        background: var(--color-gray-100);
+        padding: 0.3rem 0.9rem;
+        border-radius: 50px;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-2);
+    }
+
+    /* ==============================================
+       11. ANIMATIONS
+    ============================================== */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes slideInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .rrr-card {
+        animation: fadeInUp 0.4s ease-out;
+    }
+
+    .rrr-table tbody tr {
+        animation: slideInLeft 0.3s ease-out backwards;
+        animation-delay: calc(var(--animation-order, 0) * 0.05s);
+    }
+
+    /* Loading Skeleton Animation */
+    @keyframes shimmer {
+        0% { background-position: -1000px 0; }
+        100% { background-position: 1000px 0; }
+    }
+
+    /* ==============================================
+       12. SCROLLBAR STYLING
+    ============================================== */
+    .checkbox-panel::-webkit-scrollbar,
+    .table-wrapper::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .checkbox-panel::-webkit-scrollbar-track,
+    .table-wrapper::-webkit-scrollbar-track {
+        background: var(--color-gray-100);
+        border-radius: 10px;
+    }
+
+    .checkbox-panel::-webkit-scrollbar-thumb,
+    .table-wrapper::-webkit-scrollbar-thumb {
+        background: var(--color-gray-400);
+        border-radius: 10px;
+    }
+
+    .checkbox-panel::-webkit-scrollbar-thumb:hover,
+    .table-wrapper::-webkit-scrollbar-thumb:hover {
+        background: var(--color-gray-500);
+    }
+
+    /* ==============================================
+       13. RESPONSIVE DESIGN
+    ============================================== */
+    @media (max-width: 768px) {
+        .rrr-main-container {
+            padding: var(--spacing-4);
+        }
+        
+        .rrr-card {
+            padding: var(--spacing-4);
+        }
+        
+        .rrr-title {
+            font-size: 1.25rem;
+            flex-wrap: wrap;
+        }
+        
+        .header-actions {
+            margin-left: 0;
+            width: 100%;
+        }
+        
+        .rrr-form-row {
+            grid-template-columns: 1fr;
+            gap: var(--spacing-4);
+        }
+        
+        .rrr-table th,
+        .rrr-table td {
+            padding: var(--spacing-2) var(--spacing-3);
+        }
+        
+        .btn-create,
+        .btn-refresh {
+            padding: 0.5rem 1.2rem;
+            font-size: 0.8rem;
+        }
+        
+        .rrr-btn-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .last-updated {
+            margin-left: 0;
+            text-align: center;
+            justify-content: center;
+        }
+    }
+
+    /* ==============================================
+       14. PRINT STYLES
+    ============================================== */
+    @media print {
+        .rrr-card {
+            box-shadow: none;
+            border: 1px solid #ddd;
+        }
+        
+        .btn-create,
+        .btn-refresh,
+        .btn-delete,
+        .btn-csv-link,
+        .header-actions {
+            display: none;
+        }
+        
+        .status-dot {
+            print-color-adjust: exact;
+        }
+    }
+
+    /* ==============================================
+       15. UTILITY CLASSES
+    ============================================== */
+    .text-muted {
+        color: var(--color-gray-400);
+    }
+    
+    .fw-semibold {
+        font-weight: 600;
+    }
+    
+    .d-inline-flex {
+        display: inline-flex;
+    }
+    
+    .align-items-center {
+        align-items: center;
+    }
+    
+    .gap-1 { gap: var(--spacing-1); }
+    .gap-2 { gap: var(--spacing-2); }
+    .gap-3 { gap: var(--spacing-3); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div style="padding: 1.5rem;">
+<div class="rrr-main-container">
 
     <!-- Page Header -->
-    <div class="rrr-title" style="margin-bottom: 1.5rem;">
-        <i class="fas fa-store" style="color:#764ba2;"></i>
+    <div class="rrr-title" style="margin-bottom: 1.5rem; flex-wrap: wrap;">
+        <i class="fas fa-store"></i>
         Retailer Report Requests
+        <div class="header-actions">
+            <a href="{% url 'retailer_uploads_list' %}" class="btn-outline-custom">
+                <i class="fas fa-file-csv"></i> View Uploaded CSVs
+            </a>
+        </div>
     </div>
 
     <!-- Create Request Form -->
     <div class="rrr-card">
-        <div class="rrr-title" style="font-size:1.1rem;">
-            <i class="fas fa-plus-circle" style="color:#667eea;"></i> Create New Request
+        <div class="rrr-title rrr-title-small">
+            <i class="fas fa-plus-circle"></i> Create New Request
         </div>
-        <form method="post">
+        <form method="post" id="reportForm">
             {% csrf_token %}
             <div class="rrr-form-row">
+
+                <!-- Select Retailer checkboxes -->
                 <div class="rrr-form-group">
-                    <label>Retailer *</label>
-                    <select name="retailer" required>
-                        <option value="">-- Select Retailer --</option>
+                    <label><i class="fas fa-store"></i> Select Retailer *</label>
+                    <div class="select-all-row">
+                        <input type="checkbox" id="selectAllRetailers">
+                        <span><i class="fas fa-check-square"></i> Select All Retailers</span>
+                    </div>
+                    <div class="checkbox-panel" id="retailerPanel">
                         {% for r in retailers %}
-                        <option value="{{ r.retailer_id }}">{{ r.retailer_name }} ({{ r.retailer_code }})</option>
+                        <label>
+                            <input type="checkbox" name="retailer" value="{{ r.retailer_id }}"
+                                   data-retailer-id="{{ r.retailer_id }}">
+                            <span>{{ r.retailer_name }}</span>
+                            <span class="status-dot dot-offline" id="dot-{{ r.retailer_id }}" title="Offline"></span>
+                            <span class="status-text-offline" id="stxt-{{ r.retailer_id }}">Offline</span>
+                        </label>
                         {% endfor %}
-                    </select>
+                    </div>
                 </div>
+
+                <!-- Report Type checkboxes -->
                 <div class="rrr-form-group">
-                    <label>Report Type *</label>
-                    <select name="request_type" required>
-                        <option value="">-- Select Type --</option>
-                        <option value="STOCK">Stock</option>
-                        <option value="PURCHASE">Purchase</option>
-                        <option value="SALES">Sales</option>
-                    </select>
+                    <label><i class="fas fa-chart-line"></i> Report Type *</label>
+                    <div class="select-all-row">
+                        <input type="checkbox" id="selectAllTypes">
+                        <span><i class="fas fa-check-square"></i> Select All Types</span>
+                    </div>
+                    <div class="checkbox-panel">
+                        <label>
+                            <input type="checkbox" name="request_type" value="STOCK">
+                            <i class="fas fa-boxes"></i> Stock Report
+                        </label>
+                        <label>
+                            <input type="checkbox" name="request_type" value="PURCHASE">
+                            <i class="fas fa-shopping-cart"></i> Purchase Report
+                        </label>
+                        <label>
+                            <input type="checkbox" name="request_type" value="SALES">
+                            <i class="fas fa-chart-simple"></i> Sales Report
+                        </label>
+                    </div>
                 </div>
+
+                <!-- Dates -->
                 <div class="rrr-form-group">
-                    <label>From Date *</label>
+                    <label><i class="fas fa-calendar-alt"></i> From Date *</label>
                     <input type="date" name="from_date" required>
                 </div>
                 <div class="rrr-form-group">
-                    <label>To Date *</label>
+                    <label><i class="fas fa-calendar-check"></i> To Date *</label>
                     <input type="date" name="to_date" required>
                 </div>
+
                 <div class="rrr-form-group" style="grid-column: 1 / -1;">
-                    <label>Remarks</label>
-                    <textarea name="remarks" placeholder="Optional notes..."></textarea>
+                    <label><i class="fas fa-sticky-note"></i> Remarks</label>
+                    <textarea name="remarks" placeholder="Optional notes or instructions..."></textarea>
                 </div>
             </div>
+
             <div class="rrr-btn-row">
                 <button type="submit" class="btn-create">
                     <i class="fas fa-paper-plane"></i> Create Request
@@ -161,16 +826,22 @@
                 <a href="{% url 'retailer_report_requests' %}" class="btn-refresh">
                     <i class="fas fa-sync-alt"></i> Refresh
                 </a>
+                <span class="last-updated" id="lastUpdated">
+                    <i class="fas fa-clock"></i> Checking status...
+                </span>
             </div>
         </form>
     </div>
 
     <!-- Request History Table -->
     <div class="rrr-card">
-        <div class="rrr-title" style="font-size:1.1rem;">
-            <i class="fas fa-history" style="color:#667eea;"></i> Request History
+        <div class="rrr-title rrr-title-small">
+            <i class="fas fa-history"></i> Request History
+            <span style="margin-left: auto; font-size: 0.7rem; background: var(--color-gray-100); padding: 0.2rem 0.6rem; border-radius: 50px;">
+                {{ report_requests|length }} requests
+            </span>
         </div>
-        <div style="overflow-x: auto;">
+        <div class="table-wrapper">
             <table class="rrr-table">
                 <thead>
                     <tr>
@@ -182,33 +853,64 @@
                         <th>Status</th>
                         <th>Created Date</th>
                         <th>Completed Date</th>
+                        <th>CSV</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for req in report_requests %}
-                    <tr>
-                        <td>#{{ req.request_id }}</td>
+                    <tr style="--animation-order: {{ forloop.counter }}">
+                        <td><strong>#{{ req.request_id }}</strong></td>
                         <td>{{ req.retailer.retailer_name }}</td>
                         <td>{{ req.get_request_type_display }}</td>
-                        <td>{{ req.from_date }}</td>
-                        <td>{{ req.to_date }}</td>
+                        <td>{{ req.from_date|date:"d M Y" }}</td>
+                        <td>{{ req.to_date|date:"d M Y" }}</td>
                         <td>
                             <span class="status-badge status-{{ req.status }}">
+                                <i class="fas {% if req.status == 'COMPLETED' %}fa-check-circle{% elif req.status == 'PROCESSING' %}fa-spinner fa-pulse{% elif req.status == 'FAILED' %}fa-exclamation-circle{% else %}fa-clock{% endif %}"></i>
                                 {{ req.get_status_display }}
                             </span>
                         </td>
-                        <td>{{ req.created_at|date:"d-m-Y H:i" }}</td>
+                        <td>{{ req.created_at|date:"d M Y H:i" }}</td>
                         <td>
                             {% if req.completed_at %}
-                                {{ req.completed_at|date:"d-m-Y H:i" }}
+                                {{ req.completed_at|date:"d M Y H:i" }}
                             {% else %}
-                                <span style="color:#9ca3af;">—</span>
+                                <span class="text-muted">—</span>
                             {% endif %}
+                        </td>
+                        <td>
+                            {% if req.status == 'COMPLETED' %}
+                                {% with upload=req.csv_uploads.first %}
+                                {% if upload %}
+                                <a href="{% url 'retailer_upload_download' upload.id %}" class="btn-csv-link">
+                                    <i class="fas fa-download"></i> CSV
+                                </a>
+                                {% else %}
+                                <span class="text-muted">No file</span>
+                                {% endif %}
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <form method="post" action="{% url 'retailer_report_request_delete' req.request_id %}" 
+                                  onsubmit="return confirm('⚠️ Delete Request #{{ req.request_id }}? This action cannot be undone.');"
+                                  style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-delete">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </button>
+                            </form>
                         </td>
                     </tr>
                     {% empty %}
                     <tr class="empty-row">
-                        <td colspan="8">No requests found. Create your first request above.</td>
+                        <td colspan="10">
+                            <i class="fas fa-inbox" style="font-size: 2.5rem; opacity: 0.5; margin-bottom: 0.5rem; display: block;"></i>
+                            No requests found. Create your first request above.
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -219,3 +921,123 @@
 </div>
 {% endblock %}
 
+{% block extra_js %}
+<script>
+    (function() {
+        'use strict';
+
+        // DOM Elements
+        const selectAllRetailers = document.getElementById('selectAllRetailers');
+        const selectAllTypes = document.getElementById('selectAllTypes');
+        const reportForm = document.getElementById('reportForm');
+        const lastUpdatedSpan = document.getElementById('lastUpdated');
+
+        // ----- Select All — Retailers -----
+        if (selectAllRetailers) {
+            selectAllRetailers.addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('#retailerPanel input[type="checkbox"]');
+                checkboxes.forEach(cb => cb.checked = this.checked);
+            });
+        }
+
+        // ----- Select All — Report Types -----
+        if (selectAllTypes) {
+            selectAllTypes.addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('input[name="request_type"]');
+                checkboxes.forEach(cb => cb.checked = this.checked);
+            });
+        }
+
+        // ----- Form validation: at least one retailer + one type -----
+        if (reportForm) {
+            reportForm.addEventListener('submit', function(e) {
+                const retailers = document.querySelectorAll('input[name="retailer"]:checked');
+                const types = document.querySelectorAll('input[name="request_type"]:checked');
+                const fromDate = document.querySelector('input[name="from_date"]').value;
+                const toDate = document.querySelector('input[name="to_date"]').value;
+                
+                if (!retailers.length) {
+                    e.preventDefault();
+                    alert('❌ Please select at least one retailer.');
+                    return false;
+                }
+                
+                if (!types.length) {
+                    e.preventDefault();
+                    alert('❌ Please select at least one report type.');
+                    return false;
+                }
+                
+                if (!fromDate || !toDate) {
+                    e.preventDefault();
+                    alert('❌ Please select both From Date and To Date.');
+                    return false;
+                }
+                
+                if (new Date(fromDate) > new Date(toDate)) {
+                    e.preventDefault();
+                    alert('❌ From Date cannot be later than To Date.');
+                    return false;
+                }
+            });
+        }
+
+        // ----- Real-time status polling -----
+        function updateRetailerStatus() {
+            const statusUrl = '{% url "api_retailer_status" %}';
+            
+            fetch(statusUrl, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network response error');
+                return response.json();
+            })
+            .then(data => {
+                if (data.retailers && Array.isArray(data.retailers)) {
+                    data.retailers.forEach(retailer => {
+                        const dot = document.getElementById('dot-' + retailer.retailerId);
+                        const stxt = document.getElementById('stxt-' + retailer.retailerId);
+                        if (dot && stxt) {
+                            const isOnline = retailer.status === 'Online';
+                            dot.className = 'status-dot ' + (isOnline ? 'dot-online' : 'dot-offline');
+                            dot.title = retailer.status;
+                            stxt.textContent = retailer.status;
+                            stxt.className = isOnline ? 'status-text-online' : 'status-text-offline';
+                        }
+                    });
+                }
+                
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit' 
+                });
+                if (lastUpdatedSpan) {
+                    lastUpdatedSpan.innerHTML = `<i class="fas fa-clock"></i> Status updated: ${timeString}`;
+                }
+            })
+            .catch(error => {
+                console.warn('Status polling error:', error);
+                if (lastUpdatedSpan) {
+                    lastUpdatedSpan.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Status check failed`;
+                }
+            });
+        }
+
+        // Initialize polling
+        updateRetailerStatus();
+        const pollingInterval = setInterval(updateRetailerStatus, 15000); // refresh every 15s
+        
+        // Cleanup interval on page unload (optional but good practice)
+        window.addEventListener('beforeunload', function() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+            }
+        });
+    })();
+</script>
+{% endblock %}
