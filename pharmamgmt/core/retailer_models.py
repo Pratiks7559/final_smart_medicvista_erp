@@ -35,27 +35,30 @@ class RetailerMaster(models.Model):
 
 class RetailerReportRequest(models.Model):
     REPORT_TYPE_CHOICES = [
-        ('STOCK', 'Stock'),
+        ('STOCK',    'Stock'),
         ('PURCHASE', 'Purchase'),
-        ('SALES', 'Sales'),
+        ('SALES',    'Sales'),
+        ('RETURN',   'Return'),
     ]
     STATUS_CHOICES = [
-        ('PENDING', 'Pending'),
+        ('PENDING',    'Pending'),
         ('PROCESSING', 'Processing'),
-        ('COMPLETED', 'Completed'),
-        ('FAILED', 'Failed'),
+        ('COMPLETED',  'Completed'),
+        ('FAILED',     'Failed'),
     ]
 
-    request_id = models.AutoField(primary_key=True)
-    retailer = models.ForeignKey(RetailerMaster, on_delete=models.CASCADE)
-    request_type = models.CharField(max_length=10, choices=REPORT_TYPE_CHOICES)
-    from_date = models.DateField()
-    to_date = models.DateField()
-    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='PENDING')
-    created_by = models.CharField(max_length=150)
-    created_at = models.DateTimeField(default=timezone.now)
-    completed_at = models.DateTimeField(null=True, blank=True)
-    remarks = models.TextField(blank=True, default='')
+    request_id    = models.AutoField(primary_key=True)
+    retailer      = models.ForeignKey(RetailerMaster, on_delete=models.CASCADE)
+    request_type  = models.CharField(max_length=10, choices=REPORT_TYPE_CHOICES)
+    from_date     = models.DateField()
+    to_date       = models.DateField()
+    status        = models.CharField(max_length=15, choices=STATUS_CHOICES, default='PENDING')
+    created_by    = models.CharField(max_length=150)
+    created_at    = models.DateTimeField(default=timezone.now)
+    completed_at  = models.DateTimeField(null=True, blank=True)
+    remarks       = models.TextField(blank=True, default='')
+    error_message = models.TextField(blank=True, default='')
+    product_ids   = models.TextField(blank=True, default='')  # comma-separated product IDs, empty = all products
 
     class Meta:
         ordering = ['-created_at']
@@ -66,20 +69,22 @@ class RetailerReportRequest(models.Model):
 
 class RetailerCSVUpload(models.Model):
     REPORT_TYPE_CHOICES = [
-        ('STOCK', 'Stock'),
+        ('STOCK',    'Stock'),
         ('PURCHASE', 'Purchase'),
-        ('SALES', 'Sales'),
+        ('SALES',    'Sales'),
+        ('RETURN',   'Return'),
     ]
 
-    request    = models.ForeignKey(RetailerReportRequest, on_delete=models.CASCADE, related_name='csv_uploads')
-    retailer   = models.ForeignKey(RetailerMaster, on_delete=models.CASCADE, related_name='csv_uploads')
-    csv_file   = models.FileField(upload_to='retailer_csv_uploads/%Y/%m/')
-    file_name  = models.CharField(max_length=255)
+    request      = models.ForeignKey(RetailerReportRequest, on_delete=models.CASCADE, related_name='csv_uploads')
+    retailer     = models.ForeignKey(RetailerMaster, on_delete=models.CASCADE, related_name='csv_uploads')
+    csv_file     = models.FileField(upload_to='retailer_csv_uploads/%Y/%m/')
+    file_name    = models.CharField(max_length=255)
     file_size_kb = models.FloatField(default=0)
     request_type = models.CharField(max_length=10, choices=REPORT_TYPE_CHOICES)
     uploaded_at  = models.DateTimeField(auto_now_add=True)
     row_count    = models.IntegerField(default=0)
     preview_data = models.JSONField(null=True, blank=True)
+    generated_by = models.CharField(max_length=100, blank=True, default='')  # retailer_code
 
     class Meta:
         ordering = ['-uploaded_at']

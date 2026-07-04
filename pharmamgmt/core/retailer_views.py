@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import logging
+import threading
 import zipfile
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -42,19 +43,27 @@ def retailer_report_requests(request):
             messages.error(request, 'Select at least one retailer, one report type, and both dates.')
         else:
             created_count = 0
+            # product_ids is a comma-separated string of selected product IDs (optional)
+            product_ids_raw = request.POST.get('product_ids', '').strip()
             for retailer_id in retailer_ids:
                 try:
                     retailer = RetailerMaster.objects.get(retailer_id=retailer_id, is_active=True)
                     for rtype in request_types:
-                        RetailerReportRequest.objects.create(
+                        report_request = RetailerReportRequest.objects.create(
                             retailer=retailer,
                             request_type=rtype.upper(),
                             from_date=from_date,
                             to_date=to_date,
                             remarks=remarks,
                             created_by=request.user.username,
+                            product_ids=product_ids_raw,
                         )
                         created_count += 1
+                        
+                        # DO NOT auto-generate CSV here - let retailer generate from their own database
+                        # Each retailer has their own data in their own medicvista_retailer database
+                        # The request will stay PENDING until the retailer's sync picks it up and generates the CSV
+                        
                 except RetailerMaster.DoesNotExist:
                     messages.error(request, f'Retailer ID {retailer_id} not found.')
             if created_count:
@@ -65,6 +74,124 @@ def retailer_report_requests(request):
         'retailers': retailers,
         'report_requests': requests_qs,
     })
+
+
+@require_http_methods(['GET'])
+def api_retailer_products(request):
+    """
+    Returns distinct product names from the retailer's own medicvista_retailer
+    database via a direct MySQL connection using the retailer's DB credentials.
+    Called by the ERP form via AJAX when retailer + report_type changes.
+    URL: /api/retailer/products/?retailer_id=2&report_type=SALES
+    """
+    import configparser
+    import pymysql
+
+    retailer_id  = request.GET.get('retailer_id', '').strip()
+    report_type  = request.GET.get('report_type', 'STOCK').strip().upper()
+
+    if not retailer_id or not retailer_id.isdigit():
+        return JsonResponse({'products': [], 'error': 'retailer_id required'}, status=400)
+
+    retailer_id = int(retailer_id)
+
+    # Retailer DB credentials — read from the retailer app's config.ini
+    # Each retailer shares the same medicvista_retailer database on the same host
+    import os
+    retailer_config_path = os.path.join(
+        os.path.dirname(__file__), '..', '..', '..', '..',
+        'MEDICVISTA_RETAILER', 'Medicvist_retailer', 'config.ini'
+    )
+    retailer_config_path = os.path.normpath(retailer_config_path)
+
+    db_host = 'localhost'
+    db_port = 3306
+    db_name = 'medicvista_retailer'
+    db_user = 'root'
+    db_pass = 'Pratik@123'
+
+    if os.path.exists(retailer_config_path):
+        parser = configparser.ConfigParser()
+        parser.read(retailer_config_path)
+        db_host = parser.get('database', 'host', fallback=db_host)
+        db_port = parser.getint('database', 'port', fallback=db_port)
+        db_name = parser.get('database', 'name', fallback=db_name)
+        db_user = parser.get('database', 'user', fallback=db_user)
+        db_pass = parser.get('database', 'password', fallback=db_pass)
+
+    # Table and name column per report type
+    _TABLE_MAP = {
+        'SALES':    ('core_salesmaster',      'product_name',        'productid_id'),
+        'PURCHASE': ('core_purchasemaster',   'product_name',        'productid_id'),
+        'STOCK':    ('core_productmaster',    'product_name',        'productid'),
+        'RETURN':   ('core_returnsalesmaster', 'return_product_name', 'return_productid_id'),
+    }
+    table_info = _TABLE_MAP.get(report_type, _TABLE_MAP['STOCK'])
+    table, name_col, id_col = table_info
+
+    try:
+        conn = pymysql.connect(
+            host=db_host, port=db_port, user=db_user,
+            password=db_pass, database=db_name,
+            charset='utf8mb4', connect_timeout=5,
+            cursorclass=pymysql.cursors.DictCursor,
+        )
+        with conn.cursor() as cur:
+            if report_type == 'STOCK':
+                cur.execute(
+                    """
+                    SELECT productid AS product_id, product_name
+                    FROM core_productmaster
+                    WHERE retailer_id = %s
+                    ORDER BY product_name
+                    LIMIT 1000
+                    """,
+                    (retailer_id,)
+                )
+                rows = cur.fetchall()
+            else:
+                cur.execute(
+                    f"""
+                    SELECT DISTINCT {id_col} AS product_id, {name_col} AS product_name
+                    FROM `{table}`
+                    WHERE retailer_id = %s
+                    ORDER BY {name_col}
+                    LIMIT 1000
+                    """,
+                    (retailer_id,)
+                )
+                rows = cur.fetchall()
+                if not rows:
+                    cur.execute(
+                        """
+                        SELECT productid AS product_id, product_name
+                        FROM core_productmaster
+                        WHERE retailer_id = %s
+                        ORDER BY product_name
+                        LIMIT 1000
+                        """,
+                        (retailer_id,)
+                    )
+                    rows = cur.fetchall()
+        conn.close()
+
+        products = [
+            {
+                'id':   r['product_id'],
+                'name': r.get('product_name', ''),
+            }
+            for r in rows
+        ]
+        logger.info(
+            "api_retailer_products: retailer_id=%s type=%s count=%d",
+            retailer_id, report_type, len(products)
+        )
+        return JsonResponse({'products': products})
+
+    except Exception as e:
+        logger.error("api_retailer_products error: retailer_id=%s type=%s err=%s",
+                     retailer_id, report_type, e)
+        return JsonResponse({'products': [], 'error': str(e)}, status=500)
 
 
 @require_http_methods(['GET'])
@@ -163,18 +290,20 @@ def api_pending_requests(request):
     pending = RetailerReportRequest.objects.filter(
         retailer=retailer, status='PENDING'
     ).values(
-        'request_id', 'request_type', 'from_date', 'to_date', 'remarks', 'created_at'
+        'request_id', 'request_type', 'from_date', 'to_date', 'remarks', 'product_ids', 'created_at'
     )
 
     data = []
     for r in pending:
         data.append({
-            'request_id': r['request_id'],
+            'request_id':   r['request_id'],
+            'retailer_id':  retailer.retailer_id,
             'request_type': r['request_type'],
-            'from_date': str(r['from_date']),
-            'to_date': str(r['to_date']),
-            'remarks': r['remarks'],
-            'created_at': r['created_at'].strftime('%Y-%m-%d %H:%M:%S') if r['created_at'] else None,
+            'from_date':    str(r['from_date']),
+            'to_date':      str(r['to_date']),
+            'remarks':      r['remarks'],
+            'product_ids':  r['product_ids'],
+            'created_at':   r['created_at'].strftime('%Y-%m-%d %H:%M:%S') if r['created_at'] else None,
         })
 
     return JsonResponse({'requests': data})
@@ -268,11 +397,9 @@ def api_update_status(request):
 @require_http_methods(['GET'])
 def api_request_data(request, request_id):
     """
-    Returns structured report data for a specific request.
-    The retailer calls this after receiving a pending request,
-    generates PDF/Excel locally from the JSON, then calls update-status.
-
-    Data source: wholesaler MySQL (this server) — retailer never touches it.
+    Returns request metadata only — NO business data.
+    The retailer uses from_date/to_date/request_type to query its OWN local database
+    and generate the report locally. The ERP never sends sales/purchase/stock data.
     """
     retailer = _authenticate_retailer(request)
     if not retailer:
@@ -285,26 +412,24 @@ def api_request_data(request, request_id):
     except RetailerReportRequest.DoesNotExist:
         return JsonResponse({'error': 'Request not found'}, status=404)
 
-    from_date = report_request.from_date
-    to_date = report_request.to_date
-    rtype = report_request.request_type
-
-    if rtype == 'SALES':
-        data = _get_sales_data(from_date, to_date)
-    elif rtype == 'PURCHASE':
-        data = _get_purchase_data(from_date, to_date)
-    elif rtype == 'STOCK':
-        data = _get_stock_data()
-    else:
-        return JsonResponse({'error': f'Unknown report type: {rtype}'}, status=400)
+    logger.info(
+        "api_request_data: retailer=%s (id=%s) request_id=%s type=%s dates=%s to %s product_ids=%s",
+        retailer.retailer_name, retailer.retailer_id,
+        request_id, report_request.request_type,
+        report_request.from_date, report_request.to_date,
+        repr(report_request.product_ids),
+    )
 
     return JsonResponse({
-        'request_id': report_request.request_id,
-        'request_type': rtype,
-        'from_date': str(from_date),
-        'to_date': str(to_date),
+        'request_id':   report_request.request_id,
+        'retailer_id':  retailer.retailer_id,
+        'request_type': report_request.request_type,
+        'from_date':    str(report_request.from_date),
+        'to_date':      str(report_request.to_date),
+        'remarks':      report_request.remarks,
+        'product_ids':  report_request.product_ids,
         'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        'data': data,
+        'data':         [],   # Always empty — retailer queries its own DB
     })
 
 
@@ -413,23 +538,46 @@ def _get_stock_data() -> list:
 # CSV Upload API — POST /api/retailer/upload-csv/
 # ---------------------------------------------------------------------------
 
+# Batch-level column headers used in the grouped STOCK CSV layout
+_STOCK_BATCH_COLS = {
+    'Receive Date', 'Batch No.', 'Expiry Date', 'MRP', 'Purchase Rate',
+    'Bought Qty', 'Free Qty', 'Sold Qty', 'Available Stock',
+    'Supplier Name', 'A/C Date',
+}
+
+
 def _parse_csv(file_obj):
     """
     Parse uploaded CSV (utf-8-sig to strip BOM).
     Returns (row_count, preview_rows_list_of_dicts)
-    Looks for a 'Total Records:' line to get row_count.
-    Falls back to counting data rows.
+
+    Handles two layouts:
+    1. Standard flat CSV  — first non-blank/non-meta row = headers, rest = data.
+    2. Grouped STOCK CSV  — product info sections + per-product batch tables.
+       Detected when a header row matches _STOCK_BATCH_COLS.
+       preview_data rows include a synthetic 'Product Name' column from the
+       nearest preceding product-info block.
     """
     content = file_obj.read().decode('utf-8-sig', errors='replace')
     reader  = csv.reader(io.StringIO(content))
-    rows    = list(reader)
+    all_rows = list(reader)
 
-    row_count    = 0
-    headers      = []
-    data_rows    = []
-    found_total  = False
+    # ── detect grouped STOCK layout ──────────────────────────────────────────
+    is_stock_grouped = any(
+        row and set(c.strip() for c in row) >= _STOCK_BATCH_COLS
+        for row in all_rows
+    )
 
-    for row in rows:
+    if is_stock_grouped:
+        return _parse_stock_grouped_csv(all_rows)
+
+    # ── standard flat layout ─────────────────────────────────────────────────
+    row_count   = 0
+    headers     = []
+    data_rows   = []
+    found_total = False
+
+    for row in all_rows:
         if not row:
             continue
         joined = ','.join(str(c) for c in row)
@@ -458,9 +606,64 @@ def _parse_csv(file_obj):
     return row_count, preview
 
 
+def _parse_stock_grouped_csv(all_rows: list):
+    """
+    Parse the product-grouped STOCK CSV layout.
+    Returns (batch_row_count, preview_list_of_dicts).
+    Each preview dict has 'Product Name' prepended for context.
+    """
+    batch_cols   = []
+    preview      = []
+    batch_count  = 0
+    current_prod = {}
+
+    for row in all_rows:
+        if not row or not any(c.strip() for c in row):
+            continue
+
+        first = row[0].strip()
+
+        # Product info labels
+        if first == 'Product Name:':
+            current_prod['Product Name'] = row[1].strip() if len(row) > 1 else ''
+            continue
+        if first == 'Product Company:':
+            current_prod['Product Company'] = row[1].strip() if len(row) > 1 else ''
+            continue
+        if first == 'Packing:':
+            current_prod['Packing'] = row[1].strip() if len(row) > 1 else ''
+            continue
+        if first == 'HSN Code:':
+            current_prod['HSN Code'] = row[1].strip() if len(row) > 1 else ''
+            continue
+
+        # Batch column header row
+        if set(c.strip() for c in row) >= _STOCK_BATCH_COLS:
+            batch_cols = [c.strip() for c in row]
+            continue
+
+        # Skip report-level header / summary lines
+        if not batch_cols or first.startswith('STOCK Report') or first.startswith('Generated') or first.startswith('Total'):
+            continue
+
+        # Batch data row
+        if batch_cols:
+            batch_count += 1
+            row_dict = {batch_cols[i]: row[i].strip() if i < len(row) else '' for i in range(len(batch_cols))}
+            row_dict.update(current_prod)   # add product context
+            if len(preview) < 50:
+                preview.append(row_dict)
+
+    return batch_count, preview
+
+
 @csrf_exempt
 @require_http_methods(['POST'])
 def api_upload_csv(request):
+    """
+    Retailer POSTs a generated CSV here.
+    Validates ownership, saves file, marks request COMPLETED.
+    """
     retailer = _authenticate_retailer(request)
     if not retailer:
         return JsonResponse({'ok': False, 'error': 'Unauthorized'}, status=401)
@@ -468,30 +671,36 @@ def api_upload_csv(request):
     request_id   = request.POST.get('request_id')
     request_type = request.POST.get('request_type', '').upper()
     csv_file     = request.FILES.get('csv_file')
+    generated_by = request.POST.get('generated_by', retailer.retailer_code)
 
     if not request_id or not request_type or not csv_file:
-        return JsonResponse({'ok': False, 'error': 'request_id, request_type and csv_file are required.'}, status=400)
+        return JsonResponse(
+            {'ok': False, 'error': 'request_id, request_type and csv_file are required.'},
+            status=400,
+        )
 
-    # Validate extension
     if not csv_file.name.lower().endswith('.csv'):
         return JsonResponse({'ok': False, 'error': 'Only .csv files are accepted.'}, status=400)
 
-    # Validate size (max 10 MB)
     if csv_file.size > 10 * 1024 * 1024:
         return JsonResponse({'ok': False, 'error': 'File size exceeds 10 MB limit.'}, status=400)
 
-    # Validate request belongs to this retailer
+    # Ownership check — request must belong to the authenticated retailer
     try:
         report_request = RetailerReportRequest.objects.get(
             request_id=request_id, retailer=retailer
         )
     except RetailerReportRequest.DoesNotExist:
+        logger.warning(
+            "api_upload_csv: request_id=%s not found for retailer=%s",
+            request_id, retailer.retailer_code,
+        )
         return JsonResponse(
             {'ok': False, 'error': f'Request ID {request_id} not found or does not belong to this retailer.'},
             status=404,
         )
 
-    # Parse CSV
+    # Parse CSV for row count + preview
     try:
         row_count, preview_data = _parse_csv(csv_file)
         csv_file.seek(0)
@@ -501,7 +710,7 @@ def api_upload_csv(request):
 
     file_size_kb = round(csv_file.size / 1024, 2)
 
-    # Idempotent — update if exists, create if not
+    # Idempotent upsert
     upload, created = RetailerCSVUpload.objects.update_or_create(
         request=report_request,
         defaults={
@@ -512,26 +721,72 @@ def api_upload_csv(request):
             'request_type': request_type,
             'row_count':    row_count,
             'preview_data': preview_data,
-        }
+            'generated_by': generated_by,
+        },
     )
 
-    # Mark request COMPLETED
-    report_request.status       = 'COMPLETED'
-    report_request.completed_at = datetime.now()
-    report_request.save(update_fields=['status', 'completed_at'])
+    # Mark COMPLETED
+    report_request.status        = 'COMPLETED'
+    report_request.completed_at  = datetime.now()
+    report_request.error_message = ''
+    report_request.save(update_fields=['status', 'completed_at', 'error_message'])
 
     action = 'created' if created else 'updated'
-    logger.info("CSV upload %s: retailer=%s request_id=%s file=%s rows=%d",
-                action, retailer.retailer_code, request_id, csv_file.name, row_count)
+    logger.info(
+        "CSV upload %s: retailer=%s request_id=%s type=%s file=%s rows=%d size=%.1fKB",
+        action, retailer.retailer_code, request_id, request_type,
+        csv_file.name, row_count, file_size_kb,
+    )
 
     file_url = upload.csv_file.url if upload.csv_file else ''
     return JsonResponse({
-        'ok':          True,
-        'upload_id':   upload.id,
-        'file_url':    file_url,
-        'row_count':   row_count,
+        'ok':           True,
+        'upload_id':    upload.id,
+        'file_url':     file_url,
+        'row_count':    row_count,
         'file_size_kb': file_size_kb,
     })
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def api_report_failed(request):
+    """
+    Retailer calls this when report generation fails.
+    Marks the request FAILED and stores the error message.
+    """
+    retailer = _authenticate_retailer(request)
+    if not retailer:
+        return JsonResponse({'ok': False, 'error': 'Unauthorized'}, status=401)
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    request_id    = body.get('request_id')
+    error_message = body.get('error_message', 'Unknown error')[:1000]
+
+    if not request_id:
+        return JsonResponse({'ok': False, 'error': 'request_id is required'}, status=400)
+
+    try:
+        report_request = RetailerReportRequest.objects.get(
+            request_id=request_id, retailer=retailer
+        )
+    except RetailerReportRequest.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Request not found'}, status=404)
+
+    report_request.status        = 'FAILED'
+    report_request.completed_at  = datetime.now()
+    report_request.error_message = error_message
+    report_request.save(update_fields=['status', 'completed_at', 'error_message'])
+
+    logger.warning(
+        "Report FAILED: retailer=%s request_id=%s error=%s",
+        retailer.retailer_code, request_id, error_message,
+    )
+    return JsonResponse({'ok': True, 'request_id': request_id, 'status': 'FAILED'})
 
 
 # ---------------------------------------------------------------------------

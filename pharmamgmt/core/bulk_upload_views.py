@@ -84,7 +84,7 @@ def process_csv_file(file):
                 'product_company': row['product_company'].strip(),
                 'product_packing': row['product_packing'].strip(),
                 'product_category': row['product_category'].strip(),
-                'product_barcode': row.get('product_barcode', '').strip()
+                'product_barcode': row.get('product_barcode', '').strip() or None
             })
     
     return products
@@ -101,12 +101,13 @@ def process_excel_file(file):
     
     for row in ws.iter_rows(min_row=2, values_only=True):
         if row[0]:  # Skip empty rows
+            barcode_val = row[4] if len(row) > 4 and row[4] else None
             products.append({
                 'product_name': str(row[0]).strip(),
                 'product_company': str(row[1]).strip(),
                 'product_packing': str(row[2]).strip(),
                 'product_category': str(row[3]).strip(),
-                'product_barcode': str(row[4] if len(row) > 4 and row[4] else '').strip()
+                'product_barcode': str(barcode_val).strip() if barcode_val else None
             })
     
     return products

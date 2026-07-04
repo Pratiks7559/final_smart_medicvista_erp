@@ -1,7 +1,7 @@
 {
     "server_mode": "LOCAL",
     "server_url": "http://127.0.0.1:8000",
-    "api_key": "RTL001_TEST_KEY",
+    "api_key": "qAbkplyh1aezY0FAUkYv0rVMIshlIl9CVsR35eqzwGo",
     "retailer_id": 1,
     "retailer_code": "RTL001",
     "sync_interval_seconds": 10,

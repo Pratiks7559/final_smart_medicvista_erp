@@ -495,6 +495,7 @@ def bulk_upload_products(request):
             for row in reader:
                 try:
                     # Create or update product
+                    barcode = row.get('product_barcode', '').strip() or None
                     product, created = ProductMaster.objects.update_or_create(
                         product_name=row.get('product_name', '').strip(),
                         product_company=row.get('product_company', '').strip(),
@@ -504,6 +505,7 @@ def bulk_upload_products(request):
                             'product_category': row.get('product_category', '').strip(),
                             'product_hsn': row.get('product_hsn', '').strip(),
                             'product_hsn_percent': row.get('product_hsn_percent', '').strip(),
+                            'product_barcode': barcode,
                         }
                     )
                     success_count += 1

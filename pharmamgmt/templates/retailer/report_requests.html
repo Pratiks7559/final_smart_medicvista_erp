@@ -787,7 +787,7 @@
                         <input type="checkbox" id="selectAllTypes">
                         <span><i class="fas fa-check-square"></i> Select All Types</span>
                     </div>
-                    <div class="checkbox-panel">
+                    <div class="checkbox-panel" id="reportTypePanel">
                         <label>
                             <input type="checkbox" name="request_type" value="STOCK">
                             <i class="fas fa-boxes"></i> Stock Report
@@ -802,6 +802,25 @@
                         </label>
                     </div>
                 </div>
+
+                <!-- Product Filter (loads via AJAX after retailer + type selected) -->
+                <div class="rrr-form-group" id="productFilterGroup" style="display:none;">
+                    <label><i class="fas fa-pills"></i> Filter Products <span style="font-weight:400;color:var(--color-gray-400);">(optional — leave empty for all)</span></label>
+                    <input type="text" id="productSearch" placeholder="Search products..." autocomplete="off"
+                           style="padding:0.5rem 0.75rem;border:2px solid var(--color-gray-200);border-radius:var(--radius-lg);font-size:0.85rem;margin-bottom:0.4rem;width:100%;">
+                    <div class="select-all-row" id="selectAllProductsRow">
+                        <input type="checkbox" id="selectAllProducts">
+                        <span><i class="fas fa-check-square"></i> Select All Products</span>
+                        <span id="productCountBadge" style="margin-left:auto;font-size:0.7rem;color:var(--color-gray-400);"></span>
+                    </div>
+                    <div class="checkbox-panel" id="productPanel" style="max-height:220px;">
+                        <div style="text-align:center;padding:1rem;color:var(--color-gray-400);font-size:0.82rem;">
+                            <i class="fas fa-info-circle"></i> Select a retailer and report type first
+                        </div>
+                    </div>
+                </div>
+                <!-- product_ids hidden input is OUTSIDE productFilterGroup so it always submits -->
+                <input type="hidden" name="product_ids" id="productIdsInput" value="">
 
                 <!-- Dates -->
                 <div class="rrr-form-group">
@@ -851,14 +870,18 @@
                         <th>From Date</th>
                         <th>To Date</th>
                         <th>Status</th>
-                        <th>Created Date</th>
-                        <th>Completed Date</th>
-                        <th>CSV</th>
+                        <th>Created</th>
+                        <th>Generated At</th>
+                        <th>Uploaded At</th>
+                        <th>CSV File</th>
+                        <th>Rows</th>
+                        <th>Size</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for req in report_requests %}
+                    {% with upload=req.csv_uploads.first %}
                     <tr style="--animation-order: {{ forloop.counter }}">
                         <td><strong>#{{ req.request_id }}</strong></td>
                         <td>{{ req.retailer.retailer_name }}</td>
@@ -866,49 +889,53 @@
                         <td>{{ req.from_date|date:"d M Y" }}</td>
                         <td>{{ req.to_date|date:"d M Y" }}</td>
                         <td>
-                            <span class="status-badge status-{{ req.status }}">
+                            <span class="status-badge status-{{ req.status }}"
+                                  {% if req.status == 'FAILED' and req.error_message %}title="{{ req.error_message }}"{% endif %}>
                                 <i class="fas {% if req.status == 'COMPLETED' %}fa-check-circle{% elif req.status == 'PROCESSING' %}fa-spinner fa-pulse{% elif req.status == 'FAILED' %}fa-exclamation-circle{% else %}fa-clock{% endif %}"></i>
                                 {{ req.get_status_display }}
                             </span>
+                            {% if req.status == 'FAILED' and req.error_message %}
+                            <div style="font-size:0.68rem;color:#991b1b;margin-top:2px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ req.error_message }}">{{ req.error_message|truncatechars:55 }}</div>
+                            {% endif %}
                         </td>
                         <td>{{ req.created_at|date:"d M Y H:i" }}</td>
                         <td>
-                            {% if req.completed_at %}
-                                {{ req.completed_at|date:"d M Y H:i" }}
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
+                            {% if upload %}{{ upload.uploaded_at|date:"d M Y H:i" }}
+                            {% elif req.completed_at %}{{ req.completed_at|date:"d M Y H:i" }}
+                            {% else %}<span class="text-muted">—</span>{% endif %}
                         </td>
                         <td>
-                            {% if req.status == 'COMPLETED' %}
-                                {% with upload=req.csv_uploads.first %}
-                                {% if upload %}
-                                <a href="{% url 'retailer_upload_download' upload.id %}" class="btn-csv-link">
-                                    <i class="fas fa-download"></i> CSV
+                            {% if upload %}{{ upload.uploaded_at|date:"d M Y H:i" }}
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if upload %}
+                            <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+                                <a href="{% url 'retailer_upload_download' upload.id %}" class="btn-csv-link" title="{{ upload.file_name }}">
+                                    <i class="fas fa-download"></i> {{ upload.file_name|truncatechars:26 }}
                                 </a>
-                                {% else %}
-                                <span class="text-muted">No file</span>
-                                {% endif %}
-                                {% endwith %}
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
+                                <a href="{% url 'retailer_upload_preview' upload.id %}" class="btn-csv-link" style="color:#1e40af;" title="Preview">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </div>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
                         </td>
+                        <td style="font-size:0.78rem;font-weight:600;">{% if upload %}{{ upload.row_count }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                        <td style="font-size:0.78rem;">{% if upload %}{{ upload.file_size_kb }} KB{% else %}<span class="text-muted">—</span>{% endif %}</td>
                         <td>
-                            <form method="post" action="{% url 'retailer_report_request_delete' req.request_id %}" 
-                                  onsubmit="return confirm('⚠️ Delete Request #{{ req.request_id }}? This action cannot be undone.');"
-                                  style="display: inline;">
+                            <form method="post" action="{% url 'retailer_report_request_delete' req.request_id %}"
+                                  onsubmit="return confirm('Delete Request #{{ req.request_id }}?');"
+                                  style="display:inline;">
                                 {% csrf_token %}
-                                <button type="submit" class="btn-delete">
-                                    <i class="fas fa-trash-alt"></i> Delete
-                                </button>
+                                <button type="submit" class="btn-delete"><i class="fas fa-trash-alt"></i> Delete</button>
                             </form>
                         </td>
                     </tr>
+                    {% endwith %}
                     {% empty %}
                     <tr class="empty-row">
-                        <td colspan="10">
-                            <i class="fas fa-inbox" style="font-size: 2.5rem; opacity: 0.5; margin-bottom: 0.5rem; display: block;"></i>
+                        <td colspan="13">
+                            <i class="fas fa-inbox" style="font-size:2.5rem;opacity:0.5;margin-bottom:0.5rem;display:block;"></i>
                             No requests found. Create your first request above.
                         </td>
                     </tr>
@@ -979,6 +1006,121 @@
                     alert('❌ From Date cannot be later than To Date.');
                     return false;
                 }
+
+                // Always sync product_ids from checked boxes just before submit
+                updateProductIdsInput();
+            });
+        }
+
+        // ----- Product Filter — AJAX load -----
+        const productFilterGroup  = document.getElementById('productFilterGroup');
+        const productPanel        = document.getElementById('productPanel');
+        const productSearch       = document.getElementById('productSearch');
+        const selectAllProducts   = document.getElementById('selectAllProducts');
+        const productIdsInput     = document.getElementById('productIdsInput');
+        const productCountBadge   = document.getElementById('productCountBadge');
+        let allProductCheckboxes  = [];
+
+        function getSelectedRetailerId() {
+            // Use first checked retailer for product lookup
+            const checked = document.querySelector('#retailerPanel input[type="checkbox"]:checked');
+            return checked ? checked.value : null;
+        }
+
+        function getSelectedReportType() {
+            // Use first checked report type for product lookup
+            const checked = document.querySelector('input[name="request_type"]:checked');
+            return checked ? checked.value : null;
+        }
+
+        function updateProductIdsInput() {
+            const checked = productPanel.querySelectorAll('input[type="checkbox"]:checked');
+            productIdsInput.value = Array.from(checked).map(cb => cb.value).join(',');
+        }
+
+        function filterProductList(term) {
+            const t = term.toLowerCase();
+            allProductCheckboxes.forEach(function(label) {
+                const text = label.textContent.toLowerCase();
+                label.style.display = text.includes(t) ? '' : 'none';
+            });
+        }
+
+        function loadProducts() {
+            const retailerId = getSelectedRetailerId();
+            const reportType = getSelectedReportType();
+            if (!retailerId || !reportType) {
+                productFilterGroup.style.display = 'none';
+                return;
+            }
+            productFilterGroup.style.display = '';
+            productPanel.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--color-gray-400);font-size:0.82rem;"><i class="fas fa-spinner fa-pulse"></i> Loading products...</div>';
+            productIdsInput.value = '';
+            allProductCheckboxes = [];
+            if (productSearch) productSearch.value = '';
+            if (selectAllProducts) selectAllProducts.checked = false;
+
+            const url = '/api/retailer/products/?retailer_id=' + retailerId + '&report_type=' + reportType;
+            fetch(url, { headers: {'X-Requested-With': 'XMLHttpRequest'} })
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                const products = data.products || [];
+                productCountBadge.textContent = products.length + ' products';
+                if (!products.length) {
+                    productPanel.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--color-gray-400);font-size:0.82rem;"><i class="fas fa-info-circle"></i> No products found for this retailer</div>';
+                    return;
+                }
+                productPanel.innerHTML = '';
+                products.forEach(function(p) {
+                    const label = document.createElement('label');
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.value = p.id;
+                    cb.addEventListener('change', function() {
+                        const total = allProductCheckboxes.filter(l => l.style.display !== 'none').length;
+                        const checked = productPanel.querySelectorAll('input:checked').length;
+                        selectAllProducts.checked = total > 0 && checked === total;
+                        updateProductIdsInput();
+                    });
+                    const txt = document.createTextNode(p.name);
+                    label.appendChild(cb);
+                    label.appendChild(txt);
+                    productPanel.appendChild(label);
+                    allProductCheckboxes.push(label);
+                });
+            })
+            .catch(function(err) {
+                console.error('Product load error:', err);
+                productPanel.innerHTML = '<div style="text-align:center;padding:1rem;color:#991b1b;font-size:0.82rem;"><i class="fas fa-exclamation-circle"></i> Failed to load products: ' + err.message + '</div>';
+            });
+        }
+
+        // Trigger load when retailer or type changes
+        document.querySelectorAll('#retailerPanel input[type="checkbox"]').forEach(function(cb) {
+            cb.addEventListener('change', loadProducts);
+        });
+        document.querySelectorAll('input[name="request_type"]').forEach(function(cb) {
+            cb.addEventListener('change', loadProducts);
+        });
+
+        // Select all products
+        if (selectAllProducts) {
+            selectAllProducts.addEventListener('change', function() {
+                allProductCheckboxes.forEach(function(label) {
+                    const cb = label.querySelector('input[type="checkbox"]');
+                    if (cb && label.style.display !== 'none') cb.checked = selectAllProducts.checked;
+                });
+                updateProductIdsInput();
+            });
+        }
+
+        // Search filter
+        if (productSearch) {
+            productSearch.addEventListener('input', function() {
+                filterProductList(this.value);
             });
         }
 

@@ -81,8 +81,7 @@ attached_assets/
 *.jpg
 *.png
 *.jpeg
-!weblogo.jpeg
-!download.png
+
 
 # SQL files
 *.sql

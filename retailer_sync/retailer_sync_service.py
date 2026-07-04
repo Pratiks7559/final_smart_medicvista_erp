@@ -63,7 +63,7 @@ class RequestSyncService:
 
     def test_connection(self) -> dict:
         """
-        Call the health endpoint.
+        Call the health endpoint WITH API key so retailer gets marked online.
 
         Returns
         -------
@@ -76,7 +76,7 @@ class RequestSyncService:
         }
         """
         url = self.server_url + self._PATH_HEALTH
-        result = self._get(url, authenticated=False)
+        result = self._get(url, authenticated=True)  # ← Changed to True!
         if result['ok']:
             return {
                 'connected': True,
@@ -196,12 +196,149 @@ class RequestSyncService:
                     item['request_id'], item['new_status'],
                 )
             else:
-                on_fail(item['id'])
-                logger.warning(
-                    "Failed to flush queued update: request_id=%s error=%s",
-                    item['request_id'], result['error'],
-                )
+                # If 404 = request deleted on wholesaler, remove from queue
+                if 'Request not found' in result.get('error', '') or '404' in result.get('error', ''):
+                    logger.warning(
+                        "Request deleted on wholesaler, removing from queue: request_id=%s",
+                        item['request_id']
+                    )
+                    on_success(item['id'], item['request_id'], item['new_status'])  # Remove from queue
+                # If 400 = invalid transition (already COMPLETED), remove from queue
+                elif 'Cannot transition' in result.get('error', '') or '400' in result.get('error', ''):
+                    logger.warning(
+                        "Status already updated, removing from queue: request_id=%s status=%s",
+                        item['request_id'], item['new_status']
+                    )
+                    on_success(item['id'], item['request_id'], item['new_status'])  # Remove from queue
+                else:
+                    on_fail(item['id'])
+                    logger.warning(
+                        "Failed to flush queued update: request_id=%s error=%s",
+                        item['request_id'], result['error'],
+                    )
         return sent
+
+    def upload_csv(self, request_id: int, request_type: str, csv_file_path: str) -> dict:
+        """
+        Upload CSV file to wholesaler server.
+
+        Parameters
+        ----------
+        request_id : int
+            Wholesaler request ID
+        request_type : str
+            STOCK, PURCHASE, or SALES
+        csv_file_path : str
+            Full path to CSV file on local filesystem
+
+        Returns
+        -------
+        {
+            'ok': bool,
+            'upload_id': int | None,
+            'file_url': str | None,
+            'error': str | None,
+        }
+        """
+        import os
+        
+        if not os.path.exists(csv_file_path):
+            return {'ok': False, 'upload_id': None, 'file_url': None, 'error': 'CSV file not found'}
+        
+        url = self.server_url + '/api/retailer/upload-csv/'
+        
+        try:
+            import urllib.request
+            import mimetypes
+            
+            # Read file
+            with open(csv_file_path, 'rb') as f:
+                file_content = f.read()
+            
+            file_name = os.path.basename(csv_file_path)
+            boundary = '----WebKitFormBoundary' + ''.join(
+                str(ord(c)) for c in os.urandom(16).hex()[:16]
+            )
+            
+            # Build multipart/form-data body
+            body_parts = []
+            
+            # request_id field
+            body_parts.append(f'--{boundary}'.encode())
+            body_parts.append(b'Content-Disposition: form-data; name="request_id"')
+            body_parts.append(b'')
+            body_parts.append(str(request_id).encode())
+            
+            # request_type field
+            body_parts.append(f'--{boundary}'.encode())
+            body_parts.append(b'Content-Disposition: form-data; name="request_type"')
+            body_parts.append(b'')
+            body_parts.append(request_type.encode())
+            
+            # csv_file field
+            body_parts.append(f'--{boundary}'.encode())
+            body_parts.append(
+                f'Content-Disposition: form-data; name="csv_file"; filename="{file_name}"'.encode()
+            )
+            body_parts.append(b'Content-Type: text/csv')
+            body_parts.append(b'')
+            body_parts.append(file_content)
+            
+            body_parts.append(f'--{boundary}--'.encode())
+            body_parts.append(b'')
+            
+            body = b'\r\n'.join(body_parts)
+            
+            headers = {
+                'Content-Type': f'multipart/form-data; boundary={boundary}',
+                'X-API-KEY': self.api_key,
+            }
+            
+            req = urllib.request.Request(url, data=body, headers=headers, method='POST')
+            
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                import json
+                raw = resp.read().decode('utf-8')
+                result = json.loads(raw)
+                
+                if result.get('ok'):
+                    logger.info(
+                        "CSV uploaded: request_id=%s file=%s size=%s KB",
+                        request_id, file_name, result.get('file_size_kb', 0)
+                    )
+                    return {
+                        'ok': True,
+                        'upload_id': result.get('upload_id'),
+                        'file_url': result.get('file_url'),
+                        'error': None,
+                    }
+                else:
+                    return {
+                        'ok': False,
+                        'upload_id': None,
+                        'file_url': None,
+                        'error': result.get('error', 'Upload failed'),
+                    }
+                    
+        except urllib.error.HTTPError as e:
+            body_text = ''
+            try:
+                body_text = e.read().decode('utf-8')
+            except Exception:
+                pass
+            error_msg = f"HTTP {e.code}: {body_text[:200]}"
+            logger.error("CSV upload failed [%s]: %s", url, error_msg)
+            return {'ok': False, 'upload_id': None, 'file_url': None, 'error': error_msg}
+            
+        except urllib.error.URLError as e:
+            error_msg = f"Connection failed: {e.reason}"
+            logger.warning("CSV upload connectivity issue [%s]: %s", url, error_msg)
+            return {'ok': False, 'upload_id': None, 'file_url': None, 'error': error_msg}
+            
+        except Exception as e:
+            error_msg = f"Upload error: {str(e)}"
+            logger.exception("CSV upload unexpected error")
+            return {'ok': False, 'upload_id': None, 'file_url': None, 'error': error_msg}
 
     # ------------------------------------------------------------------
     # Private HTTP helpers — stdlib only, no external dependencies

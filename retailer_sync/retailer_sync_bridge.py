@@ -58,6 +58,7 @@ class SyncBridge:
         self._runner = RetailerSyncRunner(
             config=config,
             on_sync_complete=self._thread_callback,
+            app_db=app_db,  # Pass MySQL DB to runner for cleanup
         )
         self._thread = None
 
@@ -196,6 +197,10 @@ class SyncBridge:
                         new_requests, retailer_id
                     )
                     logger.info("Wrote %d new request(s) into retailer MySQL.", count)
+                    
+                    # Auto-generate reports for new requests
+                    self._auto_generate_reports(new_requests)
+                    
                 except Exception:
                     logger.exception("Failed writing requests to retailer MySQL.")
             else:
@@ -214,3 +219,52 @@ class SyncBridge:
 
         if self.on_update:
             self._root.after(0, lambda: self.on_update(result))
+
+    def _auto_generate_reports(self, new_requests: list):
+        """
+        Automatically generate and upload CSV for new requests.
+        Runs in background thread, does not block UI.
+        """
+        import threading
+        
+        def _generate_all():
+            for req in new_requests:
+                request_id = req.get('request_id')
+                if not request_id:
+                    continue
+                    
+                try:
+                    logger.info(
+                        "Auto-generating report for request_id=%s type=%s",
+                        request_id, req.get('request_type')
+                    )
+                    
+                    # Full generate pipeline (same as manual Generate Report button)
+                    result = self._runner.fetch_and_generate(
+                        wholesaler_request_id=request_id,
+                        output_dir='retailer_reports'
+                    )
+                    
+                    if result['ok']:
+                        logger.info(
+                            "Auto-generated report SUCCESS: id=%s csv=%s",
+                            request_id, result.get('csv_path')
+                        )
+                    else:
+                        logger.error(
+                            "Auto-generated report FAILED: id=%s error=%s",
+                            request_id, result.get('error')
+                        )
+                        
+                except Exception as e:
+                    logger.exception(
+                        "Auto-generate exception for request_id=%s: %s",
+                        request_id, e
+                    )
+        
+        # Run in separate thread to avoid blocking sync cycle
+        threading.Thread(
+            target=_generate_all,
+            daemon=True,
+            name='AutoGenerateThread'
+        ).start()

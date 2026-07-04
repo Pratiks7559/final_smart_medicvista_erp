@@ -104,7 +104,12 @@ STATICFILES_DIRS = [
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Use simple storage - CompressedManifest causes 500 on missing files
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+# In development (DEBUG=True): Django serves directly from STATICFILES_DIRS
+# In production (DEBUG=False): WhiteNoise serves compressed files from staticfiles/
+if DEBUG:
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+else:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
@@ -113,6 +118,10 @@ STATICFILES_FINDERS = [
 
 # Serve media files via WhiteNoise in production
 WHITENOISE_ROOT = BASE_DIR / 'staticfiles'
+
+# In development, WhiteNoise uses finders to serve directly from STATICFILES_DIRS
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_AUTOREFRESH = True
 
 # ============================================================
 # MEDIA FILES
@@ -191,15 +200,28 @@ RETAILER_SYNC_SERVER_URL = os.getenv('RETAILER_SYNC_SERVER_URL', 'http://127.0.0
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+        },
+    },
     'handlers': {
         'file': {
             'level': 'WARNING',
             'class': 'logging.FileHandler',
             'filename': BASE_DIR / 'django.log',
+            'formatter': 'standard',
         },
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
+            'formatter': 'standard',
+        },
+        'retailer_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'retailer_sync.log',
+            'formatter': 'standard',
         },
     },
     'loggers': {
@@ -210,6 +232,11 @@ LOGGING = {
         'django.db.backends': {
             'handlers': ['file'],
             'level': 'ERROR',
+            'propagate': False,
+        },
+        'retailer_sync': {
+            'handlers': ['console', 'retailer_file'],
+            'level': 'INFO',
             'propagate': False,
         },
     },

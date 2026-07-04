@@ -1,0 +1,74 @@
+{
+    "_comment": "============================================================",
+    "_comment2": "MedicVista Retailer Sync - PRODUCTION Configuration",
+    "_comment3": "============================================================",
+    "_comment4": "After GoDaddy deployment:",
+    "_comment5": "1. Change server_mode to 'CLOUD'",
+    "_comment6": "2. Update server_url to your GoDaddy domain (HTTPS)",
+    "_comment7": "3. Replace api_key with actual key from Django Admin",
+    "_comment8": "4. Verify retailer_id matches Django ERP",
+    "_comment9": "5. Test connection: python retailer_sync_runner.py --test-conn",
+    "_comment10": "============================================================",
+
+    "server_mode": "CLOUD",
+    "_comment_server_mode": "Use 'LOCAL' for same LAN (http://192.168.x.x:8000), 'CLOUD' for internet/GoDaddy (https)",
+
+    "server_url": "https://your-domain.com",
+    "_comment_server_url": "IMPORTANT: Replace with your actual GoDaddy domain. Must use HTTPS for CLOUD mode. No trailing slash.",
+
+    "api_key": "PASTE_API_KEY_FROM_DJANGO_ADMIN_HERE",
+    "_comment_api_key": "Get from: Django Admin → Core → Retailer Masters → Select Retailer → Copy API Key",
+
+    "retailer_id": 1,
+    "_comment_retailer_id": "Must match Django ERP RetailerMaster.id (numeric primary key, not retailer_code)",
+
+    "retailer_code": "RTL001",
+    "_comment_retailer_code": "Human-readable code from Django ERP RetailerMaster.retailer_code",
+
+    "sync_interval_seconds": 30,
+    "_comment_sync_interval": "Production: 30-60 seconds. Development: 10 seconds. Lower = more server load.",
+
+    "request_timeout_seconds": 15,
+    "_comment_timeout": "HTTP timeout per API call. Increase for slow connections (15-30 recommended).",
+
+    "max_retry_attempts": 5,
+    "_comment_retry": "Failed status updates retry this many times before queuing offline.",
+
+    "log_file": "retailer_sync.log",
+    "_comment_log": "Relative to retailer_sync folder. Check this file for connection errors.",
+
+    "cache_db_file": "retailer_request_cache.db",
+    "_comment_cache": "SQLite file for local cache + offline queue. Auto-created on first run.",
+
+    "_deployment_steps": [
+        "STEP 1: Get API key from Django Admin → Core → Retailer Masters",
+        "STEP 2: Update server_url with your GoDaddy domain (HTTPS required)",
+        "STEP 3: Set server_mode to 'CLOUD'",
+        "STEP 4: Verify retailer_id matches Django database id field",
+        "STEP 5: Test: python retailer_sync_runner.py --test-conn",
+        "STEP 6: Expected output: 'Connection successful! Server time: ...'",
+        "STEP 7: Start sync: python retailer_sync_runner.py",
+        "STEP 8: Monitor logs: tail -f retailer_sync.log (Linux) or type retailer_sync.log (Windows)"
+    ],
+
+    "_api_endpoints_to_verify": [
+        "https://your-domain.com/api/retailer/health/",
+        "https://your-domain.com/api/retailer/pending-requests/?retailer_id=1",
+        "https://your-domain.com/api/retailer/update-status/",
+        "https://your-domain.com/api/retailer/report-data/"
+    ],
+
+    "_troubleshooting": {
+        "connection_failed": "1. Check server_url is correct HTTPS URL. 2. Verify SSL certificate. 3. Check api_key matches Django Admin. 4. Ensure retailer status is Active in Django.",
+        "ssl_error": "1. GoDaddy SSL certificate must be valid. 2. Never use HTTP in CLOUD mode. 3. Check certificate expiry.",
+        "authentication_failed": "1. Get fresh API key from Django Admin. 2. Ensure no extra spaces in api_key. 3. Check retailer_id is correct numeric value.",
+        "timeout_error": "1. Increase request_timeout_seconds to 20-30. 2. Check internet connection. 3. Verify GoDaddy server is running."
+    },
+
+    "_security_notes": {
+        "api_key_security": "NEVER share API keys between retailers. Each store must have unique key.",
+        "https_required": "CLOUD mode enforces HTTPS. Never use HTTP for production.",
+        "key_rotation": "Rotate API keys every 90 days. Generate new key in Django Admin.",
+        "backup_config": "Keep secure backup of this file. Required for disaster recovery."
+    }
+}

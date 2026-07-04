@@ -53,11 +53,12 @@ def _setup_logging(log_file: str, level=logging.INFO):
 # ---------------------------------------------------------------------------
 
 class RetailerSyncRunner:
-    def __init__(self, config: dict, on_sync_complete=None):
+    def __init__(self, config: dict, on_sync_complete=None, app_db=None):
         self.config             = config
         self.retailer_id        = config['retailer_id']
         self.sync_interval      = config.get('sync_interval_seconds', 60)
         self.on_sync_complete   = on_sync_complete
+        self.app_db             = app_db  # MySQL DB instance for retailer
 
         from retailer_sync_service import RequestSyncService
         from retailer_sync_db import RetailerCacheDB
@@ -86,12 +87,13 @@ class RetailerSyncRunner:
         Full pipeline:
           1. Fetch report data JSON from wholesaler.
           2. Mark PROCESSING on wholesaler.
-          3. Generate PDF + Excel locally.
-          4. Mark COMPLETED or FAILED on wholesaler.
+          3. Generate PDF + Excel + CSV locally.
+          4. Upload CSV to wholesaler.
+          5. Mark COMPLETED or FAILED on wholesaler.
 
         MySQL status updates are handled by SyncBridge after this returns.
 
-        Returns: {ok, pdf_path, excel_path, error}
+        Returns: {ok, pdf_path, excel_path, csv_path, error}
         """
         from retailer_report_generator import ReportGenerator
 
@@ -103,29 +105,55 @@ class RetailerSyncRunner:
                 wholesaler_request_id, fetch['error'],
             )
             return {'ok': False, 'pdf_path': None, 'excel_path': None,
-                    'error': fetch['error']}
+                    'csv_path': None, 'error': fetch['error']}
 
         # Step 2 — tell wholesaler we are processing
         self._send_status(wholesaler_request_id, 'PROCESSING')
 
-        # Step 3 — generate PDF + Excel from JSON data
+        # Step 3 — generate PDF + Excel + CSV from JSON data
         gen    = ReportGenerator(output_dir=output_dir)
         result = gen.generate(fetch)
 
-        # Step 4 — tell wholesaler final status
-        final = 'COMPLETED' if result['ok'] else 'FAILED'
-        self._send_status(wholesaler_request_id, final)
-
-        if result['ok']:
-            self.logger.info(
-                "fetch_and_generate: COMPLETED id=%s pdf=%s excel=%s",
-                wholesaler_request_id, result['pdf_path'], result['excel_path'],
-            )
-        else:
+        if not result['ok']:
+            # Generation failed
+            self._send_status(wholesaler_request_id, 'FAILED')
             self.logger.error(
-                "fetch_and_generate: FAILED id=%s error=%s",
+                "fetch_and_generate: generation FAILED id=%s error=%s",
                 wholesaler_request_id, result['error'],
             )
+            return result
+
+        # Step 4 — upload CSV to wholesaler
+        csv_path = result.get('csv_path')
+        if csv_path and os.path.exists(csv_path):
+            upload_result = self.service.upload_csv(
+                request_id=wholesaler_request_id,
+                request_type=fetch.get('request_type', 'STOCK'),
+                csv_file_path=csv_path
+            )
+            if upload_result['ok']:
+                self.logger.info(
+                    "CSV uploaded: id=%s file=%s url=%s",
+                    wholesaler_request_id, csv_path, upload_result.get('file_url')
+                )
+            else:
+                self.logger.warning(
+                    "CSV upload failed: id=%s error=%s",
+                    wholesaler_request_id, upload_result.get('error')
+                )
+        else:
+            self.logger.warning(
+                "CSV not generated or not found: id=%s path=%s",
+                wholesaler_request_id, csv_path
+            )
+
+        # Step 5 — tell wholesaler final status
+        self._send_status(wholesaler_request_id, 'COMPLETED')
+
+        self.logger.info(
+            "fetch_and_generate: COMPLETED id=%s pdf=%s excel=%s csv=%s",
+            wholesaler_request_id, result['pdf_path'], result['excel_path'], result.get('csv_path'),
+        )
         return result
 
     def _send_status(self, request_id: int, status: str):
@@ -141,6 +169,10 @@ class RetailerSyncRunner:
                 "Wholesaler offline, queuing status: id=%s → %s", request_id, status
             )
             self.db.queue_status_update(request_id, status)
+    
+    def push_status_update(self, request_id: int, status: str):
+        """Public wrapper for _send_status - used by RetailerRequestsScreen."""
+        self._send_status(request_id, status)
 
     # ------------------------------------------------------------------
     # Core sync cycle
@@ -192,6 +224,9 @@ class RetailerSyncRunner:
             error = fetch_result['error']
             self.logger.error("Failed to fetch requests: %s", error)
 
+        # Check for deleted requests and cleanup from retailer MySQL
+        self._cleanup_deleted_requests()
+
         self._fire_callback(new_requests=new_requests, error=error)
         self.logger.info("--- Sync cycle end ---")
 
@@ -237,6 +272,45 @@ class RetailerSyncRunner:
 
     def _on_queue_fail(self, queue_id: int):
         self.db.increment_attempt(queue_id)
+
+    def _cleanup_deleted_requests(self):
+        """
+        Check wholesaler for deleted requests and remove them from retailer MySQL.
+        Called during each sync cycle.
+        """
+        if not self.app_db or not hasattr(self.app_db, 'get_all_reference_ids'):
+            return  # No MySQL access, skip cleanup
+        
+        try:
+            # Get all reference_ids from retailer MySQL
+            known_ids = self.app_db.get_all_reference_ids(self.retailer_id)
+            if not known_ids:
+                return  # No requests in retailer DB
+            
+            # Ask wholesaler which of these IDs have been deleted
+            ids_str = ','.join(str(i) for i in known_ids)
+            url = self.service.server_url + '/api/retailer/deleted-request-ids/?ids=' + ids_str
+            
+            result = self.service._get(url, authenticated=True)
+            if not result['ok']:
+                self.logger.warning("Failed to fetch deleted IDs: %s", result['error'])
+                return
+            
+            deleted_ids = result['data'].get('deleted_ids', [])
+            if deleted_ids:
+                self.logger.info("Found %d deleted request(s) on wholesaler: %s", 
+                               len(deleted_ids), deleted_ids)
+                
+                # Delete from retailer MySQL
+                for ref_id in deleted_ids:
+                    try:
+                        self.app_db.delete_wholesaler_request(ref_id, self.retailer_id)
+                        self.logger.info("Deleted request from retailer DB: reference_id=%s", ref_id)
+                    except Exception as e:
+                        self.logger.error("Failed to delete reference_id=%s: %s", ref_id, e)
+                        
+        except Exception as e:
+            self.logger.exception("Cleanup deleted requests failed: %s", e)
 
 
 # ---------------------------------------------------------------------------

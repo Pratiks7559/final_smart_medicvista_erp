@@ -50,7 +50,7 @@ class ReportGenerator:
 
     def generate(self, report_data: dict) -> dict:
         """
-        Generate both PDF and Excel for a report.
+        Generate PDF, Excel, and CSV for a report.
 
         Parameters
         ----------
@@ -66,18 +66,20 @@ class ReportGenerator:
             'ok': bool,
             'pdf_path': str | None,
             'excel_path': str | None,
+            'csv_path': str | None,
             'error': str | None,
         }
         """
         try:
             pdf_path   = self.generate_pdf(report_data)
             excel_path = self.generate_excel(report_data)
+            csv_path   = self.generate_csv(report_data)
             return {'ok': True, 'pdf_path': str(pdf_path),
-                    'excel_path': str(excel_path), 'error': None}
+                    'excel_path': str(excel_path), 'csv_path': str(csv_path), 'error': None}
         except Exception as e:
             logger.exception("Report generation failed for request_id=%s",
                              report_data.get('request_id'))
-            return {'ok': False, 'pdf_path': None, 'excel_path': None, 'error': str(e)}
+            return {'ok': False, 'pdf_path': None, 'excel_path': None, 'csv_path': None, 'error': str(e)}
 
     def generate_pdf(self, report_data: dict) -> Path:
         from reportlab.lib.pagesizes import A4, landscape
@@ -213,9 +215,14 @@ class ReportGenerator:
                     cell.fill = fill
 
         # Auto-width
-        for col in ws.columns:
-            max_len = max((len(str(c.value or '')) for c in col), default=8)
-            ws.column_dimensions[col[0].column_letter].width = min(max_len + 2, 30)
+        for col_idx, col in enumerate(ws.iter_cols(min_row=4, max_row=4 + len(data_rows)), 1):
+            col_letter = chr(64 + col_idx)  # A, B, C, etc.
+            max_len = max(
+                (len(str(ws.cell(row=r, column=col_idx).value or '')) 
+                 for r in range(4, 4 + len(data_rows) + 1)),
+                default=8
+            )
+            ws.column_dimensions[col_letter].width = min(max_len + 2, 30)
 
         # Summary row
         summary_row = len(data_rows) + 6
@@ -229,6 +236,41 @@ class ReportGenerator:
 
         wb.save(str(path))
         logger.info("Excel generated: %s (%d rows)", path, len(rows))
+        return path
+
+    def generate_csv(self, report_data: dict) -> Path:
+        """Generate CSV file with summary footer."""
+        import csv
+        
+        rtype     = report_data['request_type']
+        from_date = report_data['from_date']
+        to_date   = report_data['to_date']
+        rows      = report_data.get('data', [])
+        filename  = self._filename(report_data, 'csv')
+        path      = self.output_dir / filename
+
+        cols, data_rows = _get_columns_and_rows(rtype, rows)
+
+        with open(path, 'w', newline='', encoding='utf-8-sig') as f:
+            writer = csv.writer(f)
+            
+            # Header info
+            writer.writerow([f"{rtype} Report - {from_date} to {to_date}"])
+            writer.writerow([f"Generated: {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}"])
+            writer.writerow([])  # blank line
+            
+            # Column headers
+            writer.writerow(cols)
+            
+            # Data rows
+            writer.writerows(data_rows)
+            
+            # Summary footer
+            writer.writerow([])  # blank line
+            total_amount = sum(float(r.get('total_amount', 0) or 0) for r in rows)
+            writer.writerow([f"Total Records: {len(rows)}", f"Total Amount: ₹{total_amount:,.2f}"])
+
+        logger.info("CSV generated: %s (%d rows)", path, len(rows))
         return path
 
     # ------------------------------------------------------------------
@@ -288,13 +330,22 @@ _STOCK_KEYS = [
 ]
 
 
+def _get_keys_for_type(rtype: str) -> list:
+    if rtype == 'SALES':
+        return _SALES_KEYS
+    if rtype == 'PURCHASE':
+        return _PURCHASE_KEYS
+    return _STOCK_KEYS
+
+
 def _get_columns_and_rows(rtype: str, rows: list):
     if rtype == 'SALES':
-        cols, keys = _SALES_COLS, _SALES_KEYS
+        cols = _SALES_COLS
     elif rtype == 'PURCHASE':
-        cols, keys = _PURCHASE_COLS, _PURCHASE_KEYS
+        cols = _PURCHASE_COLS
     else:  # STOCK
-        cols, keys = _STOCK_COLS, _STOCK_KEYS
+        cols = _STOCK_COLS
 
+    keys = _get_keys_for_type(rtype)
     data_rows = [[r.get(k, '') for k in keys] for r in rows]
     return cols, data_rows
