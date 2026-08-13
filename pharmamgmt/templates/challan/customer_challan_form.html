@@ -654,7 +654,11 @@ function closeQuickSearch() {
 }
 
 function showBatchSelectionDialog(productId, rowIndex) {
-    fetch(`/api/product-batch-selector/?product_id=${productId}`)
+    const challanDateField = document.getElementById('challan_date');
+    const challanDate = challanDateField ? challanDateField.value : '';
+    const dateParam = challanDate ? `&sales_invoice_date=${challanDate}` : '';
+
+    fetch(`/api/product-batch-selector/?product_id=${productId}${dateParam}`)
         .then(response => response.json())
         .then(data => {
             if (data.success && data.batches.length > 0) {

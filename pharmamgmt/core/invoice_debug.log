@@ -136,3 +136,14 @@
 2026-06-17 11:45:37,014 - core.combined_invoice_view - INFO - PURCHASE CREATED: ABIXIM O TAB 10 TAB, Batch: 123443, Qty: 2.0, Free Qty: 2.0
 2026-06-17 11:45:37,029 - core.combined_invoice_view - INFO - Saved invoice: Total=4.2, RoundOff=0.0 (added)
 2026-06-17 11:45:37,031 - core.combined_invoice_view - INFO - Invoice 12346 created successfully with 1 products
+2026-08-11 20:30:34,290 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['aq5BVD9kMOJxlRxWcFO3ycjfHoXYBI21kMdHvnRgV0pftHQQ4nUtYMxAkAOyC58w'], 'invoice_no': ['1233'], 'invoice_date': ['2026-08-11'], 'supplierid': ['1'], 'transport_charges': ['0'], 'invoice_total': ['4.20'], 'products_data': ['[{"productid":"254","batch_no":"cb1cb","expiry":"12-2028","mrp":"1","purchase_rate":"2","quantity":"2","free_qty":"0","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"3","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-08-11 20:30:34,306 - core.combined_invoice_view - INFO - Products data received: [{"productid":"254","batch_no":"cb1cb","expiry":"12-2028","mrp":"1","purchase_rate":"2","quantity":"2","free_qty":"0","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"flat","rate_a":"1","rate_b":"3","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-08-11 20:30:34,307 - core.combined_invoice_view - INFO - Challan flag: false
+2026-08-11 20:30:34,313 - core.combined_invoice_view - INFO - Invoice created with ID: 135001
+2026-08-11 20:30:34,322 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-08-11 20:30:34,323 - core.combined_invoice_view - INFO - Setting rates for ASITUSS-A SYP 100ML: A=1.0, B=3.0, C=3.0
+2026-08-11 20:30:34,323 - core.combined_invoice_view - INFO - Product ASITUSS-A SYP 100ML: Base=4.0, CGST=0.1, SGST=0.1, Total=4.2
+2026-08-11 20:30:34,523 - core.combined_invoice_view - INFO - Product ASITUSS-A SYP 100ML added to invoice
+2026-08-11 20:30:34,524 - core.combined_invoice_view - INFO - PURCHASE CREATED: ASITUSS-A SYP 100ML, Batch: cb1cb, Qty: 2.0, Free Qty: 0.0
+2026-08-11 20:30:34,536 - core.combined_invoice_view - INFO - Saved invoice: Total=4.2, RoundOff=0.0 (added)
+2026-08-11 20:30:34,537 - core.combined_invoice_view - INFO - Invoice 1233 created successfully with 1 products

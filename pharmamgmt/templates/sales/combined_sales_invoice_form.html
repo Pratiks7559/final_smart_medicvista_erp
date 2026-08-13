@@ -1894,7 +1894,11 @@ function forceShowProductTable() {
 function showBatchSelectionDialog(productId, rowIndex) {
     console.log('📦 Fetching batches for product:', productId, 'row:', rowIndex);
     
-    fetch(`/api/product-batch-selector/?product_id=${productId}`)
+    const salesDateField = document.querySelector('[name="sales_invoice_date"]');
+    const salesDate = salesDateField ? salesDateField.value : '';
+    const dateParam = salesDate ? `&sales_invoice_date=${salesDate}` : '';
+    
+    fetch(`/api/product-batch-selector/?product_id=${productId}${dateParam}`)
         .then(response => {
             console.log('📡 API Response status:', response.status);
             return response.json();
@@ -1933,19 +1937,19 @@ function createBatchSelectionModal(batches, rowIndex) {
                 </div>
                 <div class="batch-modal-body">
                     <div class="batch-search">
-                        <input type="text" id="batchSearch" placeholder="Search batch...">
+                        <input type="text" id="batchSearch" placeholder="🔍 Search batch number..." autocomplete="off">
                     </div>
                     <div class="batch-list" id="batchList" tabindex="0">
                         ${batches.map((batch, index) => `
                             <div class="batch-item ${index === 0 ? 'batch-selected' : ''} ${batch.is_available ? '' : 'batch-unavailable'}" 
                                  data-batch-index="${index}" data-row-index="${rowIndex}" data-batch-data='${JSON.stringify(batch)}'>
                                 <div class="batch-info">
-                                    <div class="batch-no"><strong>${batch.batch_no}</strong></div>
+                                    <div class="batch-no-label"><strong>${batch.batch_no}</strong></div>
                                     <div class="batch-details">
-                                        <span class="batch-expiry">Exp: ${batch.expiry}</span>
-                                        <span class="batch-stock">Stock: ${batch.stock}</span>
-                                        <span class="batch-free">Free: ${batch.free_qty || 0}</span>
-                                        <span class="batch-mrp">MRP: ₹${batch.mrp}</span>
+                                        <span>📅 Exp: ${batch.expiry}</span>
+                                        <span>📦 Stock: ${batch.stock}</span>
+                                        <span>🎁 Free: ${batch.free_qty || 0}</span>
+                                        <span>💰 MRP: ₹${batch.mrp}</span>
                                     </div>
                                     <div class="batch-rates">
                                         <span>A: ₹${batch.rates ? batch.rates.rate_A : 0}</span>

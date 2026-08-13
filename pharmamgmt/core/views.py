@@ -9119,6 +9119,7 @@ def get_batch_details(request):
 def get_product_batch_selector(request):
     """API endpoint for Alt+W batch selection dialog - fetches from both Purchase and Challan"""
     product_id = request.GET.get('product_id')
+    sales_invoice_date = request.GET.get('sales_invoice_date')  # YYYY-MM-DD format
     
     if not product_id:
         return JsonResponse({'error': 'Product ID is required'}, status=400)
@@ -9126,11 +9127,20 @@ def get_product_batch_selector(request):
     try:
         from .models import SupplierChallanMaster
         batch_dict = {}
+
+        # Parse sales invoice date for filtering
+        filter_date = None
+        if sales_invoice_date:
+            try:
+                filter_date = datetime.strptime(sales_invoice_date, '%Y-%m-%d').date()
+            except ValueError:
+                pass
         
-        # 1. Get batches from PurchaseMaster
-        purchase_batches = PurchaseMaster.objects.filter(
-            productid=product_id
-        ).values('product_batch_no', 'product_expiry', 'product_MRP', 'product_free_qty').distinct()
+        # 1. Get batches from PurchaseMaster (only where invoice_date <= sales_invoice_date)
+        purchase_qs = PurchaseMaster.objects.filter(productid=product_id)
+        if filter_date:
+            purchase_qs = purchase_qs.filter(product_invoiceid__invoice_date__lte=filter_date)
+        purchase_batches = purchase_qs.values('product_batch_no', 'product_expiry', 'product_MRP', 'product_free_qty').distinct()
         
         for batch in purchase_batches:
             batch_no = batch['product_batch_no']
@@ -9154,10 +9164,11 @@ def get_product_batch_selector(request):
                 'rates': rates
             }
         
-        # 2. Get batches from SupplierChallanMaster
-        challan_batches = SupplierChallanMaster.objects.filter(
-            product_id=product_id
-        ).values('product_batch_no', 'product_expiry', 'product_mrp').distinct()
+        # 2. Get batches from SupplierChallanMaster (only where challan_date <= sales_invoice_date)
+        challan_qs = SupplierChallanMaster.objects.filter(product_id=product_id)
+        if filter_date:
+            challan_qs = challan_qs.filter(product_challan_id__challan_date__lte=filter_date)
+        challan_batches = challan_qs.values('product_batch_no', 'product_expiry', 'product_mrp').distinct()
         
         for batch in challan_batches:
             batch_no = batch['product_batch_no']
