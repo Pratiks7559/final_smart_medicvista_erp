@@ -1,74 +1,86 @@
 """
-Test script for Reorder Level calculation
+Test script for Reorder Level calculation — matches reorder_level_views.py exactly
 Run this from Django shell: python manage.py shell < test_reorder_level.py
 """
 
 from datetime import datetime, timedelta
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from core.models import ProductMaster, SalesMaster, BatchInventoryCache
 
+# Must match constants in reorder_level_views.py
+ANALYSIS_DAYS  = 90
+LEAD_TIME_DAYS = 30
+
+
 def test_reorder_level_calculation():
-    """Test reorder level calculation for a sample product"""
-    
+    """Test reorder level calculation — same formula as reorder_level_views.py"""
+
     print("=" * 60)
     print("REORDER LEVEL CALCULATION TEST")
+    print(f"Sales window: {ANALYSIS_DAYS} days | Lead time: {LEAD_TIME_DAYS} days")
     print("=" * 60)
-    
-    # Get first product with sales and stock
-    products = ProductMaster.objects.all()[:5]
-    
+
+    analysis_start = datetime.now() - timedelta(days=ANALYSIS_DAYS)
+
+    # Search for 1st Aid product; fallback to first 5 products
+    products = ProductMaster.objects.filter(
+        Q(product_name__icontains='1st aid') | Q(product_name__icontains='first aid')
+    )
+    if not products.exists():
+        print("No '1st Aid' product found — showing first 5 products instead")
+        products = ProductMaster.objects.all()[:5]
+
     for product in products:
         print(f"\n📦 Product: {product.product_name}")
         print(f"   Company: {product.product_company}")
         print("-" * 60)
-        
-        # Calculate sales (last 30 days)
-        thirty_days_ago = datetime.now() - timedelta(days=30)
+
         sales_qty = SalesMaster.objects.filter(
             productid=product,
-            sale_entry_date__gte=thirty_days_ago
+            sale_entry_date__gte=analysis_start
         ).aggregate(total=Sum('sale_quantity'))['total'] or 0
-        
-        avg_monthly_sale = float(sales_qty)
-        reorder_level_qty = avg_monthly_sale * 1.5
-        
-        print(f"📊 Sales (Last 30 days): {avg_monthly_sale:.2f} units")
-        print(f"📈 Reorder Level (1.5x): {reorder_level_qty:.2f} units")
-        
-        # Get available stock
+
+        total_sales      = float(sales_qty)
+        avg_daily_sale   = total_sales / ANALYSIS_DAYS
+        avg_monthly_sale = round(avg_daily_sale * 30, 2)
+        reorder_level    = round(avg_daily_sale * LEAD_TIME_DAYS, 2)
+
+        print(f"📊 Sales (Last {ANALYSIS_DAYS} days): {total_sales:.2f} units")
+        print(f"📈 Avg Daily Sale: {avg_daily_sale:.4f} units")
+        print(f"📈 Avg Monthly Sale (display): {avg_monthly_sale:.2f} units")
+        print(f"🎯 Reorder Level (avg_daily x {LEAD_TIME_DAYS}): {reorder_level:.2f} units")
+
         batches = BatchInventoryCache.objects.filter(
             product=product,
             current_stock__gt=0
-        )
-        
-        total_available = 0
-        batch_count = 0
-        
+        ).order_by('expiry_date', 'batch_no')
+
+        total_available = 0.0
         for batch in batches:
-            batch_stock = float(batch.current_stock) + float(batch.current_free_qty)
-            total_available += batch_stock
-            batch_count += 1
-            print(f"   Batch {batch.batch_no}: {batch_stock:.2f} (Exp: {batch.expiry_date})")
-        
-        print(f"📦 Total Available Stock: {total_available:.2f} units ({batch_count} batches)")
-        
-        # Calculate reorder needed
-        reorder_needed = max(0, reorder_level_qty - total_available)
-        
+            stock = float(batch.current_stock)  # free_qty excluded — same as views.py
+            total_available += stock
+            print(f"   Batch {batch.batch_no}: stock={stock:.2f}, free_qty={float(batch.current_free_qty):.2f} (Exp: {batch.expiry_date})")
+
+        total_available = round(total_available, 2)
+        reorder_needed  = round(max(0.0, reorder_level - total_available), 2)
+
+        print(f"📦 Total Available Stock (free_qty excluded): {total_available:.2f} units")
+
         if reorder_needed > 0:
-            status = "🔴 CRITICAL - REORDER NEEDED"
-            print(f"{status}")
+            print("🔴 CRITICAL - REORDER NEEDED")
             print(f"🛒 Order Quantity: {reorder_needed:.2f} units")
         else:
-            status = "🟢 SUFFICIENT"
-            print(f"{status}")
-            print(f"✅ Stock is adequate (Surplus: {abs(reorder_needed):.2f})")
-        
+            surplus = round(total_available - reorder_level, 2)
+            print("🟢 SUFFICIENT")
+            print(f"✅ Stock is adequate (Surplus: {surplus:.2f})")
+
         print("=" * 60)
-    
+
     print("\n✅ Test completed successfully!")
-    print("\nFormula: Reorder Level = (Avg Monthly Sale × 1.5) - Available Stock")
-    print("Note: Last 30 days sales data used for calculation")
+    print(f"\nFormula: reorder_level = (total_sales_{ANALYSIS_DAYS}d / {ANALYSIS_DAYS}) x {LEAD_TIME_DAYS}")
+    print("        reorder_needed = max(0, reorder_level - total_available)")
+    print("Note: free_qty is NOT counted in total_available (matches views.py)")
+
 
 if __name__ == "__main__":
     test_reorder_level_calculation()
