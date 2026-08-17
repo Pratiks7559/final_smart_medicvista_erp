@@ -157,9 +157,11 @@ def print_gst_sales_invoice(request, invoice_id):
         base_amount = Decimal(str(sale.sale_rate)) * Decimal(str(sale.sale_quantity))
         
         if sale.sale_calculation_mode == 'flat':
-            taxable_amount = base_amount - Decimal(str(sale.sale_discount))
+            discount_amt = Decimal(str(sale.sale_discount))
+            taxable_amount = base_amount - discount_amt
         else:
-            taxable_amount = base_amount * (Decimal('1') - (Decimal(str(sale.sale_discount)) / Decimal('100')))
+            discount_amt = base_amount * Decimal(str(sale.sale_discount)) / Decimal('100')
+            taxable_amount = base_amount - discount_amt
         
         cgst_rate = Decimal(str(sale.sale_cgst))
         sgst_rate = Decimal(str(sale.sale_sgst))
@@ -171,6 +173,7 @@ def print_gst_sales_invoice(request, invoice_id):
         items_with_calculations.append({
             'sr_no': sr_no,
             'sale': sale,
+            'discount_amt': discount_amt,
             'taxable_amount': taxable_amount,
             'cgst_amount': cgst_amount,
             'sgst_amount': sgst_amount,
@@ -200,7 +203,12 @@ def print_gst_sales_invoice(request, invoice_id):
     total_taxable = sum(item['taxable_amount'] for item in items_with_calculations)
     total_cgst = sum(item['cgst_amount'] for item in items_with_calculations)
     total_sgst = sum(item['sgst_amount'] for item in items_with_calculations)
-    total_discount = sum(Decimal(str(sale.sale_discount)) for sale in sales)
+    total_discount = sum(
+        (Decimal(str(sale.sale_rate)) * Decimal(str(sale.sale_quantity)) * Decimal(str(sale.sale_discount)) / Decimal('100'))
+        if sale.sale_calculation_mode == 'percentage'
+        else Decimal(str(sale.sale_discount))
+        for sale in sales
+    )
     grand_total = total_taxable + total_cgst + total_sgst
     
     amount_in_words = number_to_words(float(grand_total))

@@ -869,6 +869,46 @@
     color: #d1d5db;
     margin-bottom: 15px;
 }
+
+/* Discount Type Radio Button Styles */
+.disc-type-group {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.disc-type-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid #ced4da;
+    background: #f8f9fa;
+    color: #6c757d;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.disc-type-label input[type="radio"] {
+    display: none;
+}
+
+.disc-type-label:hover {
+    border-color: #6c757d;
+    background: #e9ecef;
+    color: #495057;
+}
+
+.disc-type-label.active {
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+}
 </style>
 
 <script>
@@ -988,7 +1028,7 @@ function addProductRow() {
             <div class="stock-error" style="display: none; color: #dc3545; font-size: 0.75rem; margin-top: 4px; padding: 2px 4px; background: #f8d7da; border-radius: 3px; border-left: 3px solid #dc3545;"></div>
         </td>
         <td class="free-qty-cell"><input type="number" class="free-qty form-control" step="any" placeholder="0" min="0" value="0"></td>
-        <td class="discount-cell"><input type="number" class="discount form-control" step="any" placeholder="0.00" min="0" onchange="calculateRowTotal(${productRowIndex})" value="0"></td>
+        <td class="discount-cell"><div class="disc-type-group"><label class="disc-type-label active"><input type="radio" class="disc-mode" name="disc_mode_${productRowIndex}" value="flat" checked onchange="onDiscModeChange(${productRowIndex})">Flat</label><label class="disc-type-label"><input type="radio" class="disc-mode" name="disc_mode_${productRowIndex}" value="percentage" onchange="onDiscModeChange(${productRowIndex})">%</label></div><input type="number" class="discount form-control" step="any" placeholder="0.00" min="0" onchange="calculateRowTotal(${productRowIndex})" value="0"></td>
         <td class="cgst-cell"><input type="number" class="cgst form-control" step="any" placeholder="0.00" min="0" max="100" onchange="calculateRowTotal(${productRowIndex})" value="2.5"></td>
         <td class="sgst-cell"><input type="number" class="sgst form-control" step="any" placeholder="0.00" min="0" max="100" onchange="calculateRowTotal(${productRowIndex})" value="2.5"></td>
         <td class="total-cell"><strong class="row-total">₹0.00</strong></td>
@@ -1213,6 +1253,21 @@ function lockFormInputs(lock) {
 
 // Debounced row calculation to prevent excessive calculations
 let calculationTimeout;
+function onDiscModeChange(index) {
+    const row = document.getElementById(`productRow_${index}`);
+    if (!row) return;
+    const discInput = row.querySelector('.discount');
+    const discModeEl = row.querySelector('.disc-mode:checked');
+    const mode = discModeEl ? discModeEl.value : 'flat';
+    row.querySelectorAll('.disc-type-label').forEach(l => l.classList.remove('active'));
+    if (discModeEl) discModeEl.closest('.disc-type-label').classList.add('active');
+    if (discInput) {
+        discInput.placeholder = mode === 'percentage' ? '0 %' : '0.00';
+        discInput.value = '0';
+    }
+    calculateRowTotal(index);
+}
+
 function calculateRowTotal(index, immediate = false) {
     if (immediate) {
         // Direct calculation without debounce
@@ -1221,11 +1276,13 @@ function calculateRowTotal(index, immediate = false) {
         
         const rate = parseFloat(row.querySelector('.rate').value) || 0;
         const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
-        const discount = parseFloat(row.querySelector('.discount').value) || 0;
+        const discountRaw = parseFloat(row.querySelector('.discount').value) || 0;
         const cgst = parseFloat(row.querySelector('.cgst').value) || 0;
         const sgst = parseFloat(row.querySelector('.sgst').value) || 0;
-        
+        const discModeEl = row.querySelector('.disc-mode:checked');
+        const discMode = discModeEl ? discModeEl.value : 'flat';
         const baseAmount = rate * quantity;
+        const discount = discMode === 'percentage' ? (baseAmount * discountRaw / 100) : discountRaw;
         const discountedAmount = baseAmount - discount;
         const totalAmount = discountedAmount * (1 + ((cgst + sgst) / 100));
         
@@ -1246,11 +1303,13 @@ function calculateRowTotal(index, immediate = false) {
         
         const rate = parseFloat(row.querySelector('.rate').value) || 0;
         const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
-        const discount = parseFloat(row.querySelector('.discount').value) || 0;
+        const discountRaw = parseFloat(row.querySelector('.discount').value) || 0;
         const cgst = parseFloat(row.querySelector('.cgst').value) || 0;
         const sgst = parseFloat(row.querySelector('.sgst').value) || 0;
-        
+        const discModeEl = row.querySelector('.disc-mode:checked');
+        const discMode = discModeEl ? discModeEl.value : 'flat';
         const baseAmount = rate * quantity;
+        const discount = discMode === 'percentage' ? (baseAmount * discountRaw / 100) : discountRaw;
         const discountedAmount = baseAmount - discount;
         const totalAmount = discountedAmount * (1 + ((cgst + sgst) / 100));
         
@@ -1277,11 +1336,14 @@ function calculateGrandTotal() {
     document.querySelectorAll('#productRows tr').forEach(row => {
         const rate = parseFloat(row.querySelector('.rate')?.value) || 0;
         const qty = parseFloat(row.querySelector('.quantity')?.value) || 0;
-        const discount = parseFloat(row.querySelector('.discount')?.value) || 0;
+        const discountRaw = parseFloat(row.querySelector('.discount')?.value) || 0;
         const cgst = parseFloat(row.querySelector('.cgst')?.value) || 0;
         const sgst = parseFloat(row.querySelector('.sgst')?.value) || 0;
+        const discModeEl2 = row.querySelector('.disc-mode:checked');
+        const discMode2 = discModeEl2 ? discModeEl2.value : 'flat';
 
         const base = rate * qty;
+        const discount = discMode2 === 'percentage' ? (base * discountRaw / 100) : discountRaw;
         const afterDiscount = base - discount;
         const cgstAmt = (afterDiscount * cgst) / 100;
         const sgstAmt = (afterDiscount * sgst) / 100;
@@ -1413,9 +1475,9 @@ document.getElementById('combinedSalesInvoiceForm').addEventListener('submit', f
                 quantity: quantity,
                 free_qty: parseFloat(row.querySelector('.free-qty') ? row.querySelector('.free-qty').value : 0) || 0,
                 discount: parseFloat(discountInput ? discountInput.value : 0) || 0,
+                calculation_mode: (function(){ var el = row.querySelector('.disc-mode:checked'); return el ? el.value : 'flat'; })(),
                 cgst: parseFloat(cgstInput ? cgstInput.value : 0) || 0,
                 sgst: parseFloat(sgstInput ? sgstInput.value : 0) || 0,
-                calculation_mode: 'flat',
                 rate_applied: selectedCustomerRateType,  // ✅ Use customer's rate type
                 source_challan_no: row.getAttribute('data-challan-no') || null,
                 source_challan_date: row.getAttribute('data-challan-date') || null
@@ -1490,9 +1552,9 @@ function collectProductsData() {
                 sale_rate: row.querySelector('.rate').value,
                 quantity: row.querySelector('.quantity').value,
                 discount: row.querySelector('.discount').value,
+                calculation_mode: (function(){ var el = row.querySelector('.disc-mode:checked'); return el ? el.value : 'flat'; })(),
                 cgst: row.querySelector('.cgst').value,
                 sgst: row.querySelector('.sgst').value,
-                calculation_mode: 'flat',
                 rate_applied: selectedCustomerRateType  // ✅ Use customer's rate type
             });
         }
@@ -3213,7 +3275,15 @@ function fillChallanProducts(products) {
         lastRow.querySelector('.rate').value = product.rate;
         lastRow.querySelector('.quantity').value = product.quantity;
         lastRow.querySelector('.free-qty').value = product.free_qty || 0;
+        // sale_discount in DB is always stored as flat amount (already calculated)
+        // so always set disc-mode to 'flat' regardless of original calculation_mode
         lastRow.querySelector('.discount').value = product.discount || 0;
+        const radios = lastRow.querySelectorAll('.disc-mode');
+        radios.forEach(r => {
+            r.checked = (r.value === 'flat');
+            const lbl = r.closest('.disc-type-label');
+            if (lbl) lbl.classList.toggle('active', r.value === 'flat');
+        });
         lastRow.querySelector('.cgst').value = product.cgst || 2.5;
         lastRow.querySelector('.sgst').value = product.sgst || 2.5;
         

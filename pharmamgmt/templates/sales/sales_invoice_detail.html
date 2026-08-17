@@ -202,10 +202,10 @@
                                 <td class="quantity-cell">{{ sale.sale_quantity|floatformat:2 }}</td>
                                 <td class="free-qty-cell" style="text-align: center; font-weight: 600; color: #28a745; background-color: #d4edda;">{{ sale.sale_free_qty|floatformat:2 }}</td>
                                 <td class="discount-cell">
-                                    {% if sale.sale_calculation_mode == 'flat' %}
-                                        {{ sale.sale_discount|currency }}
+                                    {% if sale.sale_calculation_mode == 'percentage' %}
+                                        ₹{{ sale.discount_amt|floatformat:2 }} <small style="color:#888;">({{ sale.sale_discount }}%)</small>
                                     {% else %}
-                                        {{ sale.sale_discount }}%
+                                        {{ sale.sale_discount|currency }}
                                     {% endif %}
                                 </td>
                                 <td class="cgst-cell">{{ sale.sale_cgst }}%</td>
@@ -435,6 +435,7 @@
                                         <th>Rate</th>
                                         <th>Qty</th>
                                         <th>Free Qty</th>
+                                        <th>Disc Type</th>
                                         <th>Discount</th>
                                         <th>CGST %</th>
                                         <th>SGST %</th>
@@ -472,7 +473,17 @@
                                             <div class="stock-error" style="display: none; color: #dc3545; font-size: 0.75rem; margin-top: 4px;"></div>
                                         </td>
                                         <td><input type="number" class="form-control free-quantity" name="free_quantity" value="{{ sale.sale_free_qty }}" step="0.01" min="0"></td>
-                                        <td><input type="number" class="form-control discount" name="discount" value="{{ sale.sale_discount }}" step="0.01" min="0"></td>
+                                        <td>
+                                            <div class="disc-type-group" style="display:flex;gap:4px;margin-bottom:4px;">
+                                                <label class="disc-type-label {% if sale.sale_calculation_mode != 'percentage' %}active{% endif %}" style="display:flex;align-items:center;gap:2px;padding:2px 6px;border:1px solid #ced4da;border-radius:4px;cursor:pointer;font-size:0.75rem;{% if sale.sale_calculation_mode != 'percentage' %}background:#e8f5e9;border-color:#28a745;{% endif %}">
+                                                    <input type="radio" class="disc-mode" name="disc_mode_{{ forloop.counter0 }}" value="flat" {% if sale.sale_calculation_mode != 'percentage' %}checked{% endif %} onchange="onEditDiscModeChange({{ forloop.counter0 }})" style="margin:0;">Flat
+                                                </label>
+                                                <label class="disc-type-label {% if sale.sale_calculation_mode == 'percentage' %}active{% endif %}" style="display:flex;align-items:center;gap:2px;padding:2px 6px;border:1px solid #ced4da;border-radius:4px;cursor:pointer;font-size:0.75rem;{% if sale.sale_calculation_mode == 'percentage' %}background:#e8f5e9;border-color:#28a745;{% endif %}">
+                                                    <input type="radio" class="disc-mode" name="disc_mode_{{ forloop.counter0 }}" value="percentage" {% if sale.sale_calculation_mode == 'percentage' %}checked{% endif %} onchange="onEditDiscModeChange({{ forloop.counter0 }})" style="margin:0;">%
+                                                </label>
+                                            </div>
+                                            <input type="number" class="form-control discount" name="discount" value="{{ sale.sale_discount }}" step="0.01" min="0" oninput="calculateEditRowTotal(this.closest('tr'))">
+                                        </td>
                                         <td><input type="number" class="form-control cgst" name="cgst" value="{{ sale.sale_cgst }}" step="0.01" min="0"></td>
                                         <td><input type="number" class="form-control sgst" name="sgst" value="{{ sale.sale_sgst }}" step="0.01" min="0"></td>
                                         <td><input type="number" class="form-control total" name="total" value="{{ sale.sale_total_amount }}" readonly></td>
@@ -774,7 +785,17 @@ document.getElementById('addEditProductRow').addEventListener('click', function(
             <div class="stock-error" style="display: none; color: #dc3545; font-size: 0.75rem; margin-top: 4px;"></div>
         </td>
         <td><input type="number" class="form-control free-quantity" name="free_quantity" step="0.01" min="0" value="0"></td>
-        <td><input type="number" class="form-control discount" name="discount" step="0.01" min="0" value="0"></td>
+        <td>
+            <div class="disc-type-group" style="display:flex;gap:4px;margin-bottom:4px;">
+                <label class="disc-type-label active" style="display:flex;align-items:center;gap:2px;padding:2px 6px;border:1px solid #28a745;border-radius:4px;cursor:pointer;font-size:0.75rem;background:#e8f5e9;">
+                    <input type="radio" class="disc-mode" name="disc_mode_${editProductRowIndex}" value="flat" checked onchange="onEditDiscModeChange(${editProductRowIndex})" style="margin:0;">Flat
+                </label>
+                <label class="disc-type-label" style="display:flex;align-items:center;gap:2px;padding:2px 6px;border:1px solid #ced4da;border-radius:4px;cursor:pointer;font-size:0.75rem;">
+                    <input type="radio" class="disc-mode" name="disc_mode_${editProductRowIndex}" value="percentage" onchange="onEditDiscModeChange(${editProductRowIndex})" style="margin:0;">%
+                </label>
+            </div>
+            <input type="number" class="form-control discount" name="discount" step="0.01" min="0" value="0" oninput="calculateEditRowTotal(this.closest('tr'))">
+        </td>
         <td><input type="number" class="form-control cgst" name="cgst" step="0.01" min="0" value="2.5"></td>
         <td><input type="number" class="form-control sgst" name="sgst" step="0.01" min="0" value="2.5"></td>
         <td><input type="number" class="form-control total" name="total" readonly></td>
@@ -959,15 +980,39 @@ function fillEditBatchDetails(data, rowIndex) {
     }, 200);
 }
 
+function onEditDiscModeChange(rowIndex) {
+    const row = document.getElementById(`editProductRow_${rowIndex}`);
+    if (!row) return;
+    const labels = row.querySelectorAll('.disc-type-label');
+    labels.forEach(lbl => {
+        const radio = lbl.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            lbl.style.background = '#e8f5e9';
+            lbl.style.borderColor = '#28a745';
+        } else {
+            lbl.style.background = '';
+            lbl.style.borderColor = '#ced4da';
+        }
+    });
+    calculateEditRowTotal(row);
+}
+
+function getEditRowDiscMode(row) {
+    const checked = row.querySelector('.disc-mode:checked');
+    return checked ? checked.value : 'flat';
+}
+
 function calculateEditRowTotal(row) {
     const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
     const rate = parseFloat(row.querySelector('.rate').value) || 0;
     const discount = parseFloat(row.querySelector('.discount').value) || 0;
     const cgst = parseFloat(row.querySelector('.cgst').value) || 0;
     const sgst = parseFloat(row.querySelector('.sgst').value) || 0;
+    const calcMode = getEditRowDiscMode(row);
     
     const basePrice = quantity * rate;
-    const discountedAmount = basePrice - discount; // Assuming flat discount
+    const discountAmt = calcMode === 'percentage' ? (basePrice * discount / 100) : discount;
+    const discountedAmount = basePrice - discountAmt;
     const total = discountedAmount * (1 + ((cgst + sgst) / 100));
     
     row.querySelector('.total').value = total.toFixed(2);
@@ -1030,7 +1075,7 @@ document.getElementById('saveEditSalesInvoice').addEventListener('click', functi
                 discount: row.querySelector('.discount').value,
                 cgst: row.querySelector('.cgst').value,
                 sgst: row.querySelector('.sgst').value,
-                calculation_mode: 'flat',
+                calculation_mode: getEditRowDiscMode(row),
                 rate_applied: selectedEditCustomerRateType
             });
             hasValidProducts = true;

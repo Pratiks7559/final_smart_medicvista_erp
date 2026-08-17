@@ -93,7 +93,7 @@
                                 <td>₹{{ item.sale_rate|floatformat:2 }}</td>
                                 <td>{{ item.sale_quantity|floatformat:2 }}</td>
                                 <td>{{ item.sale_free_qty|floatformat:2 }}</td>
-                                <td>₹{{ item.sale_discount|floatformat:2 }}</td>
+                                <td>{% if item.sale_calculation_mode == 'percentage' %}₹{{ item.discount_amt|floatformat:2 }} <small style="color:#888;">(% disc)</small>{% else %}₹{{ item.discount_amt|floatformat:2 }}{% endif %}</td>
                                 <td>{{ item.sale_cgst|floatformat:2 }}%</td>
                                 <td>{{ item.sale_sgst|floatformat:2 }}%</td>
                                 <td class="total-col">₹{{ item.sale_total_amount|floatformat:2 }}</td>
@@ -295,12 +295,27 @@ document.addEventListener('click', function(e) {
     }
 });
 
+function onChallanDiscModeChange(productId) {
+    const flatLbl = document.getElementById(`flat_lbl_${productId}`);
+    const pctLbl = document.getElementById(`pct_lbl_${productId}`);
+    if (!flatLbl || !pctLbl) return;
+    const flatRadio = flatLbl.querySelector('input');
+    if (flatRadio && flatRadio.checked) {
+        flatLbl.style.background = '#e8f5e9'; flatLbl.style.borderColor = '#28a745';
+        pctLbl.style.background = ''; pctLbl.style.borderColor = '#ced4da';
+    } else {
+        pctLbl.style.background = '#e8f5e9'; pctLbl.style.borderColor = '#28a745';
+        flatLbl.style.background = ''; flatLbl.style.borderColor = '#ced4da';
+    }
+}
+
 function openEditChallanModal() {
     document.getElementById('editChallanModal').style.display = 'block';
     loadExistingProducts();
     fetchCustomerRateType();
     setTimeout(() => {
         document.getElementById('challan_date').focus();
+        document.querySelectorAll('.disc-mode:checked').forEach(r => onChallanDiscModeChange(r.name.replace('disc_mode_', '')));
     }, 300);
 }
 
@@ -365,7 +380,8 @@ function loadExistingProducts() {
         sale_free_qty: {{ item.sale_free_qty }},
         sale_discount: {{ item.sale_discount }},
         sale_cgst: {{ item.sale_cgst }},
-        sale_sgst: {{ item.sale_sgst }}
+        sale_sgst: {{ item.sale_sgst }},
+        sale_calculation_mode: '{{ item.sale_calculation_mode|default:"flat" }}'
     });
     {% endfor %}
 }
@@ -419,8 +435,19 @@ function addProductRow(data = {}) {
                 <input type="number" name="products[${productId}][free_qty]" value="${data.sale_free_qty || '0'}" step="0.01">
             </div>
             <div class="form-group">
+                <label>Disc Type:</label>
+                <div class="disc-type-group" style="display:flex;gap:4px;">
+                    <label id="flat_lbl_${productId}" style="display:flex;align-items:center;gap:2px;padding:4px 8px;border:1px solid #ced4da;border-radius:4px;cursor:pointer;font-size:0.8rem;">
+                        <input type="radio" class="disc-mode" name="disc_mode_${productId}" value="flat" ${(!data.sale_calculation_mode || data.sale_calculation_mode === 'flat') ? 'checked' : ''} onchange="onChallanDiscModeChange('${productId}')" style="margin:0;">Flat
+                    </label>
+                    <label id="pct_lbl_${productId}" style="display:flex;align-items:center;gap:2px;padding:4px 8px;border:1px solid #ced4da;border-radius:4px;cursor:pointer;font-size:0.8rem;">
+                        <input type="radio" class="disc-mode" name="disc_mode_${productId}" value="percentage" ${data.sale_calculation_mode === 'percentage' ? 'checked' : ''} onchange="onChallanDiscModeChange('${productId}')" style="margin:0;">%
+                    </label>
+                </div>
+            </div>
+            <div class="form-group">
                 <label>Discount:</label>
-                <input type="number" name="products[${productId}][discount]" value="${data.sale_discount || ''}" step="0.01">
+                <input type="number" name="products[${productId}][discount]" value="${data.sale_discount || ''}" step="0.01" class="disc-input">
             </div>
             <div class="form-group">
                 <label>CGST %:</label>
@@ -471,6 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const sgstInput = row.querySelector('input[name*="[sgst]"]');
                 
                 if (productSelect && productSelect.value) {
+                    const discModeRadio = row.querySelector('.disc-mode:checked');
                     products.push({
                         productid: productSelect.value,
                         batch_no: batchInput ? batchInput.value : '',
@@ -481,7 +509,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         free_qty: freeQtyInput ? parseFloat(freeQtyInput.value) || 0 : 0,
                         discount: discountInput ? parseFloat(discountInput.value) || 0 : 0,
                         cgst: cgstInput ? parseFloat(cgstInput.value) || 0 : 0,
-                        sgst: sgstInput ? parseFloat(sgstInput.value) || 0 : 0
+                        sgst: sgstInput ? parseFloat(sgstInput.value) || 0 : 0,
+                        calculation_mode: discModeRadio ? discModeRadio.value : 'flat'
                     });
                 }
             });

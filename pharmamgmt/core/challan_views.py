@@ -79,9 +79,11 @@ def add_supplier_challan(request):
                     sgst = Decimal(product_data.get('sgst', 2.5))
                     batch_no = product_data.get('batch_no', '')
                     expiry = product_data.get('expiry', '')
+                    calc_mode = product_data.get('calculation_mode', 'flat')
                     
                     subtotal = rate * qty
-                    after_discount = subtotal - discount
+                    discount_amount = (subtotal * discount / 100) if calc_mode == 'percentage' else discount
+                    after_discount = subtotal - discount_amount
                     cgst_amount = (after_discount * cgst) / 100
                     sgst_amount = (after_discount * sgst) / 100
                     total = after_discount + cgst_amount + sgst_amount
@@ -102,11 +104,11 @@ def add_supplier_challan(request):
                         product_quantity=float(qty),
                         product_free_qty=float(product_data.get('free_qty', 0)),
                         product_scheme=float(product_data.get('scheme', 0)),
-                        product_discount=float(discount),
+                        product_discount=float(discount_amount),
                         cgst=float(cgst),
                         sgst=float(sgst),
                         total_amount=float(total),
-                        challan_calculation_mode=product_data.get('calculation_mode', 'flat'),
+                        challan_calculation_mode=calc_mode,
                         rate_a=float(product_data.get('rate_A', 0) or product_data.get('rate_a', 0) or 0),
                         rate_b=float(product_data.get('rate_B', 0) or product_data.get('rate_b', 0) or 0),
                         rate_c=float(product_data.get('rate_C', 0) or product_data.get('rate_c', 0) or 0)
@@ -183,14 +185,19 @@ def view_supplier_challan(request, challan_id):
                 challan.supplier = supplier
                 challan.transport_charges = float(transport_charges)
                 
-                # Calculate new total
-                products_total = sum(
-                    Decimal(p.get('purchase_rate', 0)) * Decimal(p.get('quantity', 0)) - 
-                    Decimal(p.get('discount', 0)) + 
-                    (Decimal(p.get('purchase_rate', 0)) * Decimal(p.get('quantity', 0)) - Decimal(p.get('discount', 0))) * 
-                    (Decimal(p.get('cgst', 0)) + Decimal(p.get('sgst', 0))) / 100
-                    for p in products_data
-                )
+                # Calculate new total respecting each product's calculation_mode
+                products_total = Decimal('0')
+                for p in products_data:
+                    r = Decimal(str(p.get('purchase_rate', 0)))
+                    q = Decimal(str(p.get('quantity', 0)))
+                    d = Decimal(str(p.get('discount', 0)))
+                    cg = Decimal(str(p.get('cgst', 0)))
+                    sg = Decimal(str(p.get('sgst', 0)))
+                    mode = p.get('calculation_mode', 'flat')
+                    sub = r * q
+                    disc_amt = (sub * d / 100) if mode == 'percentage' else d
+                    after = sub - disc_amt
+                    products_total += after + (after * cg / 100) + (after * sg / 100)
                 challan.challan_total = float(products_total + transport_charges)
                 challan.save()
                 
@@ -206,9 +213,11 @@ def view_supplier_challan(request, challan_id):
                     discount = Decimal(product_data.get('discount', 0))
                     cgst = Decimal(product_data.get('cgst', 2.5))
                     sgst = Decimal(product_data.get('sgst', 2.5))
+                    calc_mode = product_data.get('calculation_mode', 'flat')
                     
                     subtotal = rate * qty
-                    after_discount = subtotal - discount
+                    discount_amount = (subtotal * discount / 100) if calc_mode == 'percentage' else discount
+                    after_discount = subtotal - discount_amount
                     cgst_amount = (after_discount * cgst) / 100
                     sgst_amount = (after_discount * sgst) / 100
                     total = after_discount + cgst_amount + sgst_amount
@@ -228,11 +237,11 @@ def view_supplier_challan(request, challan_id):
                         product_quantity=float(qty),
                         product_free_qty=float(product_data.get('free_qty', 0)),
                         product_scheme=0,
-                        product_discount=float(discount),
+                        product_discount=float(discount_amount),
                         cgst=float(cgst),
                         sgst=float(sgst),
                         total_amount=float(total),
-                        challan_calculation_mode='flat',
+                        challan_calculation_mode=calc_mode,
                         rate_a=float(product_data.get('rate_a', 0)),
                         rate_b=float(product_data.get('rate_b', 0)),
                         rate_c=float(product_data.get('rate_c', 0))
@@ -253,7 +262,6 @@ def view_supplier_challan(request, challan_id):
     
     products_total = (challan_items_1.aggregate(total=Sum('total_amount'))['total'] or 0) + (challan_items_2.aggregate(total=Sum('total_amount'))['total'] or 0)
     
-    # Calculate summary figures for the bill footer
     subtotal_before_discount = sum(item.product_purchase_rate * item.product_quantity for item in challan_items)
     total_discount = sum(item.product_discount for item in challan_items)
     discount_pct = (total_discount / subtotal_before_discount * 100) if subtotal_before_discount else 0
@@ -368,7 +376,16 @@ def customer_challan_list(request):
     
     # Get all active invoice series for the dropdown
     invoice_series = InvoiceSeries.objects.filter(is_active=True).order_by('series_name')
-    
+
+    # Compute correct total for each challan from actual item totals
+    from core.models import CustomerChallanMaster
+    from django.db.models import Sum as _Sum
+    for ch in page_obj:
+        items_total = CustomerChallanMaster.objects.filter(
+            customer_challan_id=ch
+        ).aggregate(t=_Sum('sale_total_amount'))['t'] or 0
+        ch.computed_total = items_total + (ch.customer_transport_charges or 0)
+
     context = {
         'title': 'Customer Challan List',
         'challans': page_obj,
@@ -446,14 +463,19 @@ def add_customer_challan(request):
                         next_num += 1
                         challan_no = f'{prefix}{next_num:06d}'
                 
-                # Calculate products total
-                products_total = sum(
-                    Decimal(p.get('sale_rate', 0)) * Decimal(p.get('quantity', 0)) - 
-                    Decimal(p.get('discount', 0)) + 
-                    (Decimal(p.get('sale_rate', 0)) * Decimal(p.get('quantity', 0)) - Decimal(p.get('discount', 0))) * 
-                    (Decimal(p.get('cgst', 0)) + Decimal(p.get('sgst', 0))) / 100
-                    for p in products_data
-                )
+                # Calculate products total (respecting calculation_mode)
+                products_total = Decimal('0')
+                for p in products_data:
+                    r = Decimal(str(p.get('sale_rate', 0)))
+                    q = Decimal(str(p.get('quantity', 0)))
+                    d = Decimal(str(p.get('discount', 0)))
+                    cg = Decimal(str(p.get('cgst', 0)))
+                    sg = Decimal(str(p.get('sgst', 0)))
+                    mode = p.get('calculation_mode', 'flat')
+                    sub = r * q
+                    disc_amt = (sub * d / 100) if mode == 'percentage' else d
+                    after = sub - disc_amt
+                    products_total += after + (after * (cg + sg) / 100)
                 challan_total = products_total + transport_charges
                 
                 challan = CustomerChallan.objects.create(
@@ -471,14 +493,19 @@ def add_customer_challan(request):
                     
                     rate = Decimal(product_data.get('sale_rate', 0))
                     qty = Decimal(product_data.get('quantity', 0))
-                    discount = Decimal(product_data.get('discount', 0))
+                    discount_val = Decimal(product_data.get('discount', 0))
                     cgst = Decimal(product_data.get('cgst', 2.5))
                     sgst = Decimal(product_data.get('sgst', 2.5))
                     batch_no = product_data.get('batch_no', '')
                     expiry = product_data.get('expiry', '')
+                    calc_mode = product_data.get('calculation_mode', 'flat')
                     
                     subtotal = rate * qty
-                    after_discount = subtotal - discount
+                    if calc_mode == 'percentage':
+                        discount_amount = (subtotal * discount_val) / 100
+                    else:
+                        discount_amount = discount_val
+                    after_discount = subtotal - discount_amount
                     cgst_amount = (after_discount * cgst) / 100
                     sgst_amount = (after_discount * sgst) / 100
                     total = after_discount + cgst_amount + sgst_amount
@@ -497,11 +524,12 @@ def add_customer_challan(request):
                         sale_rate=float(rate),
                         sale_quantity=float(qty),
                         sale_free_qty=float(product_data.get('free_qty', 0)),
-                        sale_discount=float(discount),
+                        sale_discount=float(discount_amount),
                         sale_cgst=float(cgst),
                         sale_sgst=float(sgst),
                         sale_total_amount=float(total),
-                        rate_applied=product_data.get('rate_applied', 'NA')
+                        rate_applied=product_data.get('rate_applied', 'NA'),
+                        sale_calculation_mode=calc_mode
                     )
                     
                     # REMOVED: Inventory tracking - no longer needed
@@ -584,14 +612,19 @@ def view_customer_challan(request, challan_id):
                 challan.customer_name = customer
                 challan.customer_transport_charges = float(transport_charges)
                 
-                # Recalculate total
-                products_total = sum(
-                    Decimal(p.get('rate', 0)) * Decimal(p.get('quantity', 0)) -
-                    Decimal(p.get('discount', 0)) +
-                    (Decimal(p.get('rate', 0)) * Decimal(p.get('quantity', 0)) - Decimal(p.get('discount', 0))) *
-                    (Decimal(p.get('cgst', 0)) + Decimal(p.get('sgst', 0))) / 100
-                    for p in products_data
-                )
+                # Recalculate total (respecting calculation_mode)
+                products_total = Decimal('0')
+                for p in products_data:
+                    r = Decimal(str(p.get('rate', 0)))
+                    q = Decimal(str(p.get('quantity', 0)))
+                    d = Decimal(str(p.get('discount', 0)))
+                    cg = Decimal(str(p.get('cgst', 0)))
+                    sg = Decimal(str(p.get('sgst', 0)))
+                    mode = p.get('calculation_mode', 'flat')
+                    sub = r * q
+                    disc_amt = (sub * d / 100) if mode == 'percentage' else d
+                    after = sub - disc_amt
+                    products_total += after + (after * (cg + sg) / 100)
                 challan.challan_total = float(products_total + transport_charges)
                 challan.save()
                 
@@ -602,11 +635,16 @@ def view_customer_challan(request, challan_id):
                     product = ProductMaster.objects.get(productid=product_data['productid'])
                     rate = Decimal(product_data.get('rate', 0))
                     qty = Decimal(product_data.get('quantity', 0))
-                    discount = Decimal(product_data.get('discount', 0))
+                    discount_val = Decimal(product_data.get('discount', 0))
                     cgst = Decimal(product_data.get('cgst', 2.5))
                     sgst = Decimal(product_data.get('sgst', 2.5))
+                    calc_mode = product_data.get('calculation_mode', 'flat')
                     subtotal = rate * qty
-                    after_discount = subtotal - discount
+                    if calc_mode == 'percentage':
+                        discount_amount = (subtotal * discount_val) / 100
+                    else:
+                        discount_amount = discount_val
+                    after_discount = subtotal - discount_amount
                     total = after_discount + (after_discount * cgst / 100) + (after_discount * sgst / 100)
                     
                     CustomerChallanMaster.objects.create(
@@ -623,11 +661,12 @@ def view_customer_challan(request, challan_id):
                         sale_rate=float(rate),
                         sale_quantity=float(qty),
                         sale_free_qty=float(product_data.get('free_qty', 0)),
-                        sale_discount=float(discount),
+                        sale_discount=float(discount_amount),
                         sale_cgst=float(cgst),
                         sale_sgst=float(sgst),
                         sale_total_amount=float(total),
-                        rate_applied='NA'
+                        rate_applied='NA',
+                        sale_calculation_mode=calc_mode
                     )
                 
                 return JsonResponse({'success': True, 'message': 'Challan updated successfully'})
@@ -646,8 +685,12 @@ def view_customer_challan(request, challan_id):
     final_total = grand_total + (challan.customer_transport_charges or 0)
     
     # Calculate summary figures for the bill footer
+    # sale_discount is always stored as flat amount (already calculated at save time)
     subtotal_before_discount = sum(item.sale_rate * item.sale_quantity for item in challan_items)
-    total_discount = sum(item.sale_discount for item in challan_items)
+    total_discount = 0
+    for item in challan_items:
+        item.discount_amt = item.sale_discount  # already a flat amount in DB
+        total_discount += item.sale_discount
     discount_pct = (total_discount / subtotal_before_discount * 100) if subtotal_before_discount else 0
     total_gst = sum(
         (item.sale_rate * item.sale_quantity - item.sale_discount) * (item.sale_cgst + item.sale_sgst) / 100
@@ -853,6 +896,7 @@ def get_challan_products_api(request):
                 'discount': item.sale_discount,
                 'cgst': item.sale_cgst,
                 'sgst': item.sale_sgst,
+                'calculation_mode': 'flat',  # sale_discount is always stored as flat amount in DB
                 'challan_no': item.customer_challan_no,
                 'challan_date': item.customer_challan_id.customer_challan_date.strftime('%Y-%m-%d')
             })

@@ -68,7 +68,14 @@
 .stock-info-display{background:#dbeafe;border-left:2px solid var(--p)}
 
 /* TOTAL */
-.cust-chal-total-section{background:var(--bg);padding:.75rem;border-top:2px solid var(--green);font-size:.8rem}
+.cust-chal-total-section{background:#f8fafc;padding:.75rem;border-top:2px solid var(--green);font-size:.8rem}
+.cust-chal-total-section table{width:100%;border-collapse:collapse}
+.cust-chal-total-section td{padding:5px 12px;color:#111827!important;font-size:.8rem;background:transparent!important}
+.cust-chal-total-section tr:last-child{border-top:2px solid #111827}
+.cust-chal-total-section tr:last-child td{font-weight:700;font-size:.88rem;color:#111827!important;padding-top:7px}
+.cust-chal-total-section span{color:#111827!important;font-weight:600}
+/* override any inline style color on total section elements */
+.cust-chal-total-section *{color:#111827!important}
 
 /* ACTIONS */
 .cust-chal-form-actions{display:flex;gap:.625rem;justify-content:center;padding-top:.875rem;border-top:2px solid var(--border)}

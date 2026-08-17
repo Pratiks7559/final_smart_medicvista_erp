@@ -1973,7 +1973,7 @@ def sales_invoice_detail(request, pk):
     from django.db.models import Sum
     products_total = sales.aggregate(total=Sum('sale_total_amount'))['total'] or 0
     
-    # Calculate bill summary
+    # Calculate bill summary (handle both flat and percentage discount modes)
     bill_subtotal = 0
     bill_discount = 0
     bill_taxable = 0
@@ -1981,10 +1981,17 @@ def sales_invoice_detail(request, pk):
     bill_sgst = 0
     for sale in sales:
         base = float(sale.sale_rate) * float(sale.sale_quantity)
-        discount = float(sale.sale_discount)
-        after_discount = base - discount
+        raw_discount = float(sale.sale_discount)
+        mode = getattr(sale, 'sale_calculation_mode', 'flat') or 'flat'
+        if mode == 'percentage':
+            discount_amt = round(base * raw_discount / 100, 2)
+        else:
+            discount_amt = raw_discount
+        # Attach computed discount amount to sale object for template use
+        sale.discount_amt = discount_amt
+        after_discount = base - discount_amt
         bill_subtotal += base
-        bill_discount += discount
+        bill_discount += discount_amt
         bill_taxable += after_discount
         bill_cgst += (after_discount * float(sale.sale_cgst)) / 100
         bill_sgst += (after_discount * float(sale.sale_sgst)) / 100
@@ -2748,41 +2755,36 @@ def add_sales_invoice_with_products(request):
                             sales_to_create.append(sale_obj)
                             print(f"Added sale object for {product.product_name}")
                         
-                        # Bulk create all sales
+                        # Bulk create all sales — suppress per-row cache signals
                         if sales_to_create:
-                            SalesMaster.objects.bulk_create(sales_to_create)
+                            from .signals import _cache_suppressed
+                            from .inventory_cache import update_batch_cache, update_product_cache
+                            _cache_suppressed.active = True
+                            try:
+                                SalesMaster.objects.bulk_create(sales_to_create)
+                            finally:
+                                _cache_suppressed.active = False
                             sales_created_count = len(sales_to_create)
                             print(f"Successfully created {sales_created_count} sales records")
-                            
-                            # ✅ UPDATE INVENTORY CACHE AFTER SALES
-                            from .inventory_cache import update_batch_cache, update_product_cache
-                            print("🔄 Updating inventory cache after sales...")
-                            
-                            # Track unique products for cache update
+
+                            # Update cache ONCE per unique (product, batch) — not N times
+                            seen_batches = set()
                             products_to_update = set()
-                            
                             for sale_obj in sales_to_create:
+                                key = (sale_obj.productid.productid, sale_obj.product_batch_no, sale_obj.product_expiry)
+                                if key not in seen_batches:
+                                    seen_batches.add(key)
+                                    try:
+                                        update_batch_cache(*key)
+                                    except Exception as cache_error:
+                                        print(f"[WARN] batch cache: {cache_error}")
+                                products_to_update.add(sale_obj.productid.productid)
+                            for pid in products_to_update:
                                 try:
-                                    # Update batch cache for each sold product
-                                    update_batch_cache(
-                                        sale_obj.productid.productid,
-                                        sale_obj.product_batch_no,
-                                        sale_obj.product_expiry
-                                    )
-                                    products_to_update.add(sale_obj.productid.productid)
-                                    print(f"✅ Updated batch cache: {sale_obj.product_name} - Batch: {sale_obj.product_batch_no}")
+                                    update_product_cache(pid)
                                 except Exception as cache_error:
-                                    print(f"⚠️ Cache update warning for {sale_obj.product_name}: {cache_error}")
-                            
-                            # Update product-level cache for all affected products
-                            for product_id in products_to_update:
-                                try:
-                                    update_product_cache(product_id)
-                                    print(f"✅ Updated product cache: Product ID {product_id}")
-                                except Exception as cache_error:
-                                    print(f"⚠️ Product cache update warning for Product ID {product_id}: {cache_error}")
-                            
-                            print(f"✅ Inventory cache updated for {len(products_to_update)} products")
+                                    print(f"[WARN] product cache: {cache_error}")
+                            print(f"Cache updated for {len(products_to_update)} products, {len(seen_batches)} batches")
                         else:
                             print("No valid products to create sales records")
                             
@@ -4220,22 +4222,46 @@ def print_sales_receipt(request, invoice_id):
         sale.global_counter = counter
         counter += 1
     
-    # Calculate total
+    # Calculate totals with discount breakdown
     sales_total = sales.aggregate(total=Sum('sale_total_amount'))['total'] or 0
-    
+
+    subtotal_before_discount = 0.0
+    total_discount_amount = 0.0
+    total_cgst_amount = 0.0
+    total_sgst_amount = 0.0
+
+    for sale in sales:
+        base = sale.sale_rate * sale.sale_quantity
+        if sale.sale_calculation_mode == 'percentage':
+            disc_amt = base * (sale.sale_discount / 100)
+        else:
+            disc_amt = sale.sale_discount
+        after_disc = base - disc_amt
+        subtotal_before_discount += base
+        total_discount_amount += disc_amt
+        total_cgst_amount += after_disc * (sale.sale_cgst / 100)
+        total_sgst_amount += after_disc * (sale.sale_sgst / 100)
+
+    taxable_amount = subtotal_before_discount - total_discount_amount
+
     # Get pharmacy details
     pharmacy = None
     try:
         pharmacy = Pharmacy_Details.objects.first()
     except Pharmacy_Details.DoesNotExist:
         pharmacy = None
-    
+
     context = {
         'invoice': invoice,
         'sales': sales,
         'challan_groups': challan_groups,
         'regular_products': regular_products,
         'sales_total': sales_total,
+        'subtotal_before_discount': subtotal_before_discount,
+        'total_discount_amount': total_discount_amount,
+        'taxable_amount': taxable_amount,
+        'total_cgst_amount': total_cgst_amount,
+        'total_sgst_amount': total_sgst_amount,
         'pharmacy': pharmacy,
         'title': f'Sales Receipt - Invoice #{invoice.sales_invoice_no}'
     }

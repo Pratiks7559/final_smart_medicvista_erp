@@ -287,10 +287,14 @@
                             <td>{{ sale.sale_quantity|floatformat:2 }}</td>
                             <td class="text-right">₹{{ sale.sale_rate|floatformat:2 }}</td>
                             <td class="text-right">
-                                {% if sale.sale_calculation_mode == 'flat' %}
-                                    ₹{{ sale.sale_discount|floatformat:2 }}
+                                {% if sale.sale_calculation_mode == 'percentage' %}
+                                    <span style="font-size:8px;color:#555;">{{ sale.sale_discount }}%</span>
                                 {% else %}
-                                    {{ sale.sale_discount }}%
+                                    {% if sale.sale_discount > 0 %}
+                                        ₹{{ sale.sale_discount|floatformat:2 }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td>{{ sale.sale_cgst }}%</td>
@@ -336,10 +340,14 @@
                             <td>{{ sale.sale_quantity|floatformat:2 }}</td>
                             <td class="text-right">₹{{ sale.sale_rate|floatformat:2 }}</td>
                             <td class="text-right">
-                                {% if sale.sale_calculation_mode == 'flat' %}
-                                    ₹{{ sale.sale_discount|floatformat:2 }}
+                                {% if sale.sale_calculation_mode == 'percentage' %}
+                                    <span style="font-size:8px;color:#555;">{{ sale.sale_discount }}%</span>
                                 {% else %}
-                                    {{ sale.sale_discount }}%
+                                    {% if sale.sale_discount > 0 %}
+                                        ₹{{ sale.sale_discount|floatformat:2 }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
                                 {% endif %}
                             </td>
                             <td>{{ sale.sale_cgst }}%</td>
@@ -355,9 +363,29 @@
             <!-- Totals Section -->
             <div class="totals-section">
                 <div class="total-row">
-                    <span>Subtotal:</span>
-                    <span>₹{{ sales_total|floatformat:2 }}</span>
+                    <span>Subtotal (before disc.):</span>
+                    <span>₹{{ subtotal_before_discount|floatformat:2 }}</span>
                 </div>
+                {% if total_discount_amount > 0 %}
+                <div class="total-row" style="color:#c0392b;">
+                    <span>Total Discount:</span>
+                    <span>- ₹{{ total_discount_amount|floatformat:2 }}</span>
+                </div>
+                <div class="total-row">
+                    <span>Taxable Amount:</span>
+                    <span>₹{{ taxable_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
+                {% if total_cgst_amount > 0 or total_sgst_amount > 0 %}
+                <div class="total-row">
+                    <span>CGST:</span>
+                    <span>₹{{ total_cgst_amount|floatformat:2 }}</span>
+                </div>
+                <div class="total-row">
+                    <span>SGST:</span>
+                    <span>₹{{ total_sgst_amount|floatformat:2 }}</span>
+                </div>
+                {% endif %}
                 {% if invoice.sales_transport_charges %}
                 <div class="total-row">
                     <span>Transport Charges:</span>

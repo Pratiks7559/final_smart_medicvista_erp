@@ -244,15 +244,14 @@ def _authenticate_retailer(request):
 def api_health_check(request):
     """
     Retailer app calls this every 10s with X-API-KEY header.
-    ONLY the retailer whose API key matches gets marked Online.
-    No API key = 401. Wrong API key = 401.
+    DB write sirf tab hoga jab last_seen 15+ seconds purana ho
+    (throttle) — reduces DB writes from 6/min to ~4/min per retailer.
     """
     server_mode = getattr(settings, 'RETAILER_SYNC_MODE', 'LOCAL')
     now = datetime.now()
 
     api_key = request.headers.get('X-API-KEY', '').strip()
     if not api_key:
-        # No key — return ok but don't update any session
         return JsonResponse({
             'status': 'ok',
             'server_mode': server_mode,
@@ -265,13 +264,17 @@ def api_health_check(request):
         logger.warning("Health check rejected: unknown api_key=%s", api_key[:8])
         return JsonResponse({'error': 'Invalid API key'}, status=401)
 
-    # Update ONLY this retailer's session
-    RetailerSession.objects.update_or_create(
-        retailer=retailer,
-        defaults={'last_seen': now, 'is_online': True},
-    )
-    logger.debug("Health check OK: retailer=%s (%s)",
-                 retailer.retailer_name, now.strftime('%H:%M:%S'))
+    # Throttle: sirf tab DB write karo jab session nahi hai ya 15s se zyada purana ho
+    from datetime import timedelta
+    threshold = now - timedelta(seconds=15)
+    existing = RetailerSession.objects.filter(retailer=retailer).first()
+    if existing is None or existing.last_seen is None or existing.last_seen < threshold:
+        RetailerSession.objects.update_or_create(
+            retailer=retailer,
+            defaults={'last_seen': now, 'is_online': True},
+        )
+        logger.debug("Health check DB write: retailer=%s (%s)",
+                     retailer.retailer_name, now.strftime('%H:%M:%S'))
 
     return JsonResponse({
         'status': 'ok',

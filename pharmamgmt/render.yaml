@@ -27,3 +27,7 @@ services:
         sync: false
       - key: DB_PORT
         sync: false
+      # DB connection: 0 for Render free tier (serverless-style, no persistent connections)
+      # Set to 60 only if using a dedicated DB server that keeps connections alive
+      - key: DB_CONN_MAX_AGE
+        value: "0"

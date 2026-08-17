@@ -97,20 +97,20 @@
                             <div class="cust-chal-total-section">
                                 <table style="margin-left:auto; border-collapse:collapse; min-width:300px;">
                                     <tr>
-                                        <td style="padding:4px 12px; text-align:right;">Subtotal (before discount):</td>
-                                        <td style="padding:4px 12px; text-align:right;">₹<span id="challanSubtotal">0.00</span></td>
+                                        <td style="padding:4px 12px; text-align:right; color:#111827;">Subtotal (before discount):</td>
+                                        <td style="padding:4px 12px; text-align:right; color:#111827;">₹<span id="challanSubtotal" style="color:#111827;">0.00</span></td>
                                     </tr>
                                     <tr>
-                                        <td style="padding:4px 12px; text-align:right;">Total Discount:</td>
-                                        <td style="padding:4px 12px; text-align:right;">- ₹<span id="challanTotalDiscount">0.00</span> (<span id="challanDiscountPct">0.00</span>%)</td>
+                                        <td style="padding:4px 12px; text-align:right; color:#111827;">Total Discount:</td>
+                                        <td style="padding:4px 12px; text-align:right; color:#dc2626;">- ₹<span id="challanTotalDiscount" style="color:#dc2626;">0.00</span> (<span id="challanDiscountPct" style="color:#dc2626;">0.00</span>%)</td>
                                     </tr>
                                     <tr>
-                                        <td style="padding:4px 12px; text-align:right;">GST Total (CGST + SGST):</td>
-                                        <td style="padding:4px 12px; text-align:right;">₹<span id="challanGstTotal">0.00</span></td>
+                                        <td style="padding:4px 12px; text-align:right; color:#111827;">GST Total (CGST + SGST):</td>
+                                        <td style="padding:4px 12px; text-align:right; color:#111827;">₹<span id="challanGstTotal" style="color:#111827;">0.00</span></td>
                                     </tr>
-                                    <tr style="border-top:2px solid #333;">
-                                        <td style="padding:6px 12px; text-align:right; font-weight:700;">Grand Total:</td>
-                                        <td style="padding:6px 12px; text-align:right; font-weight:700;">₹<span id="grandTotal">0.00</span></td>
+                                    <tr style="border-top:2px solid #111827;">
+                                        <td style="padding:6px 12px; text-align:right; font-weight:700; color:#059669;">Grand Total:</td>
+                                        <td style="padding:6px 12px; text-align:right; font-weight:700; color:#059669;">₹<span id="grandTotal" style="color:#059669;">0.00</span></td>
                                     </tr>
                                 </table>
                             </div>
@@ -271,7 +271,7 @@ function addProductRow() {
             <div class="stock-info-display" style="display:none;"></div>
         </td>
         <td><input type="number" class="cust-chal-free-qty" step="0.01" placeholder="0" value="0"></td>
-        <td><input type="number" class="cust-chal-discount" step="0.01" placeholder="0.00" value="0" onchange="calculateRowTotal(${productRowIndex})"></td>
+        <td class="cust-chal-discount-cell"><div class="cust-disc-type-group"><label class="cust-disc-type-label active"><input type="radio" class="cust-chal-disc-mode" name="cust_disc_mode_${productRowIndex}" value="flat" checked onchange="onChallanDiscModeChange(${productRowIndex})">Flat</label><label class="cust-disc-type-label"><input type="radio" class="cust-chal-disc-mode" name="cust_disc_mode_${productRowIndex}" value="percentage" onchange="onChallanDiscModeChange(${productRowIndex})">%</label></div><input type="number" class="cust-chal-discount" step="0.01" placeholder="0.00" value="0" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="cust-chal-cgst" step="0.01" placeholder="2.5" value="2.5" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="cust-chal-sgst" step="0.01" placeholder="2.5" value="2.5" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><strong class="cust-chal-row-total">₹0.00</strong></td>
@@ -290,17 +290,34 @@ function removeProductRow(index) {
     }
 }
 
+function onChallanDiscModeChange(index) {
+    const row = document.getElementById(`productRow_${index}`);
+    if (!row) return;
+    const discInput = row.querySelector('.cust-chal-discount');
+    const discModeEl = row.querySelector('.cust-chal-disc-mode:checked');
+    const mode = discModeEl ? discModeEl.value : 'flat';
+    row.querySelectorAll('.cust-disc-type-label').forEach(l => l.classList.remove('active'));
+    if (discModeEl) discModeEl.closest('.cust-disc-type-label').classList.add('active');
+    if (discInput) {
+        discInput.placeholder = mode === 'percentage' ? '0 %' : '0.00';
+        discInput.value = '0';
+    }
+    calculateRowTotal(index);
+}
+
 function calculateRowTotal(index) {
     const row = document.getElementById(`productRow_${index}`);
     if (!row) return;
     
     const rate = parseFloat(row.querySelector('.cust-chal-rate').value) || 0;
     const quantity = parseFloat(row.querySelector('.cust-chal-quantity').value) || 0;
-    const discount = parseFloat(row.querySelector('.cust-chal-discount').value) || 0;
+    const discountRaw = parseFloat(row.querySelector('.cust-chal-discount').value) || 0;
     const cgst = parseFloat(row.querySelector('.cust-chal-cgst').value) || 0;
     const sgst = parseFloat(row.querySelector('.cust-chal-sgst').value) || 0;
-    
+    const discModeEl = row.querySelector('.cust-chal-disc-mode:checked');
+    const discMode = discModeEl ? discModeEl.value : 'flat';
     const baseAmount = rate * quantity;
+    const discount = discMode === 'percentage' ? (baseAmount * discountRaw / 100) : discountRaw;
     const discountedAmount = baseAmount - discount;
     const totalAmount = discountedAmount * (1 + ((cgst + sgst) / 100));
     
@@ -316,11 +333,14 @@ function calculateGrandTotal() {
     document.querySelectorAll('#productRows tr').forEach(row => {
         const rate = parseFloat(row.querySelector('.cust-chal-rate')?.value) || 0;
         const qty = parseFloat(row.querySelector('.cust-chal-quantity')?.value) || 0;
-        const discount = parseFloat(row.querySelector('.cust-chal-discount')?.value) || 0;
+        const discountRaw = parseFloat(row.querySelector('.cust-chal-discount')?.value) || 0;
         const cgst = parseFloat(row.querySelector('.cust-chal-cgst')?.value) || 0;
         const sgst = parseFloat(row.querySelector('.cust-chal-sgst')?.value) || 0;
+        const discModeEl = row.querySelector('.cust-chal-disc-mode:checked');
+        const discMode = discModeEl ? discModeEl.value : 'flat';
 
         const base = rate * qty;
+        const discount = discMode === 'percentage' ? (base * discountRaw / 100) : discountRaw;
         const afterDiscount = base - discount;
         const gst = (afterDiscount * (cgst + sgst)) / 100;
 
@@ -868,6 +888,7 @@ document.getElementById('custChallanForm').addEventListener('submit', function(e
                 quantity: parseFloat(row.querySelector('.cust-chal-quantity').value) || 0,
                 free_qty: parseFloat(row.querySelector('.cust-chal-free-qty').value) || 0,
                 discount: parseFloat(row.querySelector('.cust-chal-discount').value) || 0,
+                calculation_mode: (function(){ var el = row.querySelector('.cust-chal-disc-mode:checked'); return el ? el.value : 'flat'; })(),
                 cgst: parseFloat(row.querySelector('.cust-chal-cgst').value) || 0,
                 sgst: parseFloat(row.querySelector('.cust-chal-sgst').value) || 0,
                 rate_applied: selectedCustomerRateType
@@ -1506,6 +1527,46 @@ function saveSeries() {
 
 .stock-info-display small {
     font-size: 12px;
+}
+
+/* Discount Type Radio Button Styles */
+.cust-disc-type-group {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+}
+
+.cust-disc-type-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid #ced4da;
+    background: #f8f9fa;
+    color: #6c757d;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.cust-disc-type-label input[type="radio"] {
+    display: none;
+}
+
+.cust-disc-type-label:hover {
+    border-color: #6c757d;
+    background: #e9ecef;
+    color: #495057;
+}
+
+.cust-disc-type-label.active {
+    background: #0d6efd;
+    border-color: #0d6efd;
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
 }
 </style>
 {% endblock %}

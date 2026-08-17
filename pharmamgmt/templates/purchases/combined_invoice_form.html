@@ -111,7 +111,7 @@
                                             <th class="ci-th-purchase-rate">Purchase Rate</th>
                                             <th class="ci-th-qty">Qty</th>
                                             <th class="ci-th-free-qty">Free Qty</th>
-                                            <th class="ci-th-discount">Discount</th>
+                                            <th class="ci-th-discount">Disc Type / Amt</th>
                                             <th class="ci-th-cgst">CGST %</th>
                                             <th class="ci-th-sgst">SGST %</th>
                                             <th class="ci-th-rate-a">Rate A</th>
@@ -877,16 +877,19 @@ window.productCache = [];
 
 // Function to refresh product cache when new product is added
 window.refreshProductCache = function(newProduct) {
-    console.log('Refreshing product cache with new product:', newProduct);
-    
-    // Add to cache
     if (newProduct && newProduct.id) {
         window.productCache.push({
             id: newProduct.id,
             name: newProduct.name,
             company: newProduct.company
         });
-        console.log('✅ Product added to cache. Total products:', window.productCache.length);
+        // Add new option to ALL existing product selects in the table
+        document.querySelectorAll('.product-select').forEach(select => {
+            const opt = document.createElement('option');
+            opt.value = newProduct.id;
+            opt.textContent = `${newProduct.name} - ${newProduct.company}`;
+            select.appendChild(opt);
+        });
     }
 };
 
@@ -910,20 +913,30 @@ function addProductRow() {
     const row = document.createElement('tr');
     row.id = `productRow_${productRowIndex}`;
     
+    // Build options from live cache so newly added products appear immediately
+    let productOptions = '<option value="">Select Product</option>';
+    window.productCache.forEach(p => {
+        productOptions += `<option value="${p.id}">${p.name} - ${p.company}</option>`;
+    });
+    
     row.innerHTML = `
         <td><select class="product-select" id="productSelect_${productRowIndex}" onchange="loadProductInfo(${productRowIndex}, this.value)" required>
-            <option value="">Select Product</option>
-            {% for product in products %}
-            <option value="{{ product.productid }}">{{ product.product_name }} - {{ product.product_company }}</option>
-            {% endfor %}
+            ${productOptions}
         </select></td>
         <td><input type="text" class="batch-no" placeholder="Batch No" required></td>
-        <td><input type="text" class="expiry" placeholder="MM-YYYY" maxlength="7" title="Enter expiry in MM-YYYY format (e.g., 12-2025)" required></td>
         <td><input type="number" class="mrp" step="any" placeholder="MRP" min="0.01" required></td>
         <td><input type="number" class="purchase-rate" step="any" placeholder="Rate" min="0.01" onchange="calculateRowTotal(${productRowIndex})" required></td>
         <td><input type="number" class="qty" placeholder="Qty" min="0.01" step="any" onchange="calculateRowTotal(${productRowIndex})" required></td>
         <td><input type="number" class="free-qty" placeholder="Free Qty" min="0" step="any" value="0"></td>
-        <td><input type="number" class="discount" step="any" placeholder="Discount" min="0" onchange="calculateRowTotal(${productRowIndex})"></td>
+        <td>
+            <div style="display:flex;flex-direction:column;gap:3px;min-width:120px;">
+                <div style="display:flex;gap:6px;font-size:11px;">
+                    <label style="cursor:pointer;"><input type="radio" name="disc_type_${productRowIndex}" class="disc-type-radio" value="flat" checked onchange="onDiscTypeChange(${productRowIndex})"> Flat ₹</label>
+                    <label style="cursor:pointer;"><input type="radio" name="disc_type_${productRowIndex}" class="disc-type-radio" value="percentage" onchange="onDiscTypeChange(${productRowIndex})"> %</label>
+                </div>
+                <input type="number" class="discount" step="any" placeholder="0" min="0" onchange="calculateRowTotal(${productRowIndex})" style="width:100%;">
+            </div>
+        </td>
         <td><input type="number" class="cgst-rate" step="any" placeholder="CGST %" min="0" max="50" value="2.5" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="sgst-rate" step="any" placeholder="SGST %" min="0" max="50" value="2.5" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="rate-a" step="any" placeholder="Rate A" min="0"></td>
@@ -985,12 +998,12 @@ function calculateRowTotal(rowIndex) {
     const discount = parseFloat(String(discountInput ? discountInput.value : '0')) || 0;
     const cgstRate = parseFloat(String(cgstInput ? cgstInput.value : '0')) || 0;
     const sgstRate = parseFloat(String(sgstInput ? sgstInput.value : '0')) || 0;
+    const discTypeEl = row.querySelector('.disc-type-radio:checked');
+    const discType = discTypeEl ? discTypeEl.value : 'flat';
     
-    // Calculate base amount
     const baseAmount = rate * qty;
-    
-    // Apply discount
-    const afterDiscount = baseAmount - discount;
+    const discountAmount = discType === 'percentage' ? (baseAmount * discount / 100) : discount;
+    const afterDiscount = baseAmount - discountAmount;
     
     // Calculate tax amounts on the discounted amount
     const cgstAmount = (afterDiscount * cgstRate) / 100;
@@ -1020,14 +1033,17 @@ function calculateInvoiceTotal() {
         const cgstRate = parseFloat(row.querySelector('.cgst-rate')?.value) || 0;
         const sgstRate = parseFloat(row.querySelector('.sgst-rate')?.value) || 0;
 
+        const discTypeEl   = row.querySelector('.disc-type-radio:checked');
+        const discType     = discTypeEl ? discTypeEl.value : 'flat';
         const base         = rate * qty;
-        const afterDisc    = base - discount;
+        const discAmt      = discType === 'percentage' ? (base * discount / 100) : discount;
+        const afterDisc    = base - discAmt;
         const cgstAmt      = (afterDisc * cgstRate) / 100;
         const sgstAmt      = (afterDisc * sgstRate) / 100;
         const rowTotal     = afterDisc + cgstAmt + sgstAmt;
 
         subtotal      += base;
-        totalDiscount += discount;
+        totalDiscount += discAmt;
         totalCGST     += cgstAmt;
         totalSGST     += sgstAmt;
         productsTotal += rowTotal;
@@ -1528,7 +1544,7 @@ function collectAllProductsData() {
                 discount: String(discount),
                 cgst: String(cgstRate),
                 sgst: String(sgstRate),
-                calculation_mode: 'flat',
+                calculation_mode: (row.querySelector('.disc-type-radio:checked')?.value || 'flat'),
                 rate_a: String(rateA),
                 rate_b: String(rateB),
                 rate_c: String(rateC),
@@ -1603,13 +1619,7 @@ function openQuickProductSearch() {
                         const productName = selected.querySelector('.product-name').textContent;
                         const productCompany = selected.querySelector('.product-company').textContent;
                         
-                        const products = [{% for product in products %}{
-                            id: {{ product.productid }},
-                            name: '{{ product.product_name|escapejs }}',
-                            company: '{{ product.product_company|escapejs }}'
-                        },{% endfor %}];
-                        
-                        const matchedProduct = products.find(p => 
+                        const matchedProduct = window.productCache.find(p => 
                             p.name === productName && p.company === productCompany
                         );
                         
@@ -1923,6 +1933,18 @@ function filterBatches() {
             item.style.display = 'none';
         }
     });
+}
+
+function onDiscTypeChange(rowIndex) {
+    const row = document.getElementById(`productRow_${rowIndex}`);
+    if (!row) return;
+    const discInput = row.querySelector('.discount');
+    const discTypeEl = row.querySelector('.disc-type-radio:checked');
+    if (discInput && discTypeEl) {
+        discInput.placeholder = discTypeEl.value === 'percentage' ? '% e.g. 5' : '₹ amount';
+        discInput.max = discTypeEl.value === 'percentage' ? '100' : '';
+    }
+    calculateRowTotal(rowIndex);
 }
 
 // Form submission handler
@@ -2588,8 +2610,6 @@ function addProductRowFromChallan(product) {
     row.setAttribute('data-challan-no', product.challan_no || '');
     row.setAttribute('data-challan-date', product.challan_date || '');
     
-    console.log(`Adding challan product:`, product);
-    
     // Format expiry date to MM-YYYY if needed
     let expiry = product.expiry || product.product_expiry || '';
     if (expiry && expiry.length === 10 && expiry.includes('-')) {
@@ -2599,12 +2619,15 @@ function addProductRowFromChallan(product) {
         }
     }
     
+    // Build options from live cache
+    let productOptions = '<option value="">Select Product</option>';
+    window.productCache.forEach(p => {
+        productOptions += `<option value="${p.id}">${p.name} - ${p.company}</option>`;
+    });
+    
     row.innerHTML = `
         <td><select class="product-select" id="productSelect_${productRowIndex}" onchange="loadProductInfo(${productRowIndex}, this.value)" required>
-            <option value="">Select Product</option>
-            {% for product in products %}
-            <option value="{{ product.productid }}">{{ product.product_name }} - {{ product.product_company }}</option>
-            {% endfor %}
+            ${productOptions}
         </select></td>
         <td><input type="text" class="batch-no" placeholder="Batch No" value="${String(product.batch_no || product.product_batch_no || '')}" required></td>
         <td><input type="text" class="expiry" placeholder="MM-YYYY" maxlength="7" title="Enter expiry in MM-YYYY format (e.g., 12-2025)" value="${String(expiry)}" required></td>
@@ -2612,7 +2635,15 @@ function addProductRowFromChallan(product) {
         <td><input type="number" class="purchase-rate" step="any" placeholder="Rate" min="0.01" value="${String(product.rate || product.product_purchase_rate || '')}" onchange="calculateRowTotal(${productRowIndex})" required></td>
         <td><input type="number" class="qty" placeholder="Qty" min="0.01" step="any" value="${String(product.quantity || product.product_quantity || '')}" onchange="calculateRowTotal(${productRowIndex})" required></td>
         <td><input type="number" class="free-qty" placeholder="Free Qty" min="0" step="any" value="${String(product.free_qty || product.product_free_qty || '0')}"></td>
-        <td><input type="number" class="discount" step="any" placeholder="Discount" min="0" value="${String(product.discount || product.product_discount || '0')}" onchange="calculateRowTotal(${productRowIndex})"></td>
+        <td>
+            <div style="display:flex;flex-direction:column;gap:3px;min-width:120px;">
+                <div style="display:flex;gap:6px;font-size:11px;">
+                    <label style="cursor:pointer;"><input type="radio" name="disc_type_${productRowIndex}" class="disc-type-radio" value="flat" checked onchange="onDiscTypeChange(${productRowIndex})"> Flat ₹</label>
+                    <label style="cursor:pointer;"><input type="radio" name="disc_type_${productRowIndex}" class="disc-type-radio" value="percentage" onchange="onDiscTypeChange(${productRowIndex})"> %</label>
+                </div>
+                <input type="number" class="discount" step="any" placeholder="0" min="0" value="${String(product.discount || product.product_discount || '0')}" onchange="calculateRowTotal(${productRowIndex})" style="width:100%;">
+            </div>
+        </td>
         <td><input type="number" class="cgst-rate" step="any" placeholder="CGST %" min="0" max="50" value="${String(product.cgst || '2.5')}" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="sgst-rate" step="any" placeholder="SGST %" min="0" max="50" value="${String(product.sgst || '2.5')}" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="rate-a" step="any" placeholder="Rate A" min="0" value="${String(product.rate_a || '')}"></td>
@@ -2631,6 +2662,10 @@ function addProductRowFromChallan(product) {
     if (productSelect && product.product_id) {
         productSelect.value = product.product_id;
     }
+    
+    // Always force flat disc-type for challan products (discount is already flat amount in DB)
+    const discRadios = row.querySelectorAll('.disc-type-radio');
+    discRadios.forEach(r => { r.checked = (r.value === 'flat'); });
     
     const currentRowIndex = productRowIndex;
     productRowIndex++;

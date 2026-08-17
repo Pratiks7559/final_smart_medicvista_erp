@@ -150,7 +150,7 @@ class PurchaseMaster(models.Model):
     purchase_entry_date=models.DateTimeField(default=timezone.now)
     CGST=models.FloatField(default=0.0)
     SGST=models.FloatField(default=0.0)
-    purchase_calculation_mode=models.CharField(max_length=5, default='flat')
+    purchase_calculation_mode=models.CharField(max_length=10, default='flat')
     rate_a=models.FloatField(default=0.0, blank=True)
     rate_b=models.FloatField(default=0.0, blank=True)
     rate_c=models.FloatField(default=0.0, blank=True)
@@ -204,7 +204,7 @@ class SalesMaster(models.Model):
     sale_total_amount=models.FloatField(default=0.0)
     sale_entry_date=models.DateTimeField(default=timezone.now)
     rate_applied=models.CharField(max_length=10, blank=True, default='NA')
-    sale_calculation_mode=models.CharField(max_length=5, default='flat') 
+    sale_calculation_mode=models.CharField(max_length=10, default='flat') 
     #calculation_mode indicates how discount is calculated by flat-rupees or %-percent
     source_challan_no=models.CharField(max_length=50, blank=True, null=True, help_text='Source customer challan number if pulled from challan')
     source_challan_date=models.DateField(blank=True, null=True, help_text='Source customer challan date if pulled from challan')
@@ -535,6 +535,7 @@ class CustomerChallanMaster(models.Model):
     sale_total_amount = models.FloatField()
     sales_entry_date = models.DateTimeField(default=timezone.now)
     rate_applied = models.CharField(max_length=10, blank=True, default='NA')
+    sale_calculation_mode = models.CharField(max_length=10, default='flat')
     
     def __str__(self):
         return f"{self.product_name} - {self.product_batch_no} - {self.sale_quantity}"
@@ -564,6 +565,7 @@ class CustomerChallanMaster2(models.Model):
     sale_total_amount = models.FloatField()
     sales_entry_date = models.DateTimeField(default=timezone.now)
     rate_applied = models.CharField(max_length=10, blank=True, default='NA')
+    sale_calculation_mode = models.CharField(max_length=10, default='flat')
     
     def __str__(self):
         return f"{self.product_name} - {self.product_batch_no} - {self.sale_quantity}"

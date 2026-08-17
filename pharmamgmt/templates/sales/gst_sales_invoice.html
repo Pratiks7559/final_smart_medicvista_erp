@@ -258,7 +258,13 @@
                     <td>{{ item.sale.sale_quantity|floatformat:0 }}</td>
                     <td class="text-right">{{ item.sale.product_MRP|floatformat:2 }}</td>
                     <td class="text-right">{{ item.sale.sale_rate|floatformat:2 }}</td>
-                    <td class="text-right">{{ item.sale.sale_discount|floatformat:2 }}</td>
+                    <td class="text-right">
+                        {% if item.sale.sale_calculation_mode == 'percentage' %}
+                            {{ item.discount_amt|floatformat:2 }}<br><small style="color:#555;">({{ item.sale.sale_discount|floatformat:1 }}%)</small>
+                        {% else %}
+                            {{ item.sale.sale_discount|floatformat:2 }}
+                        {% endif %}
+                    </td>
                     <td class="text-right">{{ item.sale.sale_sgst|floatformat:1 }}%</td>
                     <td class="text-right">{{ item.sale.sale_cgst|floatformat:1 }}%</td>
                     <td class="text-right">{{ item.total_amount|floatformat:2 }}</td>
@@ -318,7 +324,7 @@
                     <td class="text-right">₹{{ total_sgst|floatformat:2 }}</td>
                 </tr>
                 <tr>
-                    <td class="text-left">Discount:</td>
+                    <td class="text-left">Total Discount:</td>
                     <td class="text-right">₹{{ total_discount|floatformat:2|default:"0.00" }}</td>
                 </tr>
                 <tr class="grand-total">

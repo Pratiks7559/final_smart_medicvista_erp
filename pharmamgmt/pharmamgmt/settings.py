@@ -34,6 +34,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'core.middleware.DatabaseRetryMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -74,6 +75,10 @@ TEMPLATES = [
 # DATABASE
 # Override via environment variables for production
 # ============================================================
+# CONN_MAX_AGE:
+#   LOCAL  → 0  (new connection per request, safe for dev)
+#   CLOUD  → 60 (reuse connections, reduces "Server has gone away")
+#   Set DB_CONN_MAX_AGE env var on Render/Railway to 60
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -82,10 +87,11 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD', 'Pratik@123'),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
-        'CONN_MAX_AGE': 600,
+        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '0')),
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            'connect_timeout': 30,
         },
     }
 }
@@ -131,8 +137,13 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # ============================================================
 # SESSION
+# Use cached_db backend:
+#   - Reads from cache (fast, no DB hit)
+#   - Writes to DB as backup (persistent across restarts)
+#   - Falls back to DB if cache miss
+#   - Eliminates 2 DB queries per request when cache is warm
 # ============================================================
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 SESSION_COOKIE_AGE = 3600
 SESSION_SAVE_EVERY_REQUEST = False
 
@@ -165,7 +176,13 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 50000
 PAGINATION_ITEMS_PER_PAGE = 50
 
 # ============================================================
-# CACHE  (use Redis in production via REDIS_URL env var)
+# CACHE
+# Priority:
+#   1. REDIS_URL env set hai  → Redis (best for production)
+#   2. MEMCACHE_URL env set hai → Memcached
+#   3. Fallback → LocMemCache (in-process, works without Redis)
+#      LocMemCache is per-process so sessions won't share across
+#      workers, but it's far better than DummyCache which does nothing.
 # ============================================================
 if os.getenv('REDIS_URL'):
     CACHES = {
@@ -177,9 +194,13 @@ if os.getenv('REDIS_URL'):
         }
     }
 else:
+    # LocMemCache: in-memory, per-process, no external dependency
+    # Better than DummyCache because cached_db sessions actually cache
     CACHES = {
         'default': {
-            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'pharma-locmem',
+            'TIMEOUT': 300,
         }
     }
 

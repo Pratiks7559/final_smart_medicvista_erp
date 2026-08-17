@@ -114,268 +114,186 @@ def add_invoice_with_products(request):
                 errors = []
                 
                 for i, product_data in enumerate(products):
-                    if product_data.get('productid'):
+                    if not product_data.get('productid'):
+                        continue
+                    sid = transaction.savepoint()
+                    try:
+                        # Get product details
+                        product = ProductMaster.objects.get(productid=product_data['productid'])
+                        
+                        # Validate required fields
+                        batch_no = product_data.get('batch_no', '').strip()
+                        expiry = product_data.get('expiry', '').strip()
+                        
+                        if not batch_no:
+                            raise ValueError(f"Batch number is required for {product.product_name}")
+                        
+                        if not expiry:
+                            raise ValueError(f"Expiry date is required for {product.product_name}")
+                        
+                        # Validate and normalize expiry date to MM-YYYY format
+                        import re
+                        expiry = expiry.strip()
+                        
+                        if len(expiry) == 4 and expiry.isdigit():
+                            expiry = f"{expiry[:2]}-20{expiry[2:4]}"
+                        elif len(expiry) == 6 and expiry.isdigit():
+                            expiry = f"{expiry[:2]}-{expiry[2:6]}"
+                        elif '/' in expiry:
+                            expiry = expiry.replace('/', '-')
+                        elif len(expiry) == 7 and expiry.count('-') == 1:
+                            pass
+                        else:
+                            digits = re.sub(r'[^0-9]', '', expiry)
+                            if len(digits) == 4:
+                                expiry = f"{digits[:2]}-20{digits[2:4]}"
+                            elif len(digits) == 6:
+                                expiry = f"{digits[:2]}-{digits[2:6]}"
+                            else:
+                                raise ValueError("Invalid expiry format")
+                        
+                        if not re.match(r'^(0[1-9]|1[0-2])-\d{4}$', expiry):
+                            raise ValueError("Invalid MM-YYYY format")
+                        
+                        exp_month, exp_year = int(expiry.split('-')[0]), int(expiry.split('-')[1])
+                        current_year = datetime.now().year
+                        if exp_year < 2000 or exp_year > (current_year + 50):
+                            raise ValueError(f"Invalid expiry year {exp_year}")
+                        expiry_date = datetime(exp_year, exp_month, 1).date()
+                        
+                        # Convert and validate numeric fields
                         try:
-                            # Get product details
-                            product = ProductMaster.objects.get(productid=product_data['productid'])
-                            
-                            # Validate required fields
-                            batch_no = product_data.get('batch_no', '').strip()
-                            expiry = product_data.get('expiry', '').strip()
-                            
-                            if not batch_no:
-                                errors.append(f"Row {i+1}: Batch number is required for {product.product_name}")
-                                continue
-                            
-                            if not expiry:
-                                errors.append(f"Row {i+1}: Expiry date is required for {product.product_name}")
-                                continue
-                            
-                            # Validate and normalize expiry date to MM-YYYY format
-                            try:
-                                import re
-                                expiry = expiry.strip()
-                                
-                                # Handle different input formats and convert to MM-YYYY
-                                if len(expiry) == 4 and expiry.isdigit():
-                                    month = expiry[:2]
-                                    year = '20' + expiry[2:4]
-                                    expiry = f"{month}-{year}"
-                                elif len(expiry) == 6 and expiry.isdigit():
-                                    month = expiry[:2]
-                                    year = expiry[2:6]
-                                    expiry = f"{month}-{year}"
-                                elif '/' in expiry:
-                                    expiry = expiry.replace('/', '-')
-                                elif len(expiry) == 7 and expiry.count('-') == 1:
-                                    pass
-                                elif not expiry:
-                                    raise ValueError("Empty expiry date")
-                                else:
-                                    digits = re.sub(r'[^0-9]', '', expiry)
-                                    if len(digits) == 4:
-                                        expiry = f"{digits[:2]}-20{digits[2:4]}"
-                                    elif len(digits) == 6:
-                                        expiry = f"{digits[:2]}-{digits[2:6]}"
-                                    else:
-                                        raise ValueError("Invalid format")
-                                
-                                if not re.match(r'^(0[1-9]|1[0-2])-\d{4}$', expiry):
-                                    raise ValueError("Invalid MM-YYYY format")
-                                
-                                month, year = expiry.split('-')
-                                month = int(month)
-                                year = int(year)
-                                
-                                if int(month) < 1 or int(month) > 12:
-                                    raise ValueError("Invalid month")
-                                
-                                # Get current year
-                                current_year = datetime.now().year
-                                
-                                # Validate year range - allow from 2000 to 50 years in future
-                                if int(year) < 2000 or int(year) > (current_year + 50):
-                                    raise ValueError("Invalid year")
-                                
-                                # Skip expired batch warning - just continue processing
-                                expiry_date = datetime(int(year), int(month), 1).date()
-                                
-                            except (ValueError, IndexError) as e:
-                                error_detail = str(e)
-                                if "Invalid year" in error_detail:
-                                    errors.append(f"Row {i+1}: Invalid expiry year for {product.product_name}. Year must be between 2000 and {datetime.now().year + 50}. Got: '{product_data.get('expiry', '')}'. Please use MM-YYYY format (e.g., 12-2025).")
-                                elif "Invalid month" in error_detail:
-                                    errors.append(f"Row {i+1}: Invalid expiry month for {product.product_name}. Month must be between 01 and 12. Got: '{product_data.get('expiry', '')}'. Please use MM-YYYY format (e.g., 12-2025).")
-                                else:
-                                    errors.append(f"Row {i+1}: Invalid expiry date format for {product.product_name}. Use MM-YYYY format (e.g., 12-2025). Got: '{product_data.get('expiry', '')}'. Error: {error_detail}")
-                                continue
-                            
-                            # Convert and validate numeric fields
-                            try:
-                                mrp_val = product_data.get('mrp', 0)
-                                purchase_rate_val = product_data.get('purchase_rate', 0)
-                                quantity_val = product_data.get('quantity', 0)
-                                free_qty_val = product_data.get('free_qty', 0)
-                                scheme_val = product_data.get('scheme', 0)
-                                discount_val = product_data.get('discount', 0)
-                                cgst_val = product_data.get('cgst', 0)
-                                sgst_val = product_data.get('sgst', 0)
-                                
-                                # Convert to float, handling string values
-                                mrp = float(str(mrp_val)) if mrp_val else 0.0
-                                purchase_rate = float(str(purchase_rate_val)) if purchase_rate_val else 0.0
-                                quantity = float(str(quantity_val)) if quantity_val else 0.0
-                                free_qty = float(str(free_qty_val)) if free_qty_val else 0.0
-                                scheme = float(str(scheme_val)) if scheme_val else 0.0
-                                discount = float(str(discount_val)) if discount_val else 0.0
-                                cgst = float(str(cgst_val)) if cgst_val else 0.0
-                                sgst = float(str(sgst_val)) if sgst_val else 0.0
-                            except (ValueError, TypeError) as e:
-                                errors.append(f"Row {i+1}: Invalid numeric values for {product.product_name}: {e}")
-                                continue
-                            
-                            if float(quantity) <= 0:
-                                errors.append(f"Row {i+1}: Quantity must be greater than 0 for {product.product_name}")
-                                continue
-                            
-                            if float(purchase_rate) <= 0:
-                                errors.append(f"Row {i+1}: Purchase rate must be greater than 0 for {product.product_name}")
-                                continue
-                            
-                            # Create purchase entry
-                            purchase = PurchaseMaster()
-                            purchase.product_supplierid = invoice.supplierid
-                            purchase.product_invoiceid = invoice
-                            purchase.product_invoice_no = invoice.invoice_no
-                            purchase.productid = product
-                            purchase.product_name = product.product_name
-                            purchase.product_company = product.product_company
-                            purchase.product_packing = product.product_packing
-                            purchase.product_batch_no = batch_no
-                            purchase.product_expiry = expiry
-                            purchase.product_MRP = mrp
-                            purchase.product_purchase_rate = purchase_rate
-                            purchase.product_quantity = quantity
-                            purchase.product_free_qty = free_qty
-                            purchase.product_scheme = scheme
-                            purchase.product_discount_got = discount
-                            purchase.CGST = cgst
-                            purchase.SGST = sgst
-                            purchase.purchase_calculation_mode = product_data.get('calculation_mode', 'flat')
-                            
-                            # Challan reference fields
-                            challan_no = product_data.get('challan_no', '')
-                            challan_date_str = product_data.get('challan_date', '')
-                            
-                            logger.info(f"Challan data received: challan_no={challan_no}, challan_date={challan_date_str}")
-                            
-                            if challan_no and str(challan_no).strip():
-                                purchase.source_challan_no = str(challan_no).strip()
-                                logger.info(f"Set source_challan_no: {purchase.source_challan_no}")
-                            else:
-                                purchase.source_challan_no = None
-                            
-                            if challan_date_str and str(challan_date_str).strip():
+                            mrp = float(str(product_data.get('mrp', 0) or 0))
+                            purchase_rate = float(str(product_data.get('purchase_rate', 0) or 0))
+                            quantity = float(str(product_data.get('quantity', 0) or 0))
+                            free_qty = float(str(product_data.get('free_qty', 0) or 0))
+                            scheme = float(str(product_data.get('scheme', 0) or 0))
+                            discount = float(str(product_data.get('discount', 0) or 0))
+                            cgst = float(str(product_data.get('cgst', 0) or 0))
+                            sgst = float(str(product_data.get('sgst', 0) or 0))
+                        except (ValueError, TypeError) as e:
+                            raise ValueError(f"Invalid numeric values for {product.product_name}: {e}")
+                        
+                        if quantity <= 0:
+                            raise ValueError(f"Quantity must be greater than 0 for {product.product_name}")
+                        if purchase_rate <= 0:
+                            raise ValueError(f"Purchase rate must be greater than 0 for {product.product_name}")
+                        
+                        # Create purchase entry
+                        purchase = PurchaseMaster()
+                        purchase.product_supplierid = invoice.supplierid
+                        purchase.product_invoiceid = invoice
+                        purchase.product_invoice_no = invoice.invoice_no
+                        purchase.productid = product
+                        purchase.product_name = product.product_name
+                        purchase.product_company = product.product_company
+                        purchase.product_packing = product.product_packing
+                        purchase.product_batch_no = batch_no
+                        purchase.product_expiry = expiry
+                        purchase.product_MRP = mrp
+                        purchase.product_purchase_rate = purchase_rate
+                        purchase.product_quantity = quantity
+                        purchase.product_free_qty = free_qty
+                        purchase.product_scheme = scheme
+                        purchase.product_discount_got = discount
+                        purchase.CGST = cgst
+                        purchase.SGST = sgst
+                        purchase.purchase_calculation_mode = product_data.get('calculation_mode', 'flat')
+                        
+                        # Challan reference fields
+                        challan_no = product_data.get('challan_no', '')
+                        challan_date_str = product_data.get('challan_date', '')
+                        logger.info(f"Challan data received: challan_no={challan_no}, challan_date={challan_date_str}")
+                        
+                        purchase.source_challan_no = str(challan_no).strip() if challan_no and str(challan_no).strip() else None
+                        purchase.source_challan_date = None
+                        if challan_date_str and str(challan_date_str).strip():
+                            for fmt in ['%d-%m-%Y', '%Y-%m-%d', '%d/%m/%Y']:
                                 try:
-                                    date_str = str(challan_date_str).strip()
-                                    # Try multiple date formats
-                                    for fmt in ['%d-%m-%Y', '%Y-%m-%d', '%d/%m/%Y']:
-                                        try:
-                                            purchase.source_challan_date = datetime.strptime(date_str, fmt).date()
-                                            logger.info(f"Set source_challan_date: {purchase.source_challan_date}")
-                                            break
-                                        except ValueError:
-                                            continue
-                                except Exception as e:
-                                    logger.warning(f"Error parsing challan date '{challan_date_str}': {e}")
-                                    purchase.source_challan_date = None
-                            else:
-                                purchase.source_challan_date = None
-                            
-                            # Optional rate fields - store in PurchaseMaster
+                                    purchase.source_challan_date = datetime.strptime(str(challan_date_str).strip(), fmt).date()
+                                    break
+                                except ValueError:
+                                    continue
+                        
+                        # Rate fields
+                        try:
+                            purchase.rate_a = float(str(product_data.get('rate_a', 0) or product_data.get('rate_A', 0) or 0))
+                            purchase.rate_b = float(str(product_data.get('rate_b', 0) or product_data.get('rate_B', 0) or 0))
+                            purchase.rate_c = float(str(product_data.get('rate_c', 0) or product_data.get('rate_C', 0) or 0))
+                        except (ValueError, TypeError):
+                            purchase.rate_a = purchase.rate_b = purchase.rate_c = 0.0
+                        
+                        # Calculate actual rate based on discount mode
+                        calc_mode = purchase.purchase_calculation_mode
+                        if calc_mode == 'flat':
+                            total_amount_calc = purchase_rate * quantity
+                            if discount > total_amount_calc:
+                                raise ValueError(f"Flat discount cannot exceed total amount for {product.product_name}")
+                            purchase.actual_rate_per_qty = round(purchase_rate - (discount / quantity if quantity > 0 else 0), 2)
+                        else:
+                            if discount > 100.0:
+                                raise ValueError(f"Percentage discount cannot exceed 100% for {product.product_name}")
+                            purchase.actual_rate_per_qty = round(purchase_rate * (1 - discount / 100.0), 2)
+                        
+                        purchase.product_actual_rate = purchase.actual_rate_per_qty
+                        base_amount = round(purchase.product_actual_rate * quantity, 2)
+                        cgst_amount = round(base_amount * (cgst / 100), 2)
+                        sgst_amount = round(base_amount * (sgst / 100), 2)
+                        purchase.total_amount = round(base_amount + cgst_amount + sgst_amount, 2)
+                        purchase.product_transportation_charges = 0
+                        
+                        total_amount += purchase.total_amount
+                        logger.info(f"Product {product.product_name}: Base={base_amount}, CGST={cgst_amount}, SGST={sgst_amount}, Total={purchase.total_amount}")
+                        purchase.save()
+                        products_added += 1
+                        logger.info(f"PURCHASE CREATED: {product.product_name}, Batch: {batch_no}, Qty: {quantity}, Free Qty: {free_qty}")
+                        
+                        # Save sale rates if provided
+                        rate_A = product_data.get('rate_a') or product_data.get('rate_A')
+                        rate_B = product_data.get('rate_b') or product_data.get('rate_B')
+                        rate_C = product_data.get('rate_c') or product_data.get('rate_C')
+                        if rate_A or rate_B or rate_C:
                             try:
-                                rate_a_val = product_data.get('rate_a', 0) or product_data.get('rate_A', 0)
-                                rate_b_val = product_data.get('rate_b', 0) or product_data.get('rate_B', 0)
-                                rate_c_val = product_data.get('rate_c', 0) or product_data.get('rate_C', 0)
-                                
-                                purchase.rate_a = float(str(rate_a_val)) if rate_a_val else 0.0
-                                purchase.rate_b = float(str(rate_b_val)) if rate_b_val else 0.0
-                                purchase.rate_c = float(str(rate_c_val)) if rate_c_val else 0.0
-                                
-                                logger.info(f"Setting rates for {product.product_name}: A={purchase.rate_a}, B={purchase.rate_b}, C={purchase.rate_c}")
-                            except (ValueError, TypeError) as e:
-                                logger.warning(f"Error converting rates for {product.product_name}: {e}")
-                                purchase.rate_a = 0.0
-                                purchase.rate_b = 0.0
-                                purchase.rate_c = 0.0
-                            
-                            # Calculate actual rate
-                            if purchase.purchase_calculation_mode == 'flat':
-                                total_amount_calc = float(purchase_rate) * float(quantity)
-                                if float(discount) > total_amount_calc:
-                                    errors.append(f"Row {i+1}: Flat discount cannot exceed total amount for {product.product_name}")
-                                    continue
-                                purchase.actual_rate_per_qty = round(float(purchase_rate) - (float(discount) / float(quantity)) if float(quantity) > 0 else float(purchase_rate), 2)
-                            else:
-                                if float(discount) > 100.0:
-                                    errors.append(f"Row {i+1}: Percentage discount cannot exceed 100% for {product.product_name}")
-                                    continue
-                                purchase.actual_rate_per_qty = round(float(purchase_rate) * (1 - (float(discount) / 100.0)), 2)
-                            
-                            purchase.product_actual_rate = purchase.actual_rate_per_qty
-                            
-                            # Calculate base amount before tax
-                            base_amount = round(purchase.product_actual_rate * quantity, 2)
-                            
-                            # Calculate tax amounts
-                            cgst_amount = round(base_amount * (cgst / 100), 2)
-                            sgst_amount = round(base_amount * (sgst / 100), 2)
-                            
-                            # Total amount including taxes
-                            purchase.total_amount = round(base_amount + cgst_amount + sgst_amount, 2)
-                            purchase.product_transportation_charges = 0  # Will be calculated later
-                            
-                            total_amount += purchase.total_amount
-                            logger.info(f"Product {product.product_name}: Base={base_amount}, CGST={cgst_amount}, SGST={sgst_amount}, Total={purchase.total_amount}")
-                            purchase.save()
-                            products_added += 1
-                            logger.info(f"Product {product.product_name} added to invoice")
-                            
-                            logger.info(f"PURCHASE CREATED: {product.product_name}, Batch: {batch_no}, Qty: {quantity}, Free Qty: {free_qty}")
-                            
-                            # Save sale rates if provided
-                            rate_A = product_data.get('rate_a') or product_data.get('rate_A')
-                            rate_B = product_data.get('rate_b') or product_data.get('rate_B')
-                            rate_C = product_data.get('rate_c') or product_data.get('rate_C')
-                            
-                            if rate_A or rate_B or rate_C:
-                                try:
-                                    SaleRateMaster.objects.update_or_create(
-                                        productid=product,
-                                        product_batch_no=batch_no,
-                                        defaults={
-                                            'rate_A': float(str(rate_A)) if rate_A else 0,
-                                            'rate_B': float(str(rate_B)) if rate_B else 0,
-                                            'rate_C': float(str(rate_C)) if rate_C else 0
-                                        }
-                                    )
-                                except (ValueError, TypeError):
-                                    logger.warning(f"Invalid sale rates for {product.product_name}, skipping rate setup")
-                            
-                        except ProductMaster.DoesNotExist:
-                            errors.append(f"Row {i+1}: Product with ID {product_data['productid']} not found")
-                            continue
-                        except Exception as e:
-                            import traceback
-                            error_trace = traceback.format_exc()
-                            errors.append(f"Row {i+1}: Error processing product: {str(e)}")
-                            logger.error(f"Error processing product {i+1}: {e}")
-                            logger.error(f"Full traceback: {error_trace}")
-                            continue
+                                SaleRateMaster.objects.update_or_create(
+                                    productid=product,
+                                    product_batch_no=batch_no,
+                                    defaults={
+                                        'rate_A': float(str(rate_A)) if rate_A else 0,
+                                        'rate_B': float(str(rate_B)) if rate_B else 0,
+                                        'rate_C': float(str(rate_C)) if rate_C else 0
+                                    }
+                                )
+                            except (ValueError, TypeError):
+                                logger.warning(f"Invalid sale rates for {product.product_name}, skipping rate setup")
+                        
+                        transaction.savepoint_commit(sid)
+                    except ProductMaster.DoesNotExist:
+                        transaction.savepoint_rollback(sid)
+                        errors.append(f"Row {i+1}: Product with ID {product_data['productid']} not found")
+                    except Exception as e:
+                        import traceback
+                        transaction.savepoint_rollback(sid)
+                        errors.append(f"Row {i+1}: {str(e)}")
+                        logger.error(f"Error processing product {i+1}: {traceback.format_exc()}")
                 
                 # Allow invoice creation even without products
                 if products_added == 0:
                     logger.info(f"Invoice {invoice.invoice_no} created without products - header only")
                     messages.info(request, "📄 Invoice created without products. You can add products later by editing the invoice.")
                 
-                # Don't distribute transport charges - keep separate
-                transport_charges_val = float(str(invoice.transport_charges)) if invoice.transport_charges else 0.0
-                
-                # Get round-off details from form
+                # Save round-off info if fields exist
                 roundoff_amount_val = request.POST.get('roundoff_amount', '0')
                 roundoff_type_val = request.POST.get('roundoff_type', 'added')
-                
                 try:
                     roundoff_amount = float(str(roundoff_amount_val)) if roundoff_amount_val else 0.0
                 except (ValueError, TypeError):
                     roundoff_amount = 0.0
-                
-                # Save actual amount (with decimals) and round-off info
-                invoice.roundoff_amount = roundoff_amount
-                invoice.roundoff_type = roundoff_type_val
-                invoice.save()
-                
-                logger.info(f"Saved invoice: Total={invoice.invoice_total}, RoundOff={roundoff_amount} ({roundoff_type_val})")
+                try:
+                    invoice.roundoff_amount = roundoff_amount
+                    invoice.roundoff_type = roundoff_type_val
+                    invoice.save()
+                except Exception:
+                    invoice.save()
                 
                 # Move challan entries to SupplierChallanMaster2 if pulled from challan
                 if is_from_challan or is_mixed_mode:
