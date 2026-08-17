@@ -924,6 +924,7 @@ function addProductRow() {
             ${productOptions}
         </select></td>
         <td><input type="text" class="batch-no" placeholder="Batch No" required></td>
+        <td><input type="text" class="expiry" placeholder="MM-YYYY" maxlength="7" title="Enter expiry in MM-YYYY format (e.g., 12-2025)" onchange="formatExpiryDate(this)" required></td>
         <td><input type="number" class="mrp" step="any" placeholder="MRP" min="0.01" required></td>
         <td><input type="number" class="purchase-rate" step="any" placeholder="Rate" min="0.01" onchange="calculateRowTotal(${productRowIndex})" required></td>
         <td><input type="number" class="qty" placeholder="Qty" min="0.01" step="any" onchange="calculateRowTotal(${productRowIndex})" required></td>
