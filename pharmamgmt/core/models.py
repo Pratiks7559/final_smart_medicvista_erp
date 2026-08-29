@@ -360,7 +360,62 @@ class SaleRateMaster(models.Model):
         return f"Batch Rates for {self.productid.product_name} - Batch {self.product_batch_no}"
 
 
+class SupplierAdvance(models.Model):
+    advance_id = models.BigAutoField(primary_key=True, auto_created=True)
+    supplier = models.ForeignKey(SupplierMaster, on_delete=models.CASCADE, related_name='advances')
+    amount = models.FloatField(help_text='Remaining advance balance')
+    payment_date = models.DateField(default=timezone.now)
+    payment_mode = models.CharField(max_length=50, default='cash')
+    reference_no = models.CharField(max_length=50, blank=True, default='')
+    narration = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(default=timezone.now)
 
+    def __str__(self):
+        return f'Supplier Advance: {self.supplier.supplier_name} - Rs.{self.amount}'
+
+
+class CustomerAdvance(models.Model):
+    """Tracks advance/over-receipt received from customers"""
+    advance_id = models.BigAutoField(primary_key=True, auto_created=True)
+    customer = models.ForeignKey(CustomerMaster, on_delete=models.CASCADE, related_name='advances')
+    amount = models.FloatField(help_text='Remaining advance balance')
+    receipt_date = models.DateField(default=timezone.now)
+    receipt_mode = models.CharField(max_length=50, default='cash')
+    reference_no = models.CharField(max_length=50, blank=True, default='')
+    narration = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f'Customer Advance: {self.customer.customer_name} - Rs.{self.amount}'
+
+
+class AdvanceLedger(models.Model):
+    """Ledger entries for all advance transactions (creation + adjustments)"""
+    ENTRY_TYPES = [
+        ('advance_in', 'Advance Received'),
+        ('adjusted', 'Adjusted Against Invoice'),
+    ]
+    PARTY_TYPES = [
+        ('supplier', 'Supplier'),
+        ('customer', 'Customer'),
+    ]
+    ledger_id = models.BigAutoField(primary_key=True, auto_created=True)
+    party_type = models.CharField(max_length=10, choices=PARTY_TYPES)
+    supplier = models.ForeignKey(SupplierMaster, on_delete=models.CASCADE, null=True, blank=True)
+    customer = models.ForeignKey(CustomerMaster, on_delete=models.CASCADE, null=True, blank=True)
+    entry_type = models.CharField(max_length=20, choices=ENTRY_TYPES)
+    amount = models.FloatField()
+    entry_date = models.DateField(default=timezone.now)
+    invoice_ref = models.CharField(max_length=50, blank=True, default='', help_text='Invoice no if adjusted')
+    narration = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-entry_date', '-ledger_id']
+
+    def __str__(self):
+        party = self.supplier or self.customer
+        return f'{self.get_entry_type_display()} - {party} - Rs.{self.amount}'
 
 
 class InvoiceSeries(models.Model):

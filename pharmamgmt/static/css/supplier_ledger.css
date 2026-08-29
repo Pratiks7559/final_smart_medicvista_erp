@@ -61,6 +61,8 @@
 .supplier-ledger-type-badge{padding:.2rem .55rem;border-radius:20px;font-size:.7rem;font-weight:600;display:inline-block}
 .supplier-ledger-type-purchase{background:#fdf2f8;color:#db2777}
 .supplier-ledger-type-payment{background:#f0fdf4;color:#059669}
+.supplier-ledger-type-advance-in{background:#d4edda;color:#155724}
+.supplier-ledger-type-advance-adj{background:#fff3cd;color:#856404}
 .supplier-ledger-type-other{background:#fffbeb;color:#d97706}
 
 /* Amounts */

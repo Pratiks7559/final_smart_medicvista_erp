@@ -5,670 +5,205 @@
 
 {% block extra_css %}
 <style>
-/* Fixed colors - no theme effects */
 :root {
-    --primary-color: #0066cc;
-    --primary-hover: #004499;
-    --secondary-color: #6c757d;
-    --success-color: #28a745;
-    --danger-color: #dc3545;
-    --warning-color: #ffc107;
-    --info-color: #17a2b8;
-    --bg-primary: #ffffff;
-    --bg-secondary: #f8f9fa;
-    --bg-accent: #e9ecef;
-    --bg-card: #ffffff;
-    --text-primary: #333333;
-    --text-secondary: #666666;
-    --border-color: #cccccc;
-    --border-focus: #0066cc;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
-    --radius-sm: 0.375rem;
-    --radius-md: 0.5rem;
-    --radius-lg: 0.75rem;
+    --primary: #0066cc;
+    --primary-dark: #004499;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --border: #cccccc;
+    --bg: #f5f5f5;
+    --card: #ffffff;
+    --text: #333333;
+    --text-muted: #666666;
+    --radius: 8px;
 }
+* { box-sizing: border-box; }
+body { background: var(--bg) !important; }
 
-* {
-    box-sizing: border-box;
-}
+.upf-container { max-width: 52rem; margin: 0 auto; padding: 1rem; }
+.upf-card { background: var(--card); border-radius: var(--radius); box-shadow: 0 4px 16px rgba(0,0,0,0.12); padding: 1.5rem; border: 1px solid var(--border); }
+.upf-title { font-size: 1.4rem; font-weight: 700; color: var(--text); text-align: center; margin: 0 0 1.2rem; }
 
-.payment-form-container {
-    max-width: 48rem;
-    margin: 0 auto;
-    padding: 0.5rem;
-    background-color: #f5f5f5 !important;
-    min-height: 100vh;
-}
-
-.payment-form-card {
-    background-color: #ffffff !important;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    padding: 1.5rem;
-    border: 2px solid #cccccc !important;
-}
-
-.payment-form-title {
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: #333333 !important;
-    margin: 0 0 1rem 0;
-    text-align: center;
-}
-
-.search-dialog-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.4s ease;
-}
-
-.search-dialog-overlay.active {
-    opacity: 1;
-    visibility: visible;
-}
-
-.search-dialog {
-    background-color: #ffffff !important;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    width: 100%;
-    max-width: 650px;
-    height: 550px;
-    max-height: 85vh;
-    border: 2px solid #cccccc !important;
-    transform: scale(0.8) translateY(-30px);
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.search-dialog-overlay.active .search-dialog {
-    transform: scale(1) translateY(0);
-}
-
-.search-dialog-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.search-dialog-header h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #333333 !important;
-}
-
-.search-dialog-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: #666666 !important;
-    cursor: pointer;
-    padding: 0.25rem;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-}
-
-.search-dialog-close:hover {
-    background-color: #f8f9fa !important;
-    color: #333333 !important;
-}
-
-.search-dialog-body {
-    padding: 1.5rem;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.search-container {
-    position: relative;
-}
-
-.search-input {
-    width: 100%;
-    padding: 1rem;
-    border: 2px solid #cccccc !important;
-    border-radius: var(--radius-md);
-    font-size: 1rem;
-    color: #333333 !important;
-    background-color: #ffffff !important;
-    transition: all 0.2s ease;
-}
-
-.search-input:focus {
-    outline: none !important;
-    border-color: #0066cc !important;
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2) !important;
-    background-color: #ffffff !important;
-    color: #333333 !important;
-}
-
-.search-results {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background-color: #ffffff !important;
-    border: 2px solid #cccccc !important;
-    border-radius: var(--radius-md);
-    max-height: 300px;
-    overflow-y: auto;
-    z-index: 10;
-    display: none;
-    box-shadow: var(--shadow-lg);
-    margin-top: 0.25rem;
-}
-
-.no-invoice-selected {
-    text-align: center;
-    padding: 1rem;
-    background-color: #f8f9fa !important;
-    border: 1px solid #e9ecef;
-    border-radius: var(--radius-md);
-    margin-bottom: 1rem;
-}
-
-.no-invoice-selected p {
-    margin: 0 0 0.5rem 0;
-    color: #666666 !important;
-    font-size: 0.9rem;
-}
-
-.search-result-item {
-    padding: 0.875rem 1rem;
-    cursor: pointer;
-    border-bottom: 1px solid #cccccc;
-    transition: background-color 0.15s ease;
-    color: #333333 !important;
-}
-
-.search-result-item:hover {
-    background-color: #f8f9fa !important;
-}
-
-.search-result-item:last-child {
-    border-bottom: none;
-}
-
-.search-result-item.highlighted {
-    background-color: #0066cc !important;
-    color: #ffffff !important;
-}
-
-.search-result-item.highlighted * {
-    color: white !important;
-}
-
-.selected-invoice-info {
-    background-color: #e9ecef !important;
-    padding: 0.8rem;
-    border-radius: var(--radius-md);
+/* Supplier/Customer summary box */
+.entity-summary {
+    background: #f0f7ff;
+    border: 2px solid #0066cc;
+    border-radius: var(--radius);
+    padding: 1rem 1.2rem;
     margin-bottom: 1rem;
     display: none;
-    border: 1px solid #cccccc !important;
 }
+.entity-summary h5 { margin: 0 0 .5rem; color: var(--primary); font-size: 1rem; }
+.entity-summary .summary-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: .5rem; margin-bottom: .6rem; }
+.entity-summary .summary-grid.has-advance { grid-template-columns: repeat(4,1fr); }
+.entity-summary .s-box { background: #fff; border-radius: 6px; padding: .5rem .8rem; text-align: center; border: 1px solid #cce0ff; }
+.entity-summary .s-box .s-label { font-size: .72rem; color: var(--text-muted); display: block; }
+.entity-summary .s-box .s-val { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+.entity-summary .s-box.balance .s-val { color: #dc3545; }
 
-.selected-invoice-info h5 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: #333333 !important;
-}
+/* No selection state */
+.no-selection { text-align: center; padding: .8rem; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: var(--radius); margin-bottom: 1rem; }
+.no-selection p { margin: 0 0 .5rem; color: var(--text-muted); font-size: .9rem; }
 
-.selected-invoice-info p {
-    margin: 0.15rem 0;
-    font-size: 0.8rem;
-    color: #666666 !important;
-}
+/* Form grid */
+.form-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 1rem; margin-bottom: 1rem; }
+@media(max-width:600px){ .form-grid { grid-template-columns: 1fr; } }
+.form-group { display: flex; flex-direction: column; }
+.form-label { font-size: .8rem; font-weight: 600; color: var(--text); margin-bottom: .3rem; }
+.form-control { width: 100%; padding: .55rem .7rem; border: 1.5px solid var(--border); border-radius: 6px; font-size: .875rem; color: var(--text); background: #fff; transition: border-color .2s; }
+.form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,102,204,.15); }
+.form-control:disabled { background: #f8f9fa; color: var(--text-muted); cursor: not-allowed; }
 
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
+.form-actions { display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: .55rem 1.2rem; font-size: .875rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; text-decoration: none; transition: all .2s; min-width: 7rem; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+.btn-secondary { background: #6c757d; color: #fff; }
+.btn-secondary:hover { background: #545b62; }
+.btn-sm { padding: .3rem .7rem; font-size: .78rem; min-width: auto; }
 
-@media (max-width: 640px) {
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-}
+/* Search dialog */
+.dialog-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1rem; opacity: 0; visibility: hidden; transition: all .3s; }
+.dialog-overlay.active { opacity: 1; visibility: visible; }
+.dialog-box { background: #fff; border-radius: var(--radius); box-shadow: 0 20px 50px rgba(0,0,0,.25); width: 100%; max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; transform: scale(.9) translateY(-20px); transition: transform .3s cubic-bezier(.34,1.56,.64,1); overflow: hidden; }
+.dialog-overlay.active .dialog-box { transform: scale(1) translateY(0); }
+.dialog-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.2rem; border-bottom: 1px solid var(--border); }
+.dialog-header h3 { margin: 0; font-size: 1.1rem; color: var(--text); }
+.dialog-close { background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; padding: 0 .3rem; }
+.dialog-body { padding: 1rem 1.2rem; flex: 1; overflow-y: auto; }
+.search-input { width: 100%; padding: .8rem 1rem; border: 2px solid var(--border); border-radius: 6px; font-size: .95rem; color: var(--text); background: #fff; margin-bottom: .5rem; }
+.search-input:focus { outline: none; border-color: var(--primary); }
+.search-results { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.result-item { padding: .75rem 1rem; cursor: pointer; border-bottom: 1px solid #eee; transition: background .15s; }
+.result-item:last-child { border-bottom: none; }
+.result-item:hover, .result-item.highlighted { background: #f0f7ff; }
+.result-item .r-name { font-weight: 600; color: var(--text); font-size: .9rem; }
+.result-item .r-meta { font-size: .78rem; color: var(--text-muted); margin-top: 2px; }
+.result-item .r-balance { font-size: .82rem; font-weight: 700; color: #dc3545; }
 
-.form-group {
-    display: flex;
-    flex-direction: column;
-}
+/* Alert */
+.alert { padding: .8rem 1rem; margin-bottom: 1rem; border-radius: 6px; border: 1px solid transparent; position: relative; }
+.alert-success { background: #d4edda; border-color: #c3e6cb; color: #155724; }
+.alert-warning { background: #fff3cd; border-color: #ffeeba; color: #856404; }
+.alert-danger  { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+.alert-dismissible { padding-right: 2.5rem; }
+.btn-close { position: absolute; top: .5rem; right: .5rem; background: none; border: none; font-size: 1.1rem; cursor: pointer; opacity: .6; }
+.btn-close:hover { opacity: 1; }
 
-.form-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #333333 !important;
-    margin-bottom: 0.3rem;
-}
+/* Transaction type highlight */
+#invoiceType { border: 2px solid #ff6b35; background: #fff8f5; animation: pulse 2s infinite; }
+#invoiceType:focus { border-color: var(--primary); background: #fff; animation: none; }
+@keyframes pulse { 0%,100%{ box-shadow: 0 0 0 3px rgba(255,107,53,.25); } 50%{ box-shadow: 0 0 0 6px rgba(255,107,53,.1); } }
 
-.form-control {
-    width: 100%;
-    padding: 0.6rem;
-    border: 1px solid #cccccc !important;
-    border-radius: var(--radius-sm);
-    font-size: 0.875rem;
-    color: #333333 !important;
-    background-color: #ffffff !important;
-    transition: all 0.2s ease;
-}
-
-.form-control:focus {
-    outline: none !important;
-    border-color: #0066cc !important;
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2) !important;
-    background-color: #ffffff !important;
-    color: #333333 !important;
-}
-
-.form-control:disabled {
-    background-color: #f8f9fa !important;
-    color: #666666 !important;
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.form-actions {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    margin-top: 1rem;
-    flex-wrap: wrap;
-}
-
-.btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.6rem 1.2rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-    border-radius: var(--radius-md);
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    min-width: 7rem;
-}
-
-.btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.btn-primary {
-    background-color: #0066cc !important;
-    color: #ffffff !important;
-    border: 2px solid #0066cc !important;
-}
-
-.btn-primary:hover:not(:disabled) {
-    background-color: #004499 !important;
-    border-color: #004499 !important;
-    color: #ffffff !important;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-}
-
-.btn-secondary {
-    background-color: #6c757d !important;
-    color: #ffffff !important;
-    border: 2px solid #6c757d !important;
-}
-
-.btn-secondary:hover {
-    background-color: #545b62 !important;
-    border-color: #545b62 !important;
-    color: #ffffff !important;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-}
-
-.loading-spinner {
-    display: inline-block;
-    width: 1rem;
-    height: 1rem;
-    border: 2px solid transparent;
-    border-top: 2px solid currentColor;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-right: 0.5rem;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.alert {
-    padding: 1rem;
-    margin-bottom: 1rem;
-    border-radius: var(--radius-md);
-    border: 1px solid transparent;
-    position: relative;
-}
-
-.alert-success {
-    background-color: #d4edda !important;
-    border-color: #c3e6cb !important;
-    color: #155724 !important;
-}
-
-.alert-dismissible {
-    padding-right: 3rem;
-}
-
-.btn-close {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background: none;
-    border: none;
-    font-size: 1.25rem;
-    cursor: pointer;
-    opacity: 0.5;
-}
-
-.btn-close:hover {
-    opacity: 1;
-}
-
-/* Override all theme effects */
-.payment-form-container,
-.payment-form-container *,
-.search-dialog-overlay,
-.search-dialog-overlay * {
-    background-color: inherit !important;
-    color: inherit !important;
-    border-color: inherit !important;
-}
-
-body {
-    background-color: #f5f5f5 !important;
-}
-
-.payment-form-container {
-    background-color: #f5f5f5 !important;
-}
-
-.payment-form-card,
-.search-dialog,
-.search-results,
-.selected-invoice-info {
-    background-color: #ffffff !important;
-}
-
-.no-invoice-selected {
-    background-color: #f8f9fa !important;
-}
-
-.payment-form-title,
-.search-dialog-header h3,
-.form-label,
-.selected-invoice-info h5,
-h1, h2, h3, h4, h5, h6,
-label, strong {
-    color: #333333 !important;
-}
-
-.no-invoice-selected p,
-.selected-invoice-info p,
-.search-dialog-close {
-    color: #666666 !important;
-}
-
-.search-result-item {
-    color: #333333 !important;
-    background-color: transparent !important;
-}
-
-.search-result-item:hover {
-    background-color: #f8f9fa !important;
-    color: #333333 !important;
-}
-
-.search-result-item.highlighted {
-    background-color: #0066cc !important;
-    color: #ffffff !important;
-}
-
-.search-result-item.highlighted * {
-    color: #ffffff !important;
-}
-
-.search-input,
-.form-control,
-input, select, textarea {
-    background-color: #ffffff !important;
-    color: #333333 !important;
-    border: 2px solid #cccccc !important;
-}
-
-.search-input:focus,
-.form-control:focus,
-input:focus, select:focus, textarea:focus {
-    background-color: #ffffff !important;
-    color: #333333 !important;
-    border-color: #0066cc !important;
-    box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2) !important;
-}
-
-.form-control:disabled {
-    background-color: #f8f9fa !important;
-    color: #666666 !important;
-}
-
-.btn-primary {
-    background-color: #0066cc !important;
-    border-color: #0066cc !important;
-    color: #ffffff !important;
-}
-
-.btn-primary:hover:not(:disabled) {
-    background-color: #004499 !important;
-    border-color: #004499 !important;
-    color: #ffffff !important;
-}
-
-.btn-secondary {
-    background-color: #6c757d !important;
-    border-color: #6c757d !important;
-    color: #ffffff !important;
-}
-
-.btn-secondary:hover {
-    background-color: #545b62 !important;
-    border-color: #545b62 !important;
-    color: #ffffff !important;
-}
-
-.search-dialog,
-.payment-form-card,
-.selected-invoice-info,
-.no-invoice-selected {
-    border: 2px solid #cccccc !important;
-}
-
-.search-results {
-    border: 2px solid #cccccc !important;
-}
-
-.search-result-item {
-    border-bottom: 1px solid #cccccc !important;
-}
-
-.search-dialog-header {
-    border-bottom: 1px solid #cccccc !important;
-}
-
-@media (max-width: 640px) {
-    .payment-form-container {
-        padding: 0.5rem;
-        background-color: #f5f5f5 !important;
-    }
-    
-    .payment-form-card {
-        padding: 1.5rem;
-        background-color: #ffffff !important;
-    }
-    
-    .payment-form-title {
-        font-size: 1.5rem;
-        color: #333333 !important;
-    }
-    
-    .form-actions {
-        flex-direction: column;
-    }
-    
-    .btn {
-        width: 100%;
-    }
-}
-
-@media (max-width: 480px) {
-    .payment-form-card {
-        padding: 1rem;
-        background-color: #ffffff !important;
-    }
-    
-    .search-input,
-    .form-control {
-        font-size: 1rem;
-        background-color: #ffffff !important;
-        color: #333333 !important;
-        border: 2px solid #cccccc !important;
-    }
-}
-
-/* FORCE FOCUS STYLES FOR TRANSACTION TYPE */
-#invoiceType {
-    outline: 2px solid #ff6b35 !important;
-    outline-offset: 2px !important;
-    background-color: #fff3e0 !important;
-    border: 2px solid #ff6b35 !important;
-    animation: focusPulse 2s infinite;
-}
-
-@keyframes focusPulse {
-    0%, 100% { box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.3); }
-    50% { box-shadow: 0 0 0 6px rgba(255, 107, 53, 0.1); }
-}
-
-#invoiceType:focus {
-    outline: 3px solid #007bff !important;
-    background-color: #e3f2fd !important;
-    border: 2px solid #007bff !important;
-    animation: none !important;
-}
+.spinner { display: inline-block; width: .9rem; height: .9rem; border: 2px solid transparent; border-top-color: currentColor; border-radius: 50%; animation: spin .8s linear infinite; margin-right: .4rem; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Search Dialog Modal -->
-<div id="searchDialog" class="search-dialog-overlay">
-    <div class="search-dialog">
-        <div class="search-dialog-header">
-            <h3 id="dialogTitle">Select Invoice</h3>
-            <button type="button" class="search-dialog-close" id="closeDialog">&times;</button>
+<!-- Search Dialog -->
+<div id="searchDialog" class="dialog-overlay">
+    <div class="dialog-box">
+        <div class="dialog-header">
+            <h3 id="dialogTitle">Select Supplier</h3>
+            <button class="dialog-close" id="closeDialog">&times;</button>
         </div>
-        <div class="search-dialog-body">
-            <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" 
-                       placeholder="Type to search..." autocomplete="off">
-                <div id="searchResults" class="search-results"></div>
-            </div>
+        <div class="dialog-body">
+            <input type="text" id="searchInput" class="search-input" placeholder="Type name to search..." autocomplete="off">
+            <div id="searchResults" class="search-results" style="display:none;"></div>
         </div>
     </div>
 </div>
 
-<div class="payment-form-container">
-    <div class="payment-form-card">
-        <h1 class="payment-form-title">Add Payment/Receipt</h1>
-        
-        <!-- Success Messages -->
+<div class="upf-container">
+    <div class="upf-card">
+        <h1 class="upf-title">Add Payment / Receipt</h1>
+
         {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible auto-hide-message" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
+            <div class="alert alert-{{ message.tags }} alert-dismissible">
+                {{ message }}
+                <button class="btn-close">&times;</button>
+            </div>
             {% endfor %}
         {% endif %}
-        
-        <!-- Invoice Type Selection -->
+
+        <!-- Transaction Type -->
         <div class="form-grid">
             <div class="form-group">
                 <label class="form-label" for="invoiceType">Transaction Type *</label>
                 <select id="invoiceType" class="form-control" required>
-                    <option value="">Select Transaction Type</option>
+                    <option value="">Select Type</option>
                     <option value="payment">Payment (To Supplier)</option>
                     <option value="receipt">Receipt (From Customer)</option>
-                    <option value="contra">Contra Entry</option>
                 </select>
             </div>
-            <div class="form-group"></div>
+            <div class="form-group" id="selectEntityGroup" style="display:none;">
+                <label class="form-label" id="entityLabel">Supplier *</label>
+                <button type="button" class="btn btn-primary" id="selectEntityBtn" style="margin-top:.3rem;">
+                    Select Supplier
+                </button>
+            </div>
         </div>
-        
-        <!-- Selected Invoice Info -->
-        <div id="selectedInvoiceInfo" class="selected-invoice-info">
-            <h5>Selected Invoice</h5>
-            <div id="invoiceDetails"></div>
-            <button type="button" class="btn btn-secondary" id="changeInvoice">Change Invoice</button>
+
+        <!-- No selection state -->
+        <div id="noSelection" class="no-selection">
+            <p id="selectionMsg">Please select a transaction type first.</p>
         </div>
-        
-        <!-- No Invoice Selected State -->
-        <div id="noInvoiceSelected" class="no-invoice-selected">
-            <p id="selectionMessage">Please select a transaction type first.</p>
-            <button type="button" class="btn btn-primary" id="selectInvoice" style="display: none;">Select Invoice</button>
+
+        <!-- Entity Summary (shown after supplier/customer selected) -->
+        <div id="entitySummary" class="entity-summary">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
+                <h5 id="summaryTitle">Supplier Summary</h5>
+                <button type="button" class="btn btn-secondary btn-sm" id="changeEntityBtn">Change</button>
+            </div>
+            <div class="summary-grid">
+                <div class="s-box">
+                    <span class="s-label">Total Invoices Amount</span>
+                    <span class="s-val" id="sumTotal">₹0</span>
+                </div>
+                <div class="s-box">
+                    <span class="s-label">Total Paid</span>
+                    <span class="s-val" id="sumPaid">₹0</span>
+                </div>
+                <div class="s-box balance">
+                    <span class="s-label">Outstanding Balance</span>
+                    <span class="s-val" id="sumBalance">₹0</span>
+                </div>
+                <div class="s-box" id="advanceBox" style="display:none;border-color:#c3e6cb;">
+                    <span class="s-label">Advance Balance</span>
+                    <span class="s-val" id="sumAdvance" style="color:#28a745;">₹0</span>
+                </div>
+            </div>
+            <p style="font-size:.75rem;color:var(--text-muted);margin:.4rem 0 0;">
+                Payment will be applied oldest invoice first. Excess amount saved as advance.
+                <a href="{% url 'advance_ledger' %}" style="color:#0066cc;margin-left:.5rem;">View Advance Ledger →</a>
+            </p>
         </div>
-        
+
+        <!-- Payment Form -->
         <form method="post" id="paymentForm">
             {% csrf_token %}
-            
+
             <div class="form-grid">
                 <div class="form-group">
                     <label class="form-label" for="paymentDate">Date *</label>
                     <input type="date" id="paymentDate" name="payment_date" class="form-control" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="paymentAmount">Amount *</label>
-                    <input type="number" id="paymentAmount" name="payment_amount" class="form-control" 
+                    <label class="form-label" for="paymentAmount">Amount (₹) *</label>
+                    <input type="number" id="paymentAmount" name="payment_amount" class="form-control"
                            step="1" min="1" placeholder="0" required>
                 </div>
             </div>
-            
+
             <div class="form-grid">
                 <div class="form-group">
-                    <label class="form-label" for="paymentMode">Payment Method *</label>
+                    <label class="form-label" for="paymentMode">Payment Mode *</label>
                     <select id="paymentMode" name="payment_mode" class="form-control" required>
-                        <option value="">Select Payment Mode</option>
+                        <option value="">Select Mode</option>
                         <option value="cash">Cash</option>
                         <option value="cheque">Cheque</option>
                         <option value="bank">Bank Transfer</option>
@@ -677,608 +212,291 @@ input:focus, select:focus, textarea:focus {
                         <option value="other">Other</option>
                     </select>
                 </div>
-                <div class="form-group" id="bankNameGroup" style="display: none;">
+                <div class="form-group" id="bankNameGroup" style="display:none;">
                     <label class="form-label" for="bankNameInput">Bank Name *</label>
                     <input type="text" id="bankNameInput" name="bank_name" class="form-control" placeholder="Enter bank name">
                 </div>
                 <div class="form-group" id="referenceGroup">
-                    <label class="form-label" for="referenceNo">Reference Number</label>
-                    <input type="text" id="referenceNo" name="reference_no" class="form-control" 
-                           placeholder="Cheque no, Transaction ID, etc.">
+                    <label class="form-label" for="referenceNo">Reference No</label>
+                    <input type="text" id="referenceNo" name="reference_no" class="form-control"
+                           placeholder="Cheque no / Transaction ID">
                 </div>
             </div>
-            
-            <div class="form-grid" id="referenceRowBelow" style="display: none;">
-                <div class="form-group">
-                    <label class="form-label" for="referenceNoBelow">Reference Number</label>
-                    <input type="text" id="referenceNoBelow" name="reference_no_below" class="form-control" 
-                           placeholder="Transaction ID, Reference, etc.">
-                </div>
-                <div class="form-group"></div>
-            </div>
-            
-            <input type="hidden" id="transactionType" name="transaction_type">
+
+            <input type="hidden" id="transactionTypeField" name="transaction_type">
             <input type="hidden" id="entityIdField" name="entity_id">
-            <input type="hidden" id="invoiceNoField" name="invoice_no">
-            
+
             <div class="form-actions">
                 <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
-                    <span class="loading-spinner" id="loadingSpinner" style="display: none;"></span>
-                    <span id="submitText">Add Transaction</span>
+                    <span class="spinner" id="spinner" style="display:none;"></span>
+                    <span id="submitText">Add Payment</span>
                 </button>
                 <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
-        
-        <!-- Success Message Container -->
-        <div id="successMessage" class="alert alert-success" style="display: none; margin-top: 1rem;">
-            <i class="fas fa-check-circle"></i>
-            <span id="successText">Transaction added successfully!</span>
-        </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const searchDialog = document.getElementById('searchDialog');
-    const closeDialog = document.getElementById('closeDialog');
-    const selectInvoiceBtn = document.getElementById('selectInvoice');
-    const changeInvoiceBtn = document.getElementById('changeInvoice');
-    const searchInput = document.getElementById('searchInput');
-    const searchResults = document.getElementById('searchResults');
-    const selectedInfo = document.getElementById('selectedInvoiceInfo');
-    const noInvoiceSelected = document.getElementById('noInvoiceSelected');
-    const invoiceDetails = document.getElementById('invoiceDetails');
-    const entityIdField = document.getElementById('entityIdField');
-    const invoiceNoField = document.getElementById('invoiceNoField');
-    const amountField = document.getElementById('paymentAmount');
-    const submitBtn = document.getElementById('submitBtn');
-    const submitText = document.getElementById('submitText');
-    const paymentForm = document.getElementById('paymentForm');
-    const paymentModeField = document.getElementById('paymentMode');
-    const bankNameRow = document.getElementById('bankNameRow');
-    const bankNameInput = document.getElementById('bankNameInput');
-    const invoiceTypeField = document.getElementById('invoiceType');
-    const transactionTypeField = document.getElementById('transactionType');
-    const dialogTitle = document.getElementById('dialogTitle');
-    const selectionMessage = document.getElementById('selectionMessage');
-    
-    let searchTimeout;
-    let isSearching = false;
-    let currentTransactionType = '';
-    
-    // Auto-hide success messages after 2 seconds
-    const autoHideMessages = document.querySelectorAll('.auto-hide-message');
-    autoHideMessages.forEach(message => {
-        setTimeout(() => {
-            message.style.opacity = '0';
-            message.style.transform = 'translateY(-10px)';
-            setTimeout(() => {
-                message.remove();
-            }, 300);
-        }, 2000);
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ── DOM refs ──────────────────────────────────────────────────────────────
+    const invoiceTypeEl   = document.getElementById('invoiceType');
+    const selectEntityGrp = document.getElementById('selectEntityGroup');
+    const selectEntityBtn = document.getElementById('selectEntityBtn');
+    const entityLabelEl   = document.getElementById('entityLabel');
+    const changeEntityBtn = document.getElementById('changeEntityBtn');
+    const noSelection     = document.getElementById('noSelection');
+    const selectionMsg    = document.getElementById('selectionMsg');
+    const entitySummary   = document.getElementById('entitySummary');
+    const summaryTitle    = document.getElementById('summaryTitle');
+    const sumTotal        = document.getElementById('sumTotal');
+    const sumPaid         = document.getElementById('sumPaid');
+    const sumBalance      = document.getElementById('sumBalance');
+    const sumAdvance      = document.getElementById('sumAdvance');
+    const advanceBox      = document.getElementById('advanceBox');
+    const summaryGrid     = document.querySelector('.summary-grid');
+    const submitBtn       = document.getElementById('submitBtn');
+    const submitText      = document.getElementById('submitText');
+    const spinner         = document.getElementById('spinner');
+    const transTypeField  = document.getElementById('transactionTypeField');
+    const entityIdField   = document.getElementById('entityIdField');
+    const amountField     = document.getElementById('paymentAmount');
+    const paymentModeEl   = document.getElementById('paymentMode');
+    const bankNameGroup   = document.getElementById('bankNameGroup');
+    const bankNameInput   = document.getElementById('bankNameInput');
+    const referenceGroup  = document.getElementById('referenceGroup');
+    const dialogOverlay   = document.getElementById('searchDialog');
+    const dialogTitle     = document.getElementById('dialogTitle');
+    const closeDialogBtn  = document.getElementById('closeDialog');
+    const searchInput     = document.getElementById('searchInput');
+    const searchResults   = document.getElementById('searchResults');
+
+    let currentType = '';
+    let searchTimer;
+    let highlightIdx = -1;
+
+    // ── Default date ──────────────────────────────────────────────────────────
+    document.getElementById('paymentDate').value = new Date().toISOString().split('T')[0];
+
+    // ── Auto-dismiss alerts ───────────────────────────────────────────────────
+    document.querySelectorAll('.alert').forEach(el => {
+        setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3000);
+        el.querySelector('.btn-close')?.addEventListener('click', () => el.remove());
     });
-    
-    // Set today's date as default
-    const dateField = document.getElementById('paymentDate');
-    if (!dateField.value) {
-        dateField.value = new Date().toISOString().split('T')[0];
-    }
-    
-    // FORCE FOCUS ON TRANSACTION TYPE FIELD
-    function forceTransactionTypeFocus() {
-        if (invoiceTypeField) {
-            // Remove any existing focus
-            document.activeElement.blur();
-            
-            // Force focus with multiple methods
-            invoiceTypeField.focus();
-            invoiceTypeField.click();
-            
-            console.log('Focused transaction type field');
-        }
-    }
-    
-    // Multiple focus attempts
-    forceTransactionTypeFocus();
-    setTimeout(forceTransactionTypeFocus, 50);
-    setTimeout(forceTransactionTypeFocus, 100);
-    setTimeout(forceTransactionTypeFocus, 200);
-    setTimeout(forceTransactionTypeFocus, 500);
-    setTimeout(forceTransactionTypeFocus, 1000);
-    
-    // Invoice type change handler
-    invoiceTypeField.addEventListener('change', function() {
-        const selectedType = this.value;
-        currentTransactionType = selectedType;
-        transactionTypeField.value = selectedType;
-        
-        resetForm();
-        
-        console.log('Transaction type changed to:', selectedType);
-        console.log('Select button element:', selectInvoiceBtn);
-        
-        if (selectedType === 'payment') {
-            selectionMessage.textContent = 'Select supplier invoice to add payment.';
-            selectInvoiceBtn.style.display = 'block';
-            selectInvoiceBtn.style.visibility = 'visible';
-            dialogTitle.textContent = 'Select Supplier & Invoice';
-            searchInput.placeholder = 'Type supplier name to search invoices...';
+
+    // ── Transaction type change ───────────────────────────────────────────────
+    invoiceTypeEl.addEventListener('change', function () {
+        currentType = this.value;
+        transTypeField.value = currentType;
+        resetSelection();
+
+        if (currentType === 'payment') {
+            selectEntityGrp.style.display = 'flex';
+            entityLabelEl.textContent = 'Supplier *';
+            selectEntityBtn.textContent = 'Select Supplier';
+            dialogTitle.textContent = 'Select Supplier';
+            searchInput.placeholder = 'Type supplier name...';
             submitText.textContent = 'Add Payment';
-            console.log('Payment selected - button should be visible');
-        } else if (selectedType === 'receipt') {
-            selectionMessage.textContent = 'Select customer invoice to add receipt.';
-            selectInvoiceBtn.style.display = 'block';
-            selectInvoiceBtn.style.visibility = 'visible';
-            dialogTitle.textContent = 'Select Customer & Invoice';
-            searchInput.placeholder = 'Type customer name or mobile to search invoices...';
+            selectionMsg.textContent = 'Select a supplier to view outstanding balance.';
+        } else if (currentType === 'receipt') {
+            selectEntityGrp.style.display = 'flex';
+            entityLabelEl.textContent = 'Customer *';
+            selectEntityBtn.textContent = 'Select Customer';
+            dialogTitle.textContent = 'Select Customer';
+            searchInput.placeholder = 'Type customer name or mobile...';
             submitText.textContent = 'Add Receipt';
-            console.log('Receipt selected - button should be visible');
-        } else if (selectedType === 'contra') {
-            selectionMessage.innerHTML = '<p style="margin-bottom: 0.5rem;">Contra entry - direct cash/bank transfer.</p>';
-            const contraButtons = `
-                <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
-                    <a href="/contra/" class="btn btn-secondary" style="text-decoration: none;">
-                        <i class="fas fa-list"></i> Contra List
-                    </a>
-                    <a href="/contra/add/" class="btn btn-primary" style="text-decoration: none;">
-                        <i class="fas fa-plus"></i> Add Contra
-                    </a>
-                </div>
-            `;
-            selectionMessage.innerHTML += contraButtons;
-            selectInvoiceBtn.style.display = 'none';
-            submitText.textContent = 'Add Contra Entry';
-            // Disable form for contra entry
-            if (selectedInfo) selectedInfo.style.display = 'none';
-            if (noInvoiceSelected) noInvoiceSelected.style.display = 'block';
-            if (submitBtn) submitBtn.disabled = true;
-            console.log('Contra selected - showing contra buttons');
+            selectionMsg.textContent = 'Select a customer to view outstanding balance.';
         } else {
-            selectionMessage.textContent = 'Please select a transaction type first.';
-            selectInvoiceBtn.style.display = 'none';
-            submitText.textContent = 'Add Transaction';
-            console.log('No type selected - button hidden');
+            selectEntityGrp.style.display = 'none';
+            selectionMsg.textContent = 'Please select a transaction type first.';
         }
     });
-    
-    // Dialog functions
+
+    // ── Open / close dialog ───────────────────────────────────────────────────
+    selectEntityBtn.addEventListener('click', openDialog);
+    changeEntityBtn.addEventListener('click', openDialog);
+    closeDialogBtn.addEventListener('click', closeDialog);
+    dialogOverlay.addEventListener('click', e => { if (e.target === dialogOverlay) closeDialog(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDialog(); });
+
     function openDialog() {
-        if (!currentTransactionType || currentTransactionType === 'contra') {
-            return;
-        }
-        
-        // Add blur to main content
+        searchInput.value = '';
+        searchResults.style.display = 'none';
+        searchResults.innerHTML = '';
+        highlightIdx = -1;
+        dialogOverlay.classList.add('active');
         document.body.style.overflow = 'hidden';
-        const mainContent = document.querySelector('.payment-form-container');
-        if (mainContent) {
-            mainContent.style.filter = 'blur(3px)';
-            mainContent.style.transition = 'filter 0.3s ease';
-        }
-        
-        searchDialog.classList.add('active');
-        resetHighlight();
-        searchInput.value = '';
-        searchResults.style.display = 'none';
-        adjustDialogSize();
-        setTimeout(() => {
-            searchInput.focus();
-        }, 150);
+        setTimeout(() => searchInput.focus(), 150);
     }
-    
-    function closeDialogFunc() {
-        // Remove blur from main content
+
+    function closeDialog() {
+        dialogOverlay.classList.remove('active');
         document.body.style.overflow = '';
-        const mainContent = document.querySelector('.payment-form-container');
-        if (mainContent) {
-            mainContent.style.filter = '';
-        }
-        
-        searchDialog.classList.remove('active');
-        searchInput.value = '';
-        searchResults.style.display = 'none';
     }
-    
-    // Event listeners for dialog
-    selectInvoiceBtn.addEventListener('click', openDialog);
-    changeInvoiceBtn.addEventListener('click', openDialog);
-    closeDialog.addEventListener('click', closeDialogFunc);
-    
-    // Close dialog on overlay click
-    searchDialog.addEventListener('click', function(e) {
-        if (e.target === searchDialog) {
-            closeDialogFunc();
-        }
-    });
-    
-    // ESC key to close dialog
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && searchDialog.classList.contains('active')) {
-            closeDialogFunc();
-        }
-    });
-    
-    searchInput.addEventListener('input', function() {
-        const query = this.value.trim();
-        
-        clearTimeout(searchTimeout);
-        
-        if (query.length < 2) {
-            searchResults.style.display = 'none';
-            adjustDialogSize();
+
+    // ── Search input ──────────────────────────────────────────────────────────
+    searchInput.addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        const q = this.value.trim();
+        if (q.length < 2) { searchResults.style.display = 'none'; searchResults.innerHTML = ''; return; }
+        if (!currentType) {
+            searchResults.innerHTML = '<div class="result-item"><span class="r-meta" style="color:#dc3545;">Please select transaction type first.</span></div>';
+            searchResults.style.display = 'block';
             return;
         }
-        
-        isSearching = true;
-        searchResults.innerHTML = '<div class="search-result-item">Searching...</div>';
+
+        searchResults.innerHTML = '<div class="result-item"><span class="r-meta">Searching...</span></div>';
         searchResults.style.display = 'block';
-        adjustDialogSize();
-        
-        const apiUrl = currentTransactionType === 'payment' 
-            ? `/api/search-supplier-invoices/?q=${encodeURIComponent(query)}`
-            : `/api/search-customer-invoices/?q=${encodeURIComponent(query)}`;
-        
-        searchTimeout = setTimeout(() => {
-            fetch(apiUrl, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                isSearching = false;
-                console.log('Search results:', data);
-                displaySearchResults(data);
-                adjustDialogSize();
-            })
-            .catch(error => {
-                isSearching = false;
-                console.error('Search error:', error);
-                searchResults.innerHTML = `<div class="search-result-item">Error loading results</div>`;
-                adjustDialogSize();
-            });
+
+        const url = currentType === 'payment'
+            ? `/api/search-supplier-invoices/?q=${encodeURIComponent(q)}`
+            : `/api/search-customer-invoices/?q=${encodeURIComponent(q)}`;
+
+        searchTimer = setTimeout(() => {
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+                .then(r => {
+                    if (r.status === 401) throw new Error('Session expired — please login again.');
+                    if (!r.ok) throw new Error('Server error (status ' + r.status + ')');
+                    return r.json();
+                })
+                .then(data => renderResults(data))
+                .catch(err => {
+                    searchResults.innerHTML = '<div class="result-item"><span class="r-meta" style="color:#dc3545;">Error: ' + err.message + '</span></div>';
+                    searchResults.style.display = 'block';
+                });
         }, 300);
     });
-    
-    // Function to adjust dialog size based on content
-    function adjustDialogSize() {
-        const dialog = document.querySelector('.search-dialog');
-        const resultsVisible = searchResults.style.display !== 'none' && searchResults.children.length > 0;
-        
-        if (resultsVisible) {
-            const resultCount = searchResults.children.length;
-            const maxHeight = Math.min(resultCount * 80 + 200, window.innerHeight * 0.8);
-            dialog.style.maxHeight = maxHeight + 'px';
-        } else {
-            dialog.style.maxHeight = '200px';
-        }
-    }
-    
-    function displaySearchResults(results) {
+
+    function toNum(v) { return (v == null || isNaN(v)) ? 0 : Number(v); }
+
+    function renderResults(data) {
         searchResults.innerHTML = '';
-        resetHighlight();
-        
-        if (results.length === 0) {
-            searchResults.innerHTML = '<div class="search-result-item">No unpaid invoices found</div>';
-        } else {
-            results.forEach((result, index) => {
-                const item = document.createElement('div');
-                item.className = 'search-result-item';
-                item.setAttribute('data-index', index);
-                
-                const entityName = currentTransactionType === 'payment' ? result.supplier_name : result.customer_name;
-                
-                item.innerHTML = `
-                    <div style="font-weight: 600; color: var(--text-primary);">${entityName}</div>
-                    <div style="font-size: 0.875rem; color: var(--text-secondary); margin: 0.25rem 0;">
-                        Invoice: ${result.invoice_no} | Date: ${result.invoice_date}
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--success-color); font-weight: 600;">
-                        Balance: Rs.${Math.round(result.balance_amount)}
-                    </div>
-                `;
-                
-                item.addEventListener('click', () => {
-                    selectInvoice(result);
-                });
-                
-                item.addEventListener('mouseenter', () => {
-                    resetHighlight();
-                    currentHighlightIndex = index;
-                    item.classList.add('highlighted');
-                });
-                
-                item.addEventListener('mouseleave', () => {
-                    item.classList.remove('highlighted');
-                    currentHighlightIndex = -1;
-                });
-                
-                searchResults.appendChild(item);
-            });
+        highlightIdx = -1;
+        if (!data.length) {
+            searchResults.innerHTML = '<div class="result-item"><span class="r-meta">No supplier/customer found with that name.</span></div>';
+            searchResults.style.display = 'block';
+            return;
         }
-        
+        data.forEach((item, i) => {
+            const div = document.createElement('div');
+            div.className = 'result-item';
+            div.dataset.index = i;
+            const name = currentType === 'payment' ? item.supplier_name : item.customer_name;
+            const id   = currentType === 'payment' ? item.supplier_id   : item.customer_id;
+            div.innerHTML = `
+                <div class="r-name">${name}</div>
+                <div class="r-meta">${item.pending_invoices ?? 0} pending invoice(s) &nbsp;|&nbsp;
+                    Total: ₹${toNum(item.total_amount).toLocaleString()} &nbsp;|&nbsp;
+                    Paid: ₹${toNum(item.total_paid).toLocaleString()}
+                </div>
+                <div class="r-balance">Balance: ₹${toNum(item.balance_amount).toLocaleString()}</div>`;
+            if (!id) return;
+            div.addEventListener('click', () => selectEntity(id, name, item));
+            div.addEventListener('mouseenter', () => { clearHighlight(); highlightIdx = i; div.classList.add('highlighted'); });
+            div.addEventListener('mouseleave', () => { div.classList.remove('highlighted'); highlightIdx = -1; });
+            searchResults.appendChild(div);
+        });
         searchResults.style.display = 'block';
     }
-    
-    function selectInvoice(invoice) {
-        console.log('Selecting invoice:', invoice);
-        
-        // Close dialog with animation
-        closeDialogFunc();
-        
-        // Set form values
-        if (entityIdField) {
-            const entityId = currentTransactionType === 'payment' ? invoice.supplier_id : invoice.customer_id;
-            entityIdField.value = entityId;
-            console.log('Set entity field value to:', entityId);
-        }
-        if (invoiceNoField) {
-            invoiceNoField.value = invoice.invoice_no;
-            console.log('Set invoice field value to:', invoice.invoice_no);
-        }
-        const roundedBalance = Math.round(invoice.balance_amount);
-        if (amountField) {
-            amountField.value = roundedBalance;
-            console.log('Set amount field value to (rounded):', roundedBalance);
-        }
-        
-        // Show selected invoice info
-        if (invoiceDetails) {
-            const entityName = currentTransactionType === 'payment' ? invoice.supplier_name : invoice.customer_name;
-            const entityLabel = currentTransactionType === 'payment' ? 'Supplier' : 'Customer';
-            
-            invoiceDetails.innerHTML = `
-                <p><strong>${entityLabel}:</strong> ${entityName}</p>
-                <p><strong>Invoice:</strong> ${invoice.invoice_no} (${invoice.invoice_date})</p>
-                <p><strong>Total:</strong> Rs.${invoice.total_amount}</p>
-                <p><strong>Paid:</strong> Rs.${invoice.paid_amount}</p>
-                <p><strong>Balance:</strong> <span style="color: var(--success-color); font-weight: 600;">Rs.${roundedBalance}</span></p>
-            `;
-        }
-        
-        // Show/hide appropriate sections
-        if (selectedInfo) selectedInfo.style.display = 'block';
-        if (noInvoiceSelected) noInvoiceSelected.style.display = 'none';
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            console.log('Enabled submit button');
-        }
-        
-        // Focus on date field after selection
-        setTimeout(() => {
-            if (dateField) dateField.focus();
-        }, 100);
-    }
-    
-    function resetForm() {
-        if (selectedInfo) selectedInfo.style.display = 'none';
-        if (noInvoiceSelected) noInvoiceSelected.style.display = 'block';
-        if (entityIdField) entityIdField.value = '';
-        if (invoiceNoField) invoiceNoField.value = '';
-        if (amountField) amountField.value = '';
-        if (submitBtn) submitBtn.disabled = currentTransactionType !== 'contra';
-    }
-    
-    // Payment method change handler
-    if (paymentModeField) {
-        paymentModeField.addEventListener('change', function() {
-            const bankNameGroup = document.getElementById('bankNameGroup');
-            const referenceGroup = document.getElementById('referenceGroup');
-            const referenceRowBelow = document.getElementById('referenceRowBelow');
-            const referenceNoBelow = document.getElementById('referenceNoBelow');
-            const referenceNo = document.getElementById('referenceNo');
-            
-            if (this.value === 'bank') {
-                if (bankNameGroup) bankNameGroup.style.display = 'block';
-                if (referenceGroup) referenceGroup.style.display = 'none';
-                if (referenceRowBelow) referenceRowBelow.style.display = 'grid';
-                if (bankNameInput) bankNameInput.required = true;
-                // Copy reference value and clear original
-                if (referenceNo && referenceNoBelow) {
-                    referenceNoBelow.value = referenceNo.value;
-                    referenceNo.value = '';
-                }
-            } else {
-                if (bankNameGroup) bankNameGroup.style.display = 'none';
-                if (referenceGroup) referenceGroup.style.display = 'block';
-                if (referenceRowBelow) referenceRowBelow.style.display = 'none';
-                if (bankNameInput) {
-                    bankNameInput.required = false;
-                    bankNameInput.value = '';
-                }
-                // Copy reference value back and clear below
-                if (referenceNo && referenceNoBelow) {
-                    referenceNo.value = referenceNoBelow.value;
-                    referenceNoBelow.value = '';
-                }
-            }
-        });
-    }
-    
-    // Form submission
-    if (paymentForm) {
-        paymentForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Validate transaction type
-            if (!currentTransactionType) {
-                alert('Please select a transaction type first');
-                invoiceTypeField.focus();
-                return;
-            }
-            
-            // Validate that an invoice is selected (except for contra)
-            if (currentTransactionType !== 'contra' && (!entityIdField || !entityIdField.value || !invoiceNoField || !invoiceNoField.value)) {
-                alert('Please select an invoice first');
-                openDialog();
-                return;
-            }
-            
-            // Validate amount
-            if (!amountField || !amountField.value || parseFloat(amountField.value) <= 0) {
-                alert('Please enter a valid amount');
-                if (amountField) amountField.focus();
-                return;
-            }
-            
-            // Handle bank name for bank transfer and set correct reference field
-            if (paymentModeField && paymentModeField.value === 'bank') {
-                const bankName = bankNameInput ? bankNameInput.value.trim() : '';
-                if (!bankName) {
-                    alert('Please enter bank name for bank transfer');
-                    if (bankNameInput) bankNameInput.focus();
-                    return;
-                }
-                // Set reference from below field for bank transfers
-                const referenceNoBelow = document.getElementById('referenceNoBelow');
-                const referenceNo = document.getElementById('referenceNo');
-                if (referenceNoBelow && referenceNo) {
-                    referenceNo.value = referenceNoBelow.value;
-                }
-                console.log('Bank name validated:', bankName);
-            }
-            
-            // Show loading state
-            const loadingSpinner = document.getElementById('loadingSpinner');
-            const submitText = document.getElementById('submitText');
-            const submitBtn = document.getElementById('submitBtn');
-            
-            if (loadingSpinner) loadingSpinner.style.display = 'inline-block';
-            if (submitText) submitText.textContent = 'Processing...';
-            if (submitBtn) submitBtn.disabled = true;
-            
-            // Debug: Log form data before submission
-            const formData = new FormData(paymentForm);
-            console.log('=== FORM DATA DEBUG ===');
-            for (let [key, value] of formData.entries()) {
-                console.log(key + ':', value);
-            }
-            
-            // Submit form normally (not via fetch)
-            console.log('Submitting form...');
-            paymentForm.submit();
-        });
-    }
-    
-    function getSubmitButtonText() {
-        switch(currentTransactionType) {
-            case 'payment': return 'Add Payment';
-            case 'receipt': return 'Add Receipt';
-            case 'contra': return 'Add Contra Entry';
-            default: return 'Add Transaction';
-        }
-    }
-    
-    function resetFormForNext() {
-        if (paymentForm) paymentForm.reset();
-        if (dateField) dateField.value = new Date().toISOString().split('T')[0];
-        if (selectedInfo) selectedInfo.style.display = 'none';
-        if (noInvoiceSelected) noInvoiceSelected.style.display = 'block';
-        const bankNameGroup = document.getElementById('bankNameGroup');
-        const referenceGroup = document.getElementById('referenceGroup');
-        const referenceRowBelow = document.getElementById('referenceRowBelow');
-        if (bankNameGroup) bankNameGroup.style.display = 'none';
-        if (referenceGroup) referenceGroup.style.display = 'block';
-        if (referenceRowBelow) referenceRowBelow.style.display = 'none';
-        if (submitBtn) submitBtn.disabled = true;
-        currentTransactionType = '';
-        selectionMessage.textContent = 'Please select a transaction type first.';
-        selectInvoiceBtn.style.display = 'none';
-        submitText.textContent = 'Add Transaction';
-    }
-    
-    // Hide search results when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
-            searchResults.style.display = 'none';
-        }
+
+    // ── Keyboard nav in dialog ────────────────────────────────────────────────
+    searchInput.addEventListener('keydown', function (e) {
+        const items = searchResults.querySelectorAll('.result-item');
+        if (!items.length) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); moveHighlight(items, 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); moveHighlight(items, -1); }
+        else if (e.key === 'Enter' && highlightIdx >= 0) { e.preventDefault(); items[highlightIdx].click(); }
     });
-    
-    // Enhanced keyboard navigation
-    let currentHighlightIndex = -1;
-    
-    searchInput.addEventListener('keydown', function(e) {
-        const items = searchResults.querySelectorAll('.search-result-item');
-        if (items.length === 0 || isSearching) return;
-        
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            navigateResults(items, 1);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            navigateResults(items, -1);
-        } else if (e.key === 'Enter' && currentHighlightIndex >= 0) {
-            e.preventDefault();
-            const selectedItem = items[currentHighlightIndex];
-            if (selectedItem && !selectedItem.textContent.includes('Searching') && !selectedItem.textContent.includes('Error')) {
-                selectedItem.click();
-            }
-        }
-    });
-    
-    function navigateResults(items, direction) {
-        if (currentHighlightIndex >= 0 && items[currentHighlightIndex]) {
-            items[currentHighlightIndex].classList.remove('highlighted');
-        }
-        
-        if (direction === 1) {
-            currentHighlightIndex = (currentHighlightIndex + 1) % items.length;
+
+    function moveHighlight(items, dir) {
+        clearHighlight();
+        highlightIdx = highlightIdx < 0 ? (dir > 0 ? 0 : items.length - 1)
+            : Math.max(0, Math.min(items.length - 1, highlightIdx + dir));
+        items[highlightIdx].classList.add('highlighted');
+        items[highlightIdx].scrollIntoView({ block: 'nearest' });
+    }
+
+    function clearHighlight() {
+        searchResults.querySelectorAll('.result-item.highlighted').forEach(el => el.classList.remove('highlighted'));
+    }
+
+    // ── Select entity → load invoices ─────────────────────────────────────────
+    function selectEntity(id, name, summaryData) {
+        closeDialog();
+        entityIdField.value = id;
+
+        // Show summary header
+        summaryTitle.textContent = (currentType === 'payment' ? 'Supplier: ' : 'Customer: ') + name;
+        sumTotal.textContent   = '₹' + toNum(summaryData.total_amount).toLocaleString();
+        sumPaid.textContent    = '₹' + toNum(summaryData.total_paid).toLocaleString();
+        sumBalance.textContent = '₹' + toNum(summaryData.balance_amount).toLocaleString();
+
+        const adv = toNum(summaryData.advance_balance);
+        if (adv > 0) {
+            sumAdvance.textContent = '₹' + adv.toLocaleString();
+            advanceBox.style.display = 'block';
+            summaryGrid.classList.add('has-advance');
         } else {
-            currentHighlightIndex = currentHighlightIndex <= 0 ? items.length - 1 : currentHighlightIndex - 1;
+            advanceBox.style.display = 'none';
+            summaryGrid.classList.remove('has-advance');
         }
-        
-        if (items[currentHighlightIndex]) {
-            items[currentHighlightIndex].classList.add('highlighted');
-            items[currentHighlightIndex].scrollIntoView({
-                behavior: 'smooth',
-                block: 'nearest'
-            });
-        }
-    }
-    
-    function resetHighlight() {
-        currentHighlightIndex = -1;
-        const items = searchResults.querySelectorAll('.search-result-item');
-        items.forEach(item => item.classList.remove('highlighted'));
-    }
-});
 
-// OVERRIDE AUTO-FOCUS AND FORCE TRANSACTION TYPE FOCUS
-window.addEventListener('load', function() {
-    const invoiceTypeField = document.getElementById('invoiceType');
-    if (invoiceTypeField) {
-        function ultimateFocus() {
-            // Override any other focus attempts
-            if (document.activeElement !== invoiceTypeField) {
-                document.activeElement.blur();
-                invoiceTypeField.focus();
-                invoiceTypeField.click();
-                console.log('Ultimate focus on transaction type');
-            }
-        }
-        
-        // Multiple attempts
-        setTimeout(ultimateFocus, 100);
-        setTimeout(ultimateFocus, 300);
-        setTimeout(ultimateFocus, 500);
-        setTimeout(ultimateFocus, 1000);
-        setTimeout(ultimateFocus, 2000);
-    }
-});
+        // Set suggested amount = outstanding balance
+        amountField.value = toNum(summaryData.balance_amount);
 
-// Override global auto-focus function
-if (typeof window.autoFocusFirstInput === 'function') {
-    window.autoFocusFirstInput = function() {
-        const invoiceTypeField = document.getElementById('invoiceType');
-        if (invoiceTypeField) {
-            invoiceTypeField.focus();
-            console.log('Overrode auto-focus for transaction type');
-            return true;
+        noSelection.style.display = 'none';
+        entitySummary.style.display = 'block';
+        submitBtn.disabled = false;
+        setTimeout(() => amountField.focus(), 100);
+    }
+
+    // ── Reset selection ───────────────────────────────────────────────────────
+    function resetSelection() {
+        entityIdField.value = '';
+        amountField.value = '';
+        entitySummary.style.display = 'none';
+        noSelection.style.display = 'block';
+        submitBtn.disabled = true;
+    }
+
+    // ── Payment mode change ───────────────────────────────────────────────────
+    paymentModeEl.addEventListener('change', function () {
+        if (this.value === 'bank') {
+            bankNameGroup.style.display = 'flex';
+            referenceGroup.style.display = 'none';
+            bankNameInput.required = true;
+        } else {
+            bankNameGroup.style.display = 'none';
+            referenceGroup.style.display = 'flex';
+            bankNameInput.required = false;
+            bankNameInput.value = '';
         }
-        return false;
-    };
-}
+    });
+
+    // ── Form submit ───────────────────────────────────────────────────────────
+    document.getElementById('paymentForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        if (!currentType) { alert('Please select a transaction type.'); invoiceTypeEl.focus(); return; }
+        if (!entityIdField.value) { alert('Please select a supplier/customer.'); return; }
+        if (!amountField.value || parseFloat(amountField.value) <= 0) {
+            alert('Please enter a valid amount.'); amountField.focus(); return;
+        }
+        if (paymentModeEl.value === 'bank' && !bankNameInput.value.trim()) {
+            alert('Please enter bank name.'); bankNameInput.focus(); return;
+        }
+
+        spinner.style.display = 'inline-block';
+        submitText.textContent = 'Processing...';
+        submitBtn.disabled = true;
+        this.submit();
+    });
+
+    // ── Auto-focus transaction type ───────────────────────────────────────────
+    setTimeout(() => invoiceTypeEl.focus(), 200);
+});
 </script>
 {% endblock %}

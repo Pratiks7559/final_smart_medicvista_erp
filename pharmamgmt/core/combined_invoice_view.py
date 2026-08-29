@@ -5,11 +5,12 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.db import transaction
 from django.db.models import Sum, Q
-from .models import ProductMaster, SupplierMaster, PurchaseMaster, SaleRateMaster, InvoiceMaster, SalesMaster, Challan1, SupplierChallanMaster, SupplierChallanMaster2
+from .models import ProductMaster, SupplierMaster, PurchaseMaster, SaleRateMaster, InvoiceMaster, SalesMaster, Challan1, SupplierChallanMaster, SupplierChallanMaster2, InvoicePaid, AdvanceLedger, SupplierAdvance
 from .forms import InvoiceForm
 from .stock_manager import StockManager
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from decimal import Decimal, ROUND_HALF_UP
 from .roundoff_utils import apply_roundoff, calculate_roundoff
 
 # Configure logging
@@ -353,13 +354,21 @@ def add_invoice_with_products(request):
                 if errors:
                     for error in errors[:3]:
                         logger.warning(error)
-                
+
+                # Auto-adjust supplier advance against this invoice
+                invoice.refresh_from_db()
+                adv_msg = _auto_adjust_advance(invoice)
+                invoice.refresh_from_db()
+
                 # Success message based on whether products were added
                 if products_added > 0:
                     success_msg = f"Purchase Invoice #{invoice.invoice_no} with {products_added} products added successfully!"
                 else:
                     success_msg = f"Purchase Invoice #{invoice.invoice_no} created successfully (header only)!"
-                
+
+                if adv_msg:
+                    success_msg += f" {adv_msg}"
+
                 messages.success(request, success_msg)
                 logger.info(f"Invoice {invoice.invoice_no} created successfully with {products_added} products")
                 return redirect('invoice_detail', pk=invoice.invoiceid)
@@ -400,6 +409,64 @@ def add_invoice_with_products(request):
     }
     return render(request, 'purchases/combined_invoice_form.html', context)
 
+
+
+def _auto_adjust_advance(invoice):
+    """Auto-adjust supplier advance against a newly created invoice.
+    Returns a message string if advance was used, else empty string."""
+    supplier = invoice.supplierid
+    inv_total = Decimal(str(invoice.invoice_total or 0))
+    inv_paid = Decimal(str(invoice.invoice_paid or 0))
+    inv_balance = inv_total - inv_paid
+
+    if inv_balance <= 0:
+        return ''
+
+    advance_qs = list(SupplierAdvance.objects.filter(supplier=supplier, amount__gt=0).order_by('payment_date'))
+    if not advance_qs:
+        return ''
+
+    advance_used = Decimal('0')
+    today = date.today()
+
+    with transaction.atomic():
+        for adv in advance_qs:
+            if inv_balance <= 0:
+                break
+            adv_amount = Decimal(str(adv.amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            apply_adv = min(adv_amount, inv_balance)
+
+            InvoicePaid.objects.create(
+                ip_invoiceid=invoice,
+                payment_date=today,
+                payment_amount=float(apply_adv),
+                payment_mode=adv.payment_mode,
+                payment_ref_no=f'ADV-ADJ-{adv.advance_id}'
+            )
+            AdvanceLedger.objects.create(
+                party_type='supplier',
+                supplier=supplier,
+                entry_type='adjusted',
+                amount=float(apply_adv),
+                entry_date=today,
+                invoice_ref=invoice.invoice_no,
+                narration=f'Advance adjusted against Invoice {invoice.invoice_no}'
+            )
+
+            inv_balance -= apply_adv
+            inv_paid += apply_adv
+            adv.amount = float(adv_amount - apply_adv)
+            adv.save()
+            advance_used += apply_adv
+
+        if advance_used > 0:
+            invoice.invoice_paid = float(inv_paid)
+            invoice.payment_status = 'paid' if round(float(inv_balance)) <= 0 else 'partial'
+            invoice.save()
+
+    if advance_used > 0:
+        return f'(Rs.{advance_used} auto-adjusted from advance)'
+    return ''
 
 
 @login_required

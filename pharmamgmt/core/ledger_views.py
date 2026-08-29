@@ -6,7 +6,7 @@ from datetime import datetime
 from .models import (
     CustomerMaster, SupplierMaster, SalesInvoiceMaster, SalesMaster,
     SalesInvoicePaid, ReturnSalesInvoiceMaster, InvoiceMaster, InvoicePaid,
-    ReturnInvoiceMaster, Pharmacy_Details
+    ReturnInvoiceMaster, Pharmacy_Details, SupplierAdvance, CustomerAdvance, AdvanceLedger
 )
 
 def get_financial_year_dates():
@@ -204,7 +204,30 @@ def supplier_ledger(request, supplier_id=None):
             'credit': 0,
             'return_obj': ret
         })
-    
+
+    # Advance Entries (advance_in = credit, adjusted = debit)
+    adv_entries = AdvanceLedger.objects.filter(party_type='supplier', supplier=supplier).order_by('entry_date')
+    if start_date and end_date:
+        adv_entries = adv_entries.filter(entry_date__range=[start_date, end_date])
+
+    for entry in adv_entries:
+        if entry.entry_type == 'advance_in':
+            transactions.append({
+                'date': entry.entry_date,
+                'type': 'Advance In',
+                'reference': entry.invoice_ref or '-',
+                'debit': 0,
+                'credit': entry.amount,
+            })
+        elif entry.entry_type == 'adjusted':
+            transactions.append({
+                'date': entry.entry_date,
+                'type': 'Advance Adjusted',
+                'reference': entry.invoice_ref or '-',
+                'debit': entry.amount,
+                'credit': 0,
+            })
+
     # Sort and calculate balance
     transactions.sort(key=lambda x: x['date'])
     balance = 0
@@ -232,7 +255,9 @@ def supplier_ledger(request, supplier_id=None):
         'current_date': timezone.now(),
         'start_date': start_date,
         'end_date': end_date,
-        'title': f'Ledger - {supplier.supplier_name}'
+        'title': f'Ledger - {supplier.supplier_name}',
+        'advance_balance': round(sum(float(a.amount) for a in SupplierAdvance.objects.filter(supplier=supplier, amount__gt=0)), 2),
+        'advance_entries': AdvanceLedger.objects.filter(party_type='supplier', supplier=supplier).order_by('-entry_date'),
     }
     return render(request, 'ledger/supplier_ledger.html', context)
 

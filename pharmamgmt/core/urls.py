@@ -43,6 +43,14 @@ from .inventory_list2_views import inventory_list2, inventory_batches, inventory
 from .contra_views import contra_list, add_contra, edit_contra, delete_contra, contra_detail
 # ============================================
 
+from .unified_payment_view import (
+    add_unified_payment,
+    search_supplier_invoices as upf_search_supplier,
+    search_customer_invoices as upf_search_customer,
+    get_supplier_pending_invoices as upf_supplier_pending,
+    get_customer_pending_invoices as upf_customer_pending,
+    advance_ledger_view,
+)
 from .year_filter_views import set_year_filter
 from .retailer_urls import urlpatterns as retailer_urlpatterns
 
@@ -314,12 +322,15 @@ urlpatterns = [
     path('payments/<int:pk>/delete/', views.delete_payment, name='delete_payment'),
     path('payments/export-pdf/', views.export_payments_pdf, name='export_payments_pdf'),
     path('payments/export-excel/', views.export_payments_excel, name='export_payments_excel'),
-    path('api/search-supplier-invoices/', views.search_supplier_invoices, name='search_supplier_invoices'),
-    path('api/search-customer-invoices/', views.search_customer_invoices, name='search_customer_invoices'),
+    path('api/search-supplier-invoices/', upf_search_supplier, name='search_supplier_invoices'),
+    path('api/get-supplier-pending-invoices/', upf_supplier_pending, name='get_supplier_pending_invoices'),
+    path('api/get-customer-pending-invoices/', upf_customer_pending, name='get_customer_pending_invoices'),
+    path('api/search-customer-invoices/', upf_search_customer, name='search_customer_invoices'),
     
     # Unified Payment/Receipt Form
-    path('finance/add/', views.add_unified_payment, name='add_unified_payment'),
-    path('unified-payment/', views.add_unified_payment, name='unified_payment'),
+    path('finance/add/', add_unified_payment, name='add_unified_payment'),
+    path('unified-payment/', add_unified_payment, name='unified_payment'),
+    path('finance/advance-ledger/', advance_ledger_view, name='advance_ledger'),
     
     # Balance Check APIs
     path('api/check-invoice-balance/', check_invoice_balance, name='check_invoice_balance'),

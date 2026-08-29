@@ -43,7 +43,7 @@ from .forms import (
     PurchaseReturnInvoiceForm, PurchaseReturnForm, SalesReturnInvoiceForm, SalesReturnForm,
     SaleRateForm, SalesReturnPaymentForm, PaymentForm, ReceiptForm
 )
-from .unified_payment_view import add_unified_payment, search_supplier_invoices, search_customer_invoices
+from .unified_payment_view import add_unified_payment, search_supplier_invoices, search_customer_invoices, get_supplier_pending_invoices, get_customer_pending_invoices, advance_ledger_view
 from .utils import get_stock_status, get_batch_stock_status, generate_invoice_pdf, generate_sales_invoice_pdf, get_avg_mrp, parse_expiry_date, generate_sales_invoice_number
 from .date_utils import parse_ddmmyyyy_date, format_date_for_display, format_date_for_backend, convert_legacy_dates
 from .low_stock_views import low_stock_update, update_low_stock_item, bulk_update_low_stock
@@ -1640,36 +1640,98 @@ def add_invoice_payment(request, invoice_id):
                     })
                 
                 # Create payment record
-                from .models import InvoicePaid
-                payment = InvoicePaid.objects.create(
-                    ip_invoiceid=invoice,
-                    payment_date=parsed_date,
-                    payment_amount=payment_amount,
-                    payment_mode=payment_mode,
-                    payment_ref_no=payment_ref_no
-                )
-                
-                # Update invoice paid amount and payment status
-                invoice.invoice_paid += payment_amount
-                
-                # Update payment status based on rounded balance
-                balance = invoice.invoice_total - invoice.invoice_paid
-                balance_rounded = round(balance)
-                if balance_rounded <= 0:
-                    invoice.payment_status = 'paid'
-                elif invoice.invoice_paid > 0:
-                    invoice.payment_status = 'partial'
-                else:
-                    invoice.payment_status = 'pending'
-                
-                invoice.save()
-                
-                # Force refresh of invoice data to ensure all views show updated status
-                invoice.refresh_from_db()
-                
+                from .models import InvoicePaid, SupplierAdvance, AdvanceLedger
+                from decimal import Decimal, ROUND_HALF_UP
+                from django.db import transaction as db_transaction
+
+                with db_transaction.atomic():
+                    supplier = invoice.supplierid
+                    inv_total = Decimal(str(invoice.invoice_total or 0))
+                    inv_paid = Decimal(str(invoice.invoice_paid or 0))
+                    inv_balance = inv_total - inv_paid
+                    pay_amount = Decimal(str(payment_amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    advance_used = Decimal('0')
+
+                    # Step 1: Use existing advance balance first
+                    advance_qs = list(SupplierAdvance.objects.filter(supplier=supplier, amount__gt=0).order_by('payment_date'))
+                    for adv in advance_qs:
+                        if inv_balance <= 0:
+                            break
+                        adv_amount = Decimal(str(adv.amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        apply_adv = min(adv_amount, inv_balance)
+                        InvoicePaid.objects.create(
+                            ip_invoiceid=invoice,
+                            payment_date=parsed_date,
+                            payment_amount=float(apply_adv),
+                            payment_mode=adv.payment_mode,
+                            payment_ref_no=payment_ref_no
+                        )
+                        AdvanceLedger.objects.create(
+                            party_type='supplier',
+                            supplier=supplier,
+                            entry_type='adjusted',
+                            amount=float(apply_adv),
+                            entry_date=parsed_date,
+                            invoice_ref=invoice.invoice_no,
+                            narration=f'Advance adjusted against Invoice {invoice.invoice_no}'
+                        )
+                        inv_balance -= apply_adv
+                        inv_paid += apply_adv
+                        adv.amount = float(adv_amount - apply_adv)
+                        adv.save()
+                        advance_used += apply_adv
+
+                    # Step 2: Apply new cash payment to remaining balance
+                    if inv_balance > 0 and pay_amount > 0:
+                        apply_cash = min(pay_amount, inv_balance)
+                        InvoicePaid.objects.create(
+                            ip_invoiceid=invoice,
+                            payment_date=parsed_date,
+                            payment_amount=float(apply_cash),
+                            payment_mode=payment_mode,
+                            payment_ref_no=payment_ref_no
+                        )
+                        inv_paid += apply_cash
+                        inv_balance -= apply_cash
+                        remaining = pay_amount - apply_cash
+                    else:
+                        remaining = pay_amount if inv_balance <= 0 else Decimal('0')
+
+                    # Step 3: Save over-payment as advance
+                    if remaining > 0:
+                        SupplierAdvance.objects.create(
+                            supplier=supplier,
+                            amount=float(remaining),
+                            payment_date=parsed_date,
+                            payment_mode=payment_mode,
+                            reference_no=payment_ref_no,
+                            narration=f'Advance from over-payment of Rs.{pay_amount}'
+                        )
+                        AdvanceLedger.objects.create(
+                            party_type='supplier',
+                            supplier=supplier,
+                            entry_type='advance_in',
+                            amount=float(remaining),
+                            entry_date=parsed_date,
+                            narration=f'Advance received Rs.{remaining} (over-payment)'
+                        )
+
+                    # Update invoice
+                    invoice.invoice_paid = float(inv_paid)
+                    balance_rounded = round(float(inv_balance))
+                    if balance_rounded <= 0:
+                        invoice.payment_status = 'paid'
+                    elif float(inv_paid) > 0:
+                        invoice.payment_status = 'partial'
+                    else:
+                        invoice.payment_status = 'pending'
+                    invoice.save()
+                    invoice.refresh_from_db()
+
+                adv_msg = f' (Rs.{advance_used} from advance)' if advance_used > 0 else ''
                 return JsonResponse({
                     'success': True,
-                    'message': f'Payment of ₹{payment_amount:.2f} added successfully!',
+                    'message': f'Payment of Rs.{payment_amount:.2f} added successfully!{adv_msg}',
                     'new_balance': float(invoice.balance_due),
                     'new_paid_amount': float(invoice.invoice_paid),
                     'payment_status': invoice.payment_status,
@@ -2548,6 +2610,60 @@ def add_invoice_with_products(request):
     from .combined_invoice_view import add_invoice_with_products as combined_view
     return combined_view(request)
 
+
+def _auto_adjust_customer_advance(invoice):
+    """Auto-adjust customer advance against a newly created sales invoice.
+    Returns a message string if advance was used, else empty string."""
+    from .models import CustomerAdvance, SalesInvoicePaid, AdvanceLedger
+    from decimal import Decimal, ROUND_HALF_UP
+    from datetime import date
+    from django.db import transaction
+
+    customer = invoice.customerid
+    inv_total = Decimal(str(invoice.sales_invoice_total or 0))
+    inv_paid = Decimal(str(invoice.sales_invoice_paid or 0))
+    inv_balance = inv_total - inv_paid
+
+    if inv_balance <= 0:
+        return ''
+
+    advance_qs = list(CustomerAdvance.objects.filter(customer=customer, amount__gt=0).order_by('receipt_date'))
+    if not advance_qs:
+        return ''
+
+    advance_used = Decimal('0')
+    today = date.today()
+
+    with transaction.atomic():
+        for adv in advance_qs:
+            if inv_balance <= 0:
+                break
+            adv_amount = Decimal(str(adv.amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            apply_adv = min(adv_amount, inv_balance)
+            SalesInvoicePaid.objects.create(
+                sales_ip_invoice_no=invoice,
+                sales_payment_date=today,
+                sales_payment_amount=float(apply_adv),
+                sales_payment_mode=adv.receipt_mode,
+                sales_payment_ref_no=f'ADV-ADJ-{adv.advance_id}'
+            )
+            AdvanceLedger.objects.create(
+                party_type='customer', customer=customer,
+                entry_type='adjusted', amount=float(apply_adv),
+                entry_date=today, invoice_ref=invoice.sales_invoice_no,
+                narration=f'Advance adjusted against Invoice {invoice.sales_invoice_no}'
+            )
+            inv_balance -= apply_adv
+            inv_paid += apply_adv
+            adv.amount = float(adv_amount - apply_adv)
+            adv.save()
+            advance_used += apply_adv
+
+    if advance_used > 0:
+        return f'(Rs.{advance_used} auto-adjusted from advance)'
+    return ''
+
+
 @login_required
 def add_sales_invoice_with_products(request):
     def convert_date_format(date_str):
@@ -2852,6 +2968,13 @@ def add_sales_invoice_with_products(request):
                 if moved_count > 0:
                     print(f"Moved {moved_count} customer challan entries to CustomerChallanMaster2")
                 
+                # Auto-adjust customer advance against this invoice
+                invoice.refresh_from_db()
+                adv_msg = _auto_adjust_customer_advance(invoice)
+                invoice.refresh_from_db()
+                if adv_msg:
+                    success_msg += f' {adv_msg}'
+
                 messages.success(request, success_msg)
                 # Redirect to invoice detail page after creating invoice
                 return redirect('sales_invoice_detail', pk=invoice.sales_invoice_no)
@@ -2944,20 +3067,82 @@ def add_sales_payment(request, invoice_id):
                         'error': 'Invalid date format'
                     })
                 
-                # Create payment record
-                from .models import SalesInvoicePaid
-                payment = SalesInvoicePaid.objects.create(
-                    sales_ip_invoice_no=invoice,
-                    sales_payment_date=parsed_date,
-                    sales_payment_amount=payment_amount,
-                    sales_payment_mode=payment_mode,
-                    sales_payment_ref_no=payment_ref_no
-                )
-                
-                # Signal auto-updates invoice.sales_invoice_paid via post_save
+                # Create payment with advance logic
+                from .models import SalesInvoicePaid, CustomerAdvance, AdvanceLedger
+                from decimal import Decimal, ROUND_HALF_UP
+                from django.db import transaction as db_transaction
+
+                with db_transaction.atomic():
+                    customer = invoice.customerid
+                    inv_total = Decimal(str(invoice.sales_invoice_total or 0))
+                    inv_paid = Decimal(str(invoice.sales_invoice_paid or 0))
+                    inv_balance = inv_total - inv_paid
+                    pay_amount = Decimal(str(payment_amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    advance_used = Decimal('0')
+
+                    # Step 1: Use existing customer advance first
+                    for adv in list(CustomerAdvance.objects.filter(customer=customer, amount__gt=0).order_by('receipt_date')):
+                        if inv_balance <= 0:
+                            break
+                        adv_amount = Decimal(str(adv.amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        apply_adv = min(adv_amount, inv_balance)
+                        SalesInvoicePaid.objects.create(
+                            sales_ip_invoice_no=invoice,
+                            sales_payment_date=parsed_date,
+                            sales_payment_amount=float(apply_adv),
+                            sales_payment_mode=adv.receipt_mode,
+                            sales_payment_ref_no=payment_ref_no
+                        )
+                        AdvanceLedger.objects.create(
+                            party_type='customer', customer=customer,
+                            entry_type='adjusted', amount=float(apply_adv),
+                            entry_date=parsed_date, invoice_ref=invoice.sales_invoice_no,
+                            narration=f'Advance adjusted against Invoice {invoice.sales_invoice_no}'
+                        )
+                        inv_balance -= apply_adv
+                        inv_paid += apply_adv
+                        adv.amount = float(adv_amount - apply_adv)
+                        adv.save()
+                        advance_used += apply_adv
+
+                    # Step 2: Apply new payment to remaining balance
+                    if inv_balance > 0 and pay_amount > 0:
+                        apply_cash = min(pay_amount, inv_balance)
+                        SalesInvoicePaid.objects.create(
+                            sales_ip_invoice_no=invoice,
+                            sales_payment_date=parsed_date,
+                            sales_payment_amount=float(apply_cash),
+                            sales_payment_mode=payment_mode,
+                            sales_payment_ref_no=payment_ref_no
+                        )
+                        inv_paid += apply_cash
+                        inv_balance -= apply_cash
+                        remaining = pay_amount - apply_cash
+                    else:
+                        remaining = pay_amount if inv_balance <= 0 else Decimal('0')
+
+                    # Step 3: Save over-payment as customer advance
+                    if remaining > 0:
+                        CustomerAdvance.objects.create(
+                            customer=customer, amount=float(remaining),
+                            receipt_date=parsed_date, receipt_mode=payment_mode,
+                            reference_no=payment_ref_no,
+                            narration=f'Advance from over-payment of Rs.{pay_amount}'
+                        )
+                        AdvanceLedger.objects.create(
+                            party_type='customer', customer=customer,
+                            entry_type='advance_in', amount=float(remaining),
+                            entry_date=parsed_date,
+                            narration=f'Advance received Rs.{remaining} (over-payment)'
+                        )
+
+                adv_msg = f' (Rs.{advance_used} from advance)' if advance_used > 0 else ''
                 return JsonResponse({
                     'success': True,
-                    'message': f'Payment of ₹{payment_amount:.2f} added successfully!'
+                    'message': f'Payment of ₹{payment_amount:.2f} added successfully!{adv_msg}',
+                    'new_balance': float(invoice.balance_due),
+                    'new_paid_amount': float(invoice.sales_invoice_paid),
+                    'invoice_total': float(invoice.sales_invoice_total)
                 })
                 
             except Exception as e:

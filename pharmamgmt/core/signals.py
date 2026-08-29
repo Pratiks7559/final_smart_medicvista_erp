@@ -5,8 +5,9 @@ from django.dispatch import receiver
 from django.db import models
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from .models import (
-    InvoicePaid, InvoiceMaster, SalesInvoicePaid, SalesInvoiceMaster,
-    SupplierChallanMaster, PurchaseMaster, SalesMaster
+    InvoicePaid, InvoiceMaster, SalesInvoiceMaster, SalesInvoicePaid,
+    SupplierChallanMaster, PurchaseMaster, SalesMaster,
+    SupplierAdvance, CustomerAdvance, AdvanceLedger
 )
 from .retailer_models import RetailerMaster, RetailerSession
 

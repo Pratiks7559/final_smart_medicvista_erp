@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Advance Ledger{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:1rem auto;padding:1rem;">
+  <div style="background:#fff;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.1);padding:1.5rem;">
+    <h2 style="margin:0 0 1rem;font-size:1.3rem;">Advance Ledger</h2>
+
+    <!-- Filter Form -->
+    <form method="get" style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.2rem;align-items:flex-end;">
+      <div>
+        <label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:.3rem;">Party Type</label>
+        <select name="party_type" onchange="this.form.submit()" style="padding:.45rem .7rem;border:1.5px solid #ccc;border-radius:6px;font-size:.875rem;">
+          <option value="supplier" {% if party_type == 'supplier' %}selected{% endif %}>Supplier</option>
+          <option value="customer" {% if party_type == 'customer' %}selected{% endif %}>Customer</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:.3rem;">
+          {% if party_type == 'supplier' %}Supplier{% else %}Customer{% endif %}
+        </label>
+        <select name="party_id" style="padding:.45rem .7rem;border:1.5px solid #ccc;border-radius:6px;font-size:.875rem;min-width:200px;">
+          <option value="">-- Select --</option>
+          {% if party_type == 'supplier' %}
+            {% for s in suppliers %}
+              <option value="{{ s.supplierid }}" {% if party and party.supplierid == s.supplierid %}selected{% endif %}>{{ s.supplier_name }}</option>
+            {% endfor %}
+          {% else %}
+            {% for c in customers %}
+              <option value="{{ c.customerid }}" {% if party and party.customerid == c.customerid %}selected{% endif %}>{{ c.customer_name }}</option>
+            {% endfor %}
+          {% endif %}
+        </select>
+      </div>
+      <button type="submit" style="padding:.45rem 1rem;background:#0066cc;color:#fff;border:none;border-radius:6px;font-size:.875rem;font-weight:600;cursor:pointer;">View</button>
+    </form>
+
+    {% if party %}
+    <!-- Advance Balance Box -->
+    <div style="background:#f0f7ff;border:2px solid #0066cc;border-radius:8px;padding:.8rem 1.2rem;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <span style="font-size:.8rem;color:#666;">Party</span>
+        <div style="font-weight:700;font-size:1rem;">{{ party }}</div>
+      </div>
+      <div style="text-align:right;">
+        <span style="font-size:.8rem;color:#666;">Current Advance Balance</span>
+        <div style="font-weight:700;font-size:1.2rem;color:{% if advance_balance > 0 %}#28a745{% else %}#333{% endif %};">
+          ₹{{ advance_balance|floatformat:2 }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Ledger Table -->
+    {% if entries %}
+    <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+      <thead>
+        <tr style="background:#e8f0fe;">
+          <th style="padding:8px;text-align:left;border-bottom:2px solid #ccc;">Date</th>
+          <th style="padding:8px;text-align:left;border-bottom:2px solid #ccc;">Type</th>
+          <th style="padding:8px;text-align:right;border-bottom:2px solid #ccc;">Amount (₹)</th>
+          <th style="padding:8px;text-align:left;border-bottom:2px solid #ccc;">Invoice Ref</th>
+          <th style="padding:8px;text-align:left;border-bottom:2px solid #ccc;">Narration</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr style="border-bottom:1px solid #eee;">
+          <td style="padding:7px 8px;">{{ e.entry_date }}</td>
+          <td style="padding:7px 8px;">
+            {% if e.entry_type == 'advance_in' %}
+              <span style="background:#d4edda;color:#155724;padding:2px 8px;border-radius:10px;font-size:.75rem;">Advance In</span>
+            {% else %}
+              <span style="background:#fff3cd;color:#856404;padding:2px 8px;border-radius:10px;font-size:.75rem;">Adjusted</span>
+            {% endif %}
+          </td>
+          <td style="padding:7px 8px;text-align:right;font-weight:600;">₹{{ e.amount|floatformat:2 }}</td>
+          <td style="padding:7px 8px;">{{ e.invoice_ref|default:'-' }}</td>
+          <td style="padding:7px 8px;color:#555;">{{ e.narration }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="text-align:center;color:#888;padding:2rem;">No advance ledger entries found.</p>
+    {% endif %}
+
+    {% else %}
+    <p style="text-align:center;color:#888;padding:2rem;">Select a party to view advance ledger.</p>
+    {% endif %}
+
+    <div style="margin-top:1rem;">
+      <a href="{% url 'add_unified_payment' %}" style="padding:.45rem 1rem;background:#6c757d;color:#fff;border-radius:6px;text-decoration:none;font-size:.875rem;">← Back to Payments</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
