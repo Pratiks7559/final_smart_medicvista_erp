@@ -144,8 +144,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 #   - Eliminates 2 DB queries per request when cache is warm
 # ============================================================
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
-SESSION_COOKIE_AGE = 3600
-SESSION_SAVE_EVERY_REQUEST = False
+SESSION_COOKIE_AGE = 900
+SESSION_SAVE_EVERY_REQUEST = True
 
 # ============================================================
 # AUTH
