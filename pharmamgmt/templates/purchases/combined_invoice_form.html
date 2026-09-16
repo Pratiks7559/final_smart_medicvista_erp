@@ -3,17 +3,10 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/combined_invoice_form.css' %}">
-
-{% include 'components/add_product_dialog.html' %}
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'js/expiry-date-formatter.js' %}"></script>
-<!-- SELECT2 JS - COMMENTED OUT
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
--->
-
-{% include 'components/add_product_dialog.html' %}
 {% endblock %}
 
 {% block content %}
@@ -86,6 +79,41 @@
 
 
 
+                        <!-- Discount Mode Section -->
+                        <div class="ci-discount-mode-section" style="margin-bottom:18px;padding:16px 20px;background:linear-gradient(135deg,#fff8e1,#e8f5e9);border:2px solid #f0c040;border-radius:14px;">
+                            <div style="font-weight:700;font-size:0.95rem;color:#5d4037;margin-bottom:12px;"><i class="fas fa-tag"></i> Discount Mode</div>
+                            <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
+                                <label style="cursor:pointer;display:flex;align-items:center;gap:7px;font-weight:600;color:#2e7d32;">
+                                    <input type="radio" name="discount_mode" id="discModeProductWise" value="product_wise" checked onchange="onDiscountModeChange()"> Product-wise Discount
+                                </label>
+                                <label style="cursor:pointer;display:flex;align-items:center;gap:7px;font-weight:600;color:#c62828;">
+                                    <input type="radio" name="discount_mode" id="discModeWhole" value="whole" onchange="onDiscountModeChange()"> Whole Invoice Discount
+                                </label>
+                            </div>
+                            <div id="wholeDiscountPanel" style="display:none;margin-top:14px;padding:14px;background:#fff3e0;border:1.5px solid #ffb300;border-radius:10px;">
+                                <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+                                    <div>
+                                        <label style="font-weight:600;color:#5d4037;font-size:0.88rem;">Discount Type</label>
+                                        <div style="display:flex;gap:14px;margin-top:6px;">
+                                            <label style="cursor:pointer;font-weight:600;"><input type="radio" name="whole_disc_type" id="wholeDiscFlat" value="flat" checked onchange="recalcWholeDiscount()"> Flat ₹</label>
+                                            <label style="cursor:pointer;font-weight:600;"><input type="radio" name="whole_disc_type" id="wholeDiscPercent" value="percentage" onchange="recalcWholeDiscount()"> Percentage %</label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="font-weight:600;color:#5d4037;font-size:0.88rem;">Discount Amount</label>
+                                        <input type="number" id="wholeDiscountAmount" min="0" step="any" placeholder="0" style="margin-top:6px;padding:8px 12px;border:2px solid #ffb300;border-radius:8px;width:160px;font-size:0.95rem;" oninput="recalcWholeDiscount()">
+                                    </div>
+                                    <div style="margin-top:20px;">
+                                        <span style="font-size:0.88rem;color:#5d4037;">Discount on Total: </span>
+                                        <strong id="wholeDiscDisplay" style="color:#c62828;">₹0.00</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="whole_discount_amount" id="wholeDiscountAmountHidden" value="0">
+                        <input type="hidden" name="whole_discount_type" id="wholeDiscountTypeHidden" value="flat">
+                        <input type="hidden" name="discount_mode_value" id="discountModeHidden" value="product_wise">
+
                         <!-- Products Section -->
                         <div class="ci-products-section">
                             <div class="ci-products-header">
@@ -148,6 +176,10 @@
                                         <tr>
                                             <td style="padding:4px 12px;color:#555;">Total SGST:</td>
                                             <td style="padding:4px 12px;text-align:right;font-weight:600;">₹<span id="totalSGST">0.00</span></td>
+                                        </tr>
+                                        <tr id="wholeDiscountRow" style="display:none;">
+                                            <td style="padding:4px 12px;color:#c62828;">Whole Invoice Discount (₹):</td>
+                                            <td style="padding:4px 12px;text-align:right;font-weight:600;color:#c62828;">- ₹<span id="wholeDiscountDeducted">0.00</span></td>
                                         </tr>
                                         <tr style="border-top:2px solid #27ae60;background:#f0fdf4;">
                                             <td style="padding:6px 12px;font-weight:700;font-size:1rem;color:#27ae60;">Invoice Total:</td>
@@ -929,7 +961,7 @@ function addProductRow() {
         <td><input type="number" class="purchase-rate" step="any" placeholder="Rate" min="0.01" onchange="calculateRowTotal(${productRowIndex})" required></td>
         <td><input type="number" class="qty" placeholder="Qty" min="0.01" step="any" onchange="calculateRowTotal(${productRowIndex})" required></td>
         <td><input type="number" class="free-qty" placeholder="Free Qty" min="0" step="any" value="0"></td>
-        <td>
+        <td class="disc-cell">
             <div style="display:flex;flex-direction:column;gap:3px;min-width:120px;">
                 <div style="display:flex;gap:6px;font-size:11px;">
                     <label style="cursor:pointer;"><input type="radio" name="disc_type_${productRowIndex}" class="disc-type-radio" value="flat" checked onchange="onDiscTypeChange(${productRowIndex})"> Flat ₹</label>
@@ -950,6 +982,15 @@ function addProductRow() {
     tbody.appendChild(row);
     const currentIndex = productRowIndex;
     productRowIndex++;
+
+    // Apply current discount mode to the new row's disc-cell
+    const currentMode = document.querySelector('input[name="discount_mode"]:checked')?.value || 'product_wise';
+    if (currentMode === 'whole') {
+        const discCell = row.querySelector('.disc-cell');
+        if (discCell) { discCell.style.opacity = '0.35'; discCell.style.pointerEvents = 'none'; }
+        const discInput = row.querySelector('.discount');
+        if (discInput) discInput.value = 0;
+    }
     
     /* SELECT2 INITIALIZATION - COMMENTED OUT
     // Initialize Select2 on the new product select
@@ -1062,20 +1103,42 @@ function calculateInvoiceTotal() {
 
     const transportInput = document.querySelector('input[name*="transport_charges"]');
     const transportCharges = parseFloat(transportInput?.value) || 0;
-    const rawTotal = productsTotal + transportCharges;
+
+    // Whole invoice discount
+    const discModeEl = document.querySelector('input[name="discount_mode"]:checked');
+    const discMode = discModeEl ? discModeEl.value : 'product_wise';
+    let wholeDisc = 0;
+    if (discMode === 'whole') {
+        const wholeDiscTypeEl = document.querySelector('input[name="whole_disc_type"]:checked');
+        const wholeDiscType = wholeDiscTypeEl ? wholeDiscTypeEl.value : 'flat';
+        const wholeDiscVal = parseFloat(document.getElementById('wholeDiscountAmount')?.value) || 0;
+        if (wholeDiscType === 'percentage') {
+            wholeDisc = Math.min(productsTotal * wholeDiscVal / 100, productsTotal);
+        } else {
+            wholeDisc = Math.min(wholeDiscVal, productsTotal);
+        }
+        // Keep hidden field in sync
+        const hiddenEl = document.getElementById('wholeDiscountAmountHidden');
+        if (hiddenEl) hiddenEl.value = wholeDisc.toFixed(2);
+        const dispEl = document.getElementById('wholeDiscDisplay');
+        if (dispEl) dispEl.textContent = '\u20b9' + wholeDisc.toFixed(2);
+        const dedEl = document.getElementById('wholeDiscountDeducted');
+        if (dedEl) dedEl.textContent = wholeDisc.toFixed(2);
+    }
+
+    const rawTotal = productsTotal + transportCharges - wholeDisc;
     const roundedTotal = Math.round(rawTotal);
     const roundoffAmount = roundedTotal - rawTotal;
 
-    // Update invoice total display
-    let displayHtml = transportCharges > 0
-        ? `${productsTotal.toFixed(2)} + ${transportCharges.toFixed(2)}`
-        : productsTotal.toFixed(2);
+    // Update invoice total display — show whole discount deduction clearly
+    let displayHtml = productsTotal.toFixed(2);
+    if (transportCharges > 0) displayHtml += ` + ${transportCharges.toFixed(2)}`;
+    if (wholeDisc > 0) displayHtml += ` - ${wholeDisc.toFixed(2)} (whole disc)`;
     if (Math.abs(roundoffAmount) > 0.001) {
         const sign = roundoffAmount > 0 ? '+' : '-';
-        displayHtml += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>${roundedTotal}</strong>`;
-    } else {
-        displayHtml += ` = <strong>${roundedTotal}</strong>`;
+        displayHtml += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off)`;
     }
+    displayHtml += ` = <strong>₹${roundedTotal}</strong>`;
     document.getElementById('invoiceTotal').innerHTML = displayHtml;
 
     // Save actual amount in invoice_total input
@@ -1554,8 +1617,6 @@ function collectAllProductsData() {
                 challan_date: String(rowChallanDate)
             };
             
-            console.log(`Row ${index + 1} FREE_QTY:`, freeQty, '| Product data:',  product);
-            console.log(`Row ${index + 1} data:`, product);
             products.push(product);
         }
     });
@@ -1936,13 +1997,69 @@ function filterBatches() {
     });
 }
 
+function onDiscountModeChange() {
+    const mode = document.querySelector('input[name="discount_mode"]:checked').value;
+    document.getElementById('wholeDiscountPanel').style.display = mode === 'whole' ? 'block' : 'none';
+    document.getElementById('wholeDiscountRow').style.display = mode === 'whole' ? '' : 'none';
+    document.getElementById('discountModeHidden').value = mode;  // updates discount_mode_value hidden field
+
+    // Grey-out product-wise discount column (do NOT hide — hiding causes table column compression)
+    const discCells = document.querySelectorAll('.ci-th-discount, .disc-cell');
+    discCells.forEach(el => {
+        el.style.opacity = mode === 'whole' ? '0.35' : '1';
+        el.style.pointerEvents = mode === 'whole' ? 'none' : '';
+    });
+
+    if (mode === 'whole') {
+        // Reset all product-wise discounts to 0
+        document.querySelectorAll('#productRows .discount').forEach(inp => { inp.value = 0; });
+        recalcWholeDiscount();
+    } else {
+        document.getElementById('wholeDiscountAmount').value = '';
+        document.getElementById('wholeDiscountAmountHidden').value = '0';
+        document.getElementById('wholeDiscDisplay').textContent = '\u20b90.00';
+        document.getElementById('wholeDiscountDeducted').textContent = '0.00';
+        calculateInvoiceTotal();
+    }
+}
+
+function recalcWholeDiscount() {
+    const discType = document.querySelector('input[name="whole_disc_type"]:checked').value;
+    const discVal = parseFloat(document.getElementById('wholeDiscountAmount').value) || 0;
+    document.getElementById('wholeDiscountTypeHidden').value = discType;
+
+    // Get products total (after product-wise discounts + GST) — correct base for whole discount
+    let subtotal = 0;
+    document.querySelectorAll('#productRows tr').forEach(row => {
+        const rate     = parseFloat(row.querySelector('.purchase-rate')?.value) || 0;
+        const qty      = parseFloat(row.querySelector('.qty')?.value) || 0;
+        const discount = parseFloat(row.querySelector('.discount')?.value) || 0;
+        const cgst     = parseFloat(row.querySelector('.cgst-rate')?.value) || 0;
+        const sgst     = parseFloat(row.querySelector('.sgst-rate')?.value) || 0;
+        const discTypeEl = row.querySelector('.disc-type-radio:checked');
+        const rowDiscType = discTypeEl ? discTypeEl.value : 'flat';
+        const base     = rate * qty;
+        const discAmt  = rowDiscType === 'percentage' ? (base * discount / 100) : discount;
+        const afterDisc = base - discAmt;
+        subtotal += afterDisc + (afterDisc * cgst / 100) + (afterDisc * sgst / 100);
+    });
+
+    let discAmt = discType === 'percentage' ? (subtotal * discVal / 100) : discVal;
+    discAmt = Math.min(discAmt, subtotal); // can't exceed total
+
+    document.getElementById('wholeDiscountAmountHidden').value = discAmt.toFixed(2);
+    document.getElementById('wholeDiscDisplay').textContent = '\u20b9' + discAmt.toFixed(2);
+    document.getElementById('wholeDiscountDeducted').textContent = discAmt.toFixed(2);
+    calculateInvoiceTotal();
+}
+
 function onDiscTypeChange(rowIndex) {
     const row = document.getElementById(`productRow_${rowIndex}`);
     if (!row) return;
     const discInput = row.querySelector('.discount');
     const discTypeEl = row.querySelector('.disc-type-radio:checked');
     if (discInput && discTypeEl) {
-        discInput.placeholder = discTypeEl.value === 'percentage' ? '% e.g. 5' : '₹ amount';
+        discInput.placeholder = discTypeEl.value === 'percentage' ? '% e.g. 5' : '\u20b9 amount';
         discInput.max = discTypeEl.value === 'percentage' ? '100' : '';
     }
     calculateRowTotal(rowIndex);
@@ -2572,6 +2689,16 @@ function pullSelectedChallans() {
             // Mark as from challan
             document.getElementById('isFromChallan').value = 'true';
             
+            // Apply whole discount from challan if present
+            if (data.whole_discount_amount && data.whole_discount_amount > 0) {
+                const wholeRadio = document.querySelector('input[name="discount_mode"][value="whole"]');
+                if (wholeRadio) { wholeRadio.checked = true; wholeRadio.dispatchEvent(new Event('change')); }
+                const flatRadio = document.querySelector('input[name="whole_disc_type"][value="flat"]');
+                if (flatRadio) flatRadio.checked = true;
+                const discInput = document.getElementById('wholeDiscountAmount');
+                if (discInput) { discInput.value = data.whole_discount_amount.toFixed(2); discInput.dispatchEvent(new Event('input')); }
+            }
+
             // Calculate invoice total immediately
             calculateInvoiceTotal();
             

@@ -66,6 +66,35 @@
                         </div>
                     </div>
 
+                    <!-- Discount Mode Section -->
+                    <div class="cust-disc-section">
+                        <div class="cust-disc-title"><i class="fas fa-tag"></i> Discount Type</div>
+                        <div class="cust-disc-options">
+                            <label class="cust-disc-option-label">
+                                <input type="radio" name="challan_discount_mode" id="custDiscModeProductWise" value="product_wise" checked onchange="onCustDiscountModeChange()"> Product-wise Discount
+                            </label>
+                            <label class="cust-disc-option-label">
+                                <input type="radio" name="challan_discount_mode" id="custDiscModeWhole" value="whole" onchange="onCustDiscountModeChange()"> Whole Challan Discount
+                            </label>
+                        </div>
+                        <div id="custWholeDiscSection" class="cust-whole-disc-section" style="display:none;">
+                            <div class="cust-whole-disc-title">Whole Challan Discount</div>
+                            <div class="cust-whole-disc-row">
+                                <label class="cust-whole-disc-type-label" id="custWholeDiscFlatLabel">
+                                    <input type="radio" name="cust_whole_disc_type" value="flat" id="custWholeDiscFlat" checked onchange="updateCustWholeDisc()"> Flat &#8377;
+                                </label>
+                                <label class="cust-whole-disc-type-label" id="custWholeDiscPctLabel">
+                                    <input type="radio" name="cust_whole_disc_type" value="percentage" id="custWholeDiscPct" onchange="updateCustWholeDisc()"> %
+                                </label>
+                                <input type="number" id="custWholeDiscInput" min="0" step="any" placeholder="0" value="0" class="cust-whole-disc-input" oninput="updateCustWholeDisc()">
+                                <span class="cust-whole-disc-badge cust-disc-badge">Discount: <strong id="custWholeDiscDisplay">&#8377;0.00</strong></span>
+                                <span class="cust-whole-disc-badge cust-total-badge">Total: <strong id="custGrandTotalDisplay">&#8377;0.00</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="whole_discount_amount" id="custWholeDiscAmountHidden" value="0">
+                    <input type="hidden" name="discount_mode" id="custDiscountModeHidden" value="product_wise">
+
                     <!-- Products Section -->
                     <div class="cust-chal-products-section">
                         <div class="cust-chal-products-header">
@@ -107,6 +136,14 @@
                                     <tr>
                                         <td style="padding:4px 12px; text-align:right; color:#111827;">GST Total (CGST + SGST):</td>
                                         <td style="padding:4px 12px; text-align:right; color:#111827;">₹<span id="challanGstTotal" style="color:#111827;">0.00</span></td>
+                                    </tr>
+                                    <tr id="custTransportRow" style="display:none;">
+                                        <td style="padding:4px 12px; text-align:right; color:#111827;">Transport Charges:</td>
+                                        <td style="padding:4px 12px; text-align:right; color:#ea580c; font-weight:600;">+ ₹<span id="challanTransportDisplay">0.00</span></td>
+                                    </tr>
+                                    <tr id="custWholeDiscRow" style="display:none;">
+                                        <td style="padding:4px 12px; text-align:right; font-weight:600; color:#c62828;"><i class="fas fa-tag"></i> Whole Discount:</td>
+                                        <td style="padding:4px 12px; text-align:right; font-weight:600; color:#c62828;">- ₹<span id="challanWholeDiscDisplay">0.00</span></td>
                                     </tr>
                                     <tr style="border-top:2px solid #111827;">
                                         <td style="padding:6px 12px; text-align:right; font-weight:700; color:#059669;">Grand Total:</td>
@@ -325,6 +362,22 @@ function calculateRowTotal(index) {
     calculateGrandTotal();
 }
 
+function onCustDiscountModeChange() {
+    const isWhole = document.getElementById('custDiscModeWhole').checked;
+    const section = document.getElementById('custWholeDiscSection');
+    section.style.display = isWhole ? 'flex' : 'none';
+    document.getElementById('custDiscountModeHidden').value = isWhole ? 'whole' : 'product_wise';
+    if (!isWhole) {
+        document.getElementById('custWholeDiscAmountHidden').value = '0';
+        document.getElementById('custWholeDiscInput').value = '0';
+    }
+    calculateGrandTotal();
+}
+
+function updateCustWholeDisc() {
+    calculateGrandTotal();
+}
+
 function calculateGrandTotal() {
     let subtotal = 0;
     let totalDiscount = 0;
@@ -352,7 +405,24 @@ function calculateGrandTotal() {
     const discountPct = subtotal > 0 ? (totalDiscount / subtotal * 100) : 0;
     const productsTotal = subtotal - totalDiscount + totalGst;
     const transportCharges = parseFloat(document.getElementById('transport_charges').value) || 0;
-    const rawTotal = productsTotal + transportCharges;
+
+    // Whole discount logic
+    const isWhole = document.getElementById('custDiscModeWhole') && document.getElementById('custDiscModeWhole').checked;
+    let wholeDiscAmt = 0;
+    if (isWhole) {
+        const wholeDiscVal = parseFloat(document.getElementById('custWholeDiscInput').value) || 0;
+        const wholeDiscType = document.querySelector('input[name="cust_whole_disc_type"]:checked')?.value || 'flat';
+        const baseForWhole = productsTotal + transportCharges;
+        wholeDiscAmt = wholeDiscType === 'percentage' ? (baseForWhole * wholeDiscVal / 100) : wholeDiscVal;
+        document.getElementById('custWholeDiscAmountHidden').value = wholeDiscAmt.toFixed(2);
+        // Update display in discount section
+        const discDisplay = document.getElementById('custWholeDiscDisplay');
+        if (discDisplay) discDisplay.textContent = '\u20b9' + wholeDiscAmt.toFixed(2);
+        const totalDisplay = document.getElementById('custGrandTotalDisplay');
+        if (totalDisplay) totalDisplay.textContent = '\u20b9' + Math.round(baseForWhole - wholeDiscAmt).toFixed(2);
+    }
+
+    const rawTotal = productsTotal + transportCharges - wholeDiscAmt;
     const roundedTotal = Math.round(rawTotal);
 
     const setSpan = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -361,6 +431,16 @@ function calculateGrandTotal() {
     setSpan('challanDiscountPct', discountPct.toFixed(2));
     setSpan('challanGstTotal', totalGst.toFixed(2));
     setSpan('grandTotal', roundedTotal.toFixed(2));
+
+    // Transport row visibility
+    const transportRow = document.getElementById('custTransportRow');
+    if (transportRow) transportRow.style.display = transportCharges > 0 ? '' : 'none';
+    setSpan('challanTransportDisplay', transportCharges.toFixed(2));
+
+    // Whole discount row visibility
+    const wholeDiscRow = document.getElementById('custWholeDiscRow');
+    if (wholeDiscRow) wholeDiscRow.style.display = (isWhole && wholeDiscAmt > 0) ? '' : 'none';
+    setSpan('challanWholeDiscDisplay', wholeDiscAmt.toFixed(2));
 }
 
 // Add event listener for transport charges input
@@ -902,6 +982,8 @@ document.getElementById('custChallanForm').addEventListener('submit', function(e
     }
     
     document.getElementById('productsData').value = JSON.stringify(products);
+    // Ensure discount_mode hidden field is set
+    document.getElementById('custDiscountModeHidden').value = document.getElementById('custDiscModeWhole').checked ? 'whole' : 'product_wise';
     this.submit();
 });
 

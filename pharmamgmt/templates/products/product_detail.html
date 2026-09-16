@@ -32,7 +32,7 @@
             <div class="product-info-body">
                 <div class="product-image-section">
                     {% if product.product_image %}
-                    <img src="{{ product.product_image.url }}" alt="{{ product.product_name }}" class="product-detail-image" style="max-height: 200px;">
+                    <img src="{{ product.product_image.url }}" alt="{{ product.product_name }}" class="product-detail-image" style="max-height: 200px;" loading="lazy" decoding="async">
                     {% else %}
                     <div class="product-image-placeholder">
                         <i class="fas fa-pills product-placeholder-icon"></i>

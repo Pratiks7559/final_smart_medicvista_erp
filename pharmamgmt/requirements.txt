@@ -19,5 +19,8 @@ pandas==2.2.3
 # HTTP Requests
 requests==2.32.3
 
+# Image Processing (auto-compress uploaded images)
+Pillow>=12.0.0
+
 # Serve static files in production
 whitenoise==6.11.0

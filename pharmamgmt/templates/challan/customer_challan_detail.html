@@ -123,13 +123,19 @@
                                 <td class="transport-value">₹{{ challan.customer_transport_charges|floatformat:2 }}</td>
                             </tr>
                             {% endif %}
+                            {% if challan.whole_discount_amount > 0 %}
+                            <tr>
+                                <td colspan="12" style="text-align:right; font-weight:600; color:#c62828;"><i class="fas fa-tag"></i> Whole Discount:</td>
+                                <td style="font-weight:600; color:#c62828;">- ₹{{ challan.whole_discount_amount|floatformat:2 }}</td>
+                            </tr>
+                            {% endif %}
                             <tr class="total-row">
                                 <td colspan="12" class="total-label">Grand Total:</td>
-                                <td class="grand-total">₹{{ final_total|floatformat:0 }}</td>
+                                <td class="grand-total">₹{{ challan.challan_total|floatformat:0 }}</td>
                             </tr>
                             <tr>
                                 <td colspan="12" style="text-align:right; color:#6c757d; font-size:0.9em;">Actual Amount:</td>
-                                <td style="color:#6c757d; font-size:0.9em;">₹{{ final_total|floatformat:2 }}</td>
+                                <td style="color:#6c757d; font-size:0.9em;">₹{{ challan.challan_total|floatformat:2 }}</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -200,7 +206,32 @@
                         <input type="number" id="transport_charges" name="transport_charges" value="{{ challan.customer_transport_charges }}" step="0.01" min="0">
                     </div>
                 </div>
-                
+
+                <!-- Discount Mode -->
+                <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:12px 16px;margin-bottom:1rem;">
+                    <div style="font-weight:600;margin-bottom:8px;"><i class="fas fa-tag"></i> Discount Type</div>
+                    <div style="display:flex;gap:20px;margin-bottom:8px;">
+                        <label style="cursor:pointer;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid #3b82f6;border-radius:6px;background:#eff6ff;color:#1d4ed8;">
+                            <input type="radio" name="edit_discount_mode" id="editDiscModeProductWise" value="product_wise" {% if not challan.whole_discount_amount or challan.whole_discount_amount == 0 %}checked{% endif %} onchange="onEditDiscountModeChange()"> Product-wise Discount
+                        </label>
+                        <label style="cursor:pointer;font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid #d97706;border-radius:6px;background:#fffbeb;color:#92400e;">
+                            <input type="radio" name="edit_discount_mode" id="editDiscModeWhole" value="whole" {% if challan.whole_discount_amount > 0 %}checked{% endif %} onchange="onEditDiscountModeChange()"> Whole Challan Discount
+                        </label>
+                    </div>
+                    <div id="editWholeDiscSection" style="display:{% if challan.whole_discount_amount > 0 %}flex{% else %}none{% endif %};gap:12px;align-items:center;flex-wrap:wrap;">
+                        <label style="cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:4px 10px;border:1.5px solid #16a34a;border-radius:6px;background:#f0fdf4;color:#15803d;">
+                            <input type="radio" name="edit_whole_disc_type" value="flat" id="editWholeDiscFlat" checked onchange="updateEditWholeDisc()"> Flat &#8377;
+                        </label>
+                        <label style="cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;padding:4px 10px;border:1.5px solid #7c3aed;border-radius:6px;background:#f5f3ff;color:#6d28d9;">
+                            <input type="radio" name="edit_whole_disc_type" value="percentage" id="editWholeDiscPct" onchange="updateEditWholeDisc()"> %
+                        </label>
+                        <input type="number" id="editWholeDiscInput" min="0" step="any" placeholder="0" value="{{ challan.whole_discount_amount|default:0 }}" style="width:120px;padding:6px;border:2px solid #d97706;border-radius:6px;font-weight:600;" oninput="updateEditWholeDisc()">
+                        <span style="font-size:0.82rem;background:#fee2e2;color:#991b1b;font-weight:700;padding:4px 10px;border-radius:6px;border:1.5px solid #fca5a5;">Discount: <span id="editWholeDiscDisplay">&#8377;{{ challan.whole_discount_amount|default:0|floatformat:2 }}</span></span>
+                    </div>
+                    <input type="hidden" name="whole_discount_amount" id="editWholeDiscAmountHidden" value="{{ challan.whole_discount_amount|default:0 }}">
+                    <input type="hidden" name="discount_mode" id="editDiscountModeHidden" value="{% if challan.whole_discount_amount > 0 %}whole{% else %}product_wise{% endif %}">
+                </div>
+
                 <h4>Products</h4>
                 <div id="productsContainer"></div>
                 
@@ -294,6 +325,43 @@ document.addEventListener('click', function(e) {
         list.style.display = 'none';
     }
 });
+
+function onEditDiscountModeChange() {
+    const isWhole = document.getElementById('editDiscModeWhole').checked;
+    document.getElementById('editWholeDiscSection').style.display = isWhole ? 'flex' : 'none';
+    document.getElementById('editDiscountModeHidden').value = isWhole ? 'whole' : 'product_wise';
+    if (!isWhole) {
+        document.getElementById('editWholeDiscAmountHidden').value = '0';
+        document.getElementById('editWholeDiscInput').value = '0';
+    }
+}
+
+function updateEditWholeDisc() {
+    const val = parseFloat(document.getElementById('editWholeDiscInput').value) || 0;
+    const type = document.querySelector('input[name="edit_whole_disc_type"]:checked')?.value || 'flat';
+    let flatAmt = val;
+    if (type === 'percentage') {
+        // Compute products total from current product rows
+        let pTotal = 0;
+        document.querySelectorAll('.product-row').forEach(row => {
+            const rate = parseFloat(row.querySelector('input[name*="[rate]"]')?.value) || 0;
+            const qty = parseFloat(row.querySelector('input[name*="[quantity]"]')?.value) || 0;
+            const disc = parseFloat(row.querySelector('input[name*="[discount]"]')?.value) || 0;
+            const cgst = parseFloat(row.querySelector('input[name*="[cgst]"]')?.value) || 0;
+            const sgst = parseFloat(row.querySelector('input[name*="[sgst]"]')?.value) || 0;
+            const discMode = row.querySelector('.disc-mode:checked')?.value || 'flat';
+            const base = rate * qty;
+            const discAmt = discMode === 'percentage' ? (base * disc / 100) : disc;
+            const after = base - discAmt;
+            pTotal += after + (after * (cgst + sgst) / 100);
+        });
+        const transport = parseFloat(document.getElementById('transport_charges')?.value) || 0;
+        flatAmt = (pTotal + transport) * val / 100;
+    }
+    document.getElementById('editWholeDiscAmountHidden').value = flatAmt.toFixed(2);
+    const display = document.getElementById('editWholeDiscDisplay');
+    if (display) display.textContent = '\u20b9' + flatAmt.toFixed(2);
+}
 
 function onChallanDiscModeChange(productId) {
     const flatLbl = document.getElementById(`flat_lbl_${productId}`);

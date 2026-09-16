@@ -1104,20 +1104,32 @@ def edit_invoice(request, pk):
                         except ProductMaster.DoesNotExist:
                             continue
 
-                    # Recalculate invoice total (products + transport charges) with proper precision
+                    # Recalculate invoice total (products + transport - whole discount) with proper precision
                     from decimal import Decimal, ROUND_HALF_UP
                     
                     products_total = PurchaseMaster.objects.filter(product_invoiceid=invoice).aggregate(
                         total=Sum('total_amount')
                     )['total'] or 0
                     
-                    # Use Decimal for precise calculation (fix for round-off issue)
+                    # Use Decimal for precise calculation
                     products_decimal = Decimal(str(products_total))
                     transport_decimal = Decimal(str(invoice.transport_charges or 0))
-                    total_decimal = products_decimal + transport_decimal
-                    
-                    # Keep exact total with proper precision
-                    invoice.invoice_total = float(total_decimal.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+                    subtotal_decimal = products_decimal + transport_decimal
+
+                    # Apply whole invoice discount if provided
+                    whole_disc_val = Decimal(str(request.POST.get('whole_discount_amount', 0) or 0))
+                    whole_disc_type = request.POST.get('whole_discount_type', 'flat')
+                    if whole_disc_val > 0:
+                        if whole_disc_type == 'percentage':
+                            whole_disc_amt = (products_decimal * whole_disc_val / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        else:
+                            whole_disc_amt = min(whole_disc_val, products_decimal)
+                        total_decimal = subtotal_decimal - whole_disc_amt
+                    else:
+                        total_decimal = subtotal_decimal
+
+                    # Round to nearest integer (standard invoice rounding)
+                    invoice.invoice_total = float(total_decimal.quantize(Decimal('1'), rounding=ROUND_HALF_UP))
                     
                 except json.JSONDecodeError:
                     pass  # If products_data is invalid, just update basic fields
@@ -1167,11 +1179,15 @@ def invoice_detail(request, pk):
     purchases_total = purchases.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
     
     # Calculate the difference between invoice total and sum of purchases
-    # Note: invoice.invoice_total includes transport charges, so we need to add transport charges to purchases_total for comparison
+    # Whole invoice discount is already baked into invoice.invoice_total,
+    # so compare invoice_total directly against purchases_total + transport.
+    # A negative difference means whole discount was applied — not a pending entry.
     purchases_total_with_transport = purchases_total + (invoice.transport_charges or 0)
     invoice_pending = invoice.invoice_total - purchases_total_with_transport
     
-    # Get all payments for this invoice
+    # Only flag as pending if products EXCEED invoice total (data entry error),
+    # not when invoice_total < purchases+transport (that's whole discount).
+    has_pending_entries = invoice_pending > 0.01
     payments = InvoicePaid.objects.filter(ip_invoiceid=pk).order_by('-payment_date')
     
     # Get challan products for this supplier (if any exist)
@@ -1190,7 +1206,7 @@ def invoice_detail(request, pk):
         'payments': payments,
         'purchases_total': purchases_total,
         'invoice_pending': invoice_pending,
-        'has_pending_entries': abs(invoice_pending) > 0.01,  # Using a small threshold to account for floating-point errors
+        'has_pending_entries': invoice_pending > 0.01,  # Only show when products are MISSING (positive gap), not when whole discount applied (negative gap)
         'challan_products': challan_products,
         'suppliers': suppliers,
         'products': products,
@@ -2367,6 +2383,8 @@ def edit_sales_invoice(request, pk):
         new_date = request.POST.get('sales_invoice_date')
         new_customer_id = request.POST.get('customerid')
         new_series_id = request.POST.get('invoice_series_id')
+        new_transport = float(request.POST.get('sales_transport_charges', 0) or 0)
+        new_whole_discount = float(request.POST.get('whole_discount_amount', 0) or 0)
 
         # Handle invoice number change
         if new_invoice_no and new_invoice_no != pk:
@@ -2386,8 +2404,9 @@ def edit_sales_invoice(request, pk):
                     sales_invoice_date=new_date or invoice.sales_invoice_date,
                     customerid_id=new_customer_id or invoice.customerid_id,
                     invoice_series_id=new_series_id if new_series_id else invoice.invoice_series_id,
-                    sales_transport_charges=invoice.sales_transport_charges,
+                    sales_transport_charges=new_transport,
                     sales_invoice_paid=invoice.sales_invoice_paid,
+                    whole_discount_amount=new_whole_discount,
                 )
                 
                 # Move all sales items
@@ -2453,6 +2472,8 @@ def edit_sales_invoice(request, pk):
             invoice.customerid_id = new_customer_id
             if new_series_id:
                 invoice.invoice_series_id = new_series_id
+            invoice.sales_transport_charges = new_transport
+            invoice.whole_discount_amount = new_whole_discount
             
             products_data = request.POST.get('products_data')
             if products_data:
@@ -2645,7 +2666,7 @@ def _auto_adjust_customer_advance(invoice):
                 sales_payment_date=today,
                 sales_payment_amount=float(apply_adv),
                 sales_payment_mode=adv.receipt_mode,
-                sales_payment_ref_no=f'ADV-ADJ-{adv.advance_id}'
+                sales_payment_ref_no=''
             )
             AdvanceLedger.objects.create(
                 party_type='customer', customer=customer,
@@ -2918,6 +2939,25 @@ def add_sales_invoice_with_products(request):
                     print("No products data received - creating header-only invoice")
                     messages.info(request, "📄 Sales Invoice created without products. You can add products later by editing the invoice.")
                 
+
+                # Apply whole invoice discount to invoice total
+                disc_mode_val = request.POST.get('discount_mode_value', 'product_wise')
+                if disc_mode_val == 'whole':
+                    from decimal import Decimal, ROUND_HALF_UP
+                    whole_disc_val = Decimal(str(request.POST.get('whole_discount_amount', 0) or 0))
+                    whole_disc_type = request.POST.get('whole_discount_type', 'flat')
+                    if whole_disc_val > 0:
+                        products_sum = SalesMaster.objects.filter(sales_invoice_no=invoice).aggregate(t=Sum('sale_total_amount'))['t'] or 0
+                        products_sum = Decimal(str(products_sum))
+                        transport_dec = Decimal(str(invoice.sales_transport_charges or 0))
+                        if whole_disc_type == 'percentage':
+                            disc_amt = (products_sum * whole_disc_val / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        else:
+                            disc_amt = min(whole_disc_val, products_sum)
+                        raw_total = products_sum + transport_dec - disc_amt
+                        invoice.whole_discount_amount = float(disc_amt)
+                        invoice.save()
+
                 # Success message based on whether products were added
                 if sales_created_count > 0:
                     success_msg = f"Sales Invoice #{invoice.sales_invoice_no} with {sales_created_count} products added successfully!"

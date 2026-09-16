@@ -6,7 +6,9 @@ from datetime import datetime
 from decimal import Decimal
 import csv
 from django.http import HttpResponse
-from django.db.models import Q, F 
+from django.db.models import Q, F
+from PIL import Image
+import os
 
 # Create your models here.
 class Web_User(AbstractUser):
@@ -38,6 +40,19 @@ class ProductMaster(models.Model):
     product_company=models.CharField(max_length=200, db_index=True)
     product_packing=models.CharField(max_length=20)
     product_image=models.ImageField(upload_to='images/',default='images/medicine_default.png', null=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.product_image and self.product_image.name != 'images/medicine_default.png':
+            try:
+                img_path = self.product_image.path
+                img = Image.open(img_path)
+                img = img.convert('RGB')
+                if img.width > 800 or img.height > 800:
+                    img.thumbnail((800, 800), Image.LANCZOS)
+                img.save(img_path, 'JPEG', quality=75, optimize=True)
+            except Exception:
+                pass
     product_salt=models.CharField(max_length=300, default=None, db_index=True)
     product_category=models.CharField(max_length=30, default=None, db_index=True)
     product_hsn=models.CharField(max_length=20, default=None)
@@ -168,16 +183,28 @@ class SalesInvoiceMaster(models.Model):
     invoice_series=models.ForeignKey('InvoiceSeries', on_delete=models.SET_NULL, null=True, blank=True)
     sales_transport_charges=models.FloatField(default=0)
     sales_invoice_paid=models.FloatField(null=False, blank=False, default=0)
+    whole_discount_amount=models.FloatField(default=0)
     
     def __str__(self):
         return f"Sales Invoice #{self.sales_invoice_no} - {self.customerid.customer_name}"
     
     @property
     def sales_invoice_total(self):
-        """Calculate total from the sum of all sales items"""
+        """Calculate total: products sum + transport - whole discount, rounded"""
         from django.db.models import Sum
-        sales_total = SalesMaster.objects.filter(sales_invoice_no=self.sales_invoice_no).aggregate(Sum('sale_total_amount'))
-        return sales_total['sale_total_amount__sum'] or 0
+        products_sum = SalesMaster.objects.filter(sales_invoice_no=self.sales_invoice_no).aggregate(Sum('sale_total_amount'))['sale_total_amount__sum'] or 0
+        raw = products_sum + (self.sales_transport_charges or 0) - (self.whole_discount_amount or 0)
+        return round(raw)
+
+    @sales_invoice_total.setter
+    def sales_invoice_total(self, value):
+        """Ignored - total is computed dynamically from sales items."""
+        pass
+
+    @sales_invoice_total.setter
+    def sales_invoice_total(self, value):
+        """Setter is ignored - total is always computed dynamically from sales items."""
+        pass
     
     @property
     def balance_due(self):
@@ -453,6 +480,7 @@ class Challan1(models.Model):
     challan_total = models.FloatField(default=0.0)
     transport_charges = models.FloatField(default=0.0)
     challan_paid = models.FloatField(default=0.0)
+    whole_discount_amount = models.FloatField(default=0.0)
     challan_remark = models.TextField(default='None')
     is_invoiced = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)
@@ -557,6 +585,7 @@ class CustomerChallan(models.Model):
     challan_series = models.ForeignKey('ChallanSeries', on_delete=models.SET_NULL, null=True, blank=True)
     customer_transport_charges = models.FloatField(default=0.0)
     challan_total = models.FloatField(default=0.0)
+    whole_discount_amount = models.FloatField(default=0.0)
     challan_invoice_paid = models.FloatField(default=0.0)
     is_invoiced = models.BooleanField(default=False)
     created_at = models.DateTimeField(default=timezone.now)

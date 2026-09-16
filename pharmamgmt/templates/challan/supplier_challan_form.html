@@ -78,6 +78,37 @@
                             </div>
                         </div>
 
+                        <!-- Discount Mode Section -->
+                        <div class="ci-discount-mode-section">
+                            <div class="ci-disc-title"><i class="fas fa-tag"></i> Discount Type</div>
+                            <div class="ci-disc-options">
+                                <label class="ci-disc-option-label">
+                                    <input type="radio" name="challan_discount_mode" id="challanDiscModeProductWise" value="product_wise" checked onchange="onChallanDiscountModeChange()">
+                                    <span>Product-wise Discount</span>
+                                </label>
+                                <label class="ci-disc-option-label">
+                                    <input type="radio" name="challan_discount_mode" id="challanDiscModeWhole" value="whole" onchange="onChallanDiscountModeChange()">
+                                    <span>Whole Challan Discount</span>
+                                </label>
+                            </div>
+                            <div id="challanWholeDiscSection" class="ci-whole-disc-section" style="display:none;">
+                                <div class="ci-whole-disc-title">Whole Challan Discount</div>
+                                <div class="ci-whole-disc-row">
+                                    <label class="ci-whole-disc-type-label" id="challanWholeDiscFlatLabel">
+                                        <input type="radio" name="challan_whole_disc_type" value="flat" id="challanWholeDiscFlat" checked onchange="updateChallanWholeDisc()"> Flat ₹
+                                    </label>
+                                    <label class="ci-whole-disc-type-label" id="challanWholeDiscPctLabel">
+                                        <input type="radio" name="challan_whole_disc_type" value="percentage" id="challanWholeDiscPct" onchange="updateChallanWholeDisc()"> %
+                                    </label>
+                                    <input type="number" id="challanWholeDiscInput" min="0" step="any" placeholder="0" value="0" class="ci-whole-disc-input" oninput="updateChallanWholeDisc()">
+                                    <span class="ci-whole-disc-display-text">Discount: <strong id="challanWholeDiscDisplay" style="color:#dc2626;">₹0.00</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" name="whole_discount_amount" id="challanWholeDiscAmountHidden" value="0">
+                        <input type="hidden" name="whole_discount_type" id="challanWholeDiscTypeHidden" value="flat">
+                        <input type="hidden" name="discount_mode" id="challanDiscountModeHidden" value="product_wise">
+
                         <!-- Products Section -->
                         <div class="ci-products-section">
                             <div class="ci-products-header">
@@ -130,6 +161,10 @@
                                     <tr>
                                         <td style="padding:4px 12px; text-align:right;">GST Total (CGST + SGST):</td>
                                         <td style="padding:4px 12px; text-align:right;">₹<span id="challanGstTotal">0.00</span></td>
+                                    </tr>
+                                    <tr id="challanWholeDiscRow" style="display:none;color:#c62828;">
+                                        <td style="padding:4px 12px; text-align:right; font-weight:600;">Whole Discount (-):</td>
+                                        <td style="padding:4px 12px; text-align:right; font-weight:600;">- ₹<span id="challanWholeDiscRowVal">0.00</span></td>
                                     </tr>
                                     <tr style="border-top:2px solid #333;">
                                         <td style="padding:6px 12px; text-align:right; font-weight:700;">Challan Total:</td>
@@ -549,6 +584,38 @@ function calculateRowTotal(rowIndex) {
     calculatechallanTotal();
 }
 
+function onChallanDiscountModeChange() {
+    const mode = document.querySelector('input[name="challan_discount_mode"]:checked')?.value || 'product_wise';
+    const wholeSection = document.getElementById('challanWholeDiscSection');
+    const modeHidden = document.getElementById('challanDiscountModeHidden');
+    wholeSection.style.display = mode === 'whole' ? 'block' : 'none';
+    if (modeHidden) modeHidden.value = mode;
+    // Show/hide product-wise discount column
+    document.querySelectorAll('#productRows tr').forEach(row => {
+        const discCell = row.querySelector('td:nth-child(8)');
+        if (discCell) discCell.style.display = mode === 'product_wise' ? '' : 'none';
+    });
+    const discHeader = document.querySelector('.ci-th-discount');
+    if (discHeader) discHeader.style.display = mode === 'product_wise' ? '' : 'none';
+    if (mode === 'product_wise') {
+        document.getElementById('challanWholeDiscInput').value = '0';
+        document.getElementById('challanWholeDiscAmountHidden').value = '0';
+    }
+    calculatechallanTotal();
+}
+
+function updateChallanWholeDisc() {
+    const discType = document.querySelector('input[name="challan_whole_disc_type"]:checked')?.value || 'flat';
+    const discVal = parseFloat(document.getElementById('challanWholeDiscInput')?.value) || 0;
+    // Style active label
+    const flatLbl = document.getElementById('challanWholeDiscFlatLabel');
+    const pctLbl = document.getElementById('challanWholeDiscPctLabel');
+    if (flatLbl) { flatLbl.style.borderColor = discType === 'flat' ? '#d97706' : ''; flatLbl.style.background = discType === 'flat' ? '#fef3c7' : ''; }
+    if (pctLbl) { pctLbl.style.borderColor = discType === 'percentage' ? '#d97706' : ''; pctLbl.style.background = discType === 'percentage' ? '#fef3c7' : ''; }
+    document.getElementById('challanWholeDiscTypeHidden').value = discType;
+    calculatechallanTotal();
+}
+
 function calculatechallanTotal() {
     let subtotal = 0;
     let totalDiscount = 0;
@@ -560,14 +627,12 @@ function calculatechallanTotal() {
         const discount = parseFloat(row.querySelector('.discount')?.value) || 0;
         const cgst = parseFloat(row.querySelector('.cgst-rate')?.value) || 0;
         const sgst = parseFloat(row.querySelector('.sgst-rate')?.value) || 0;
-
         const discTypeEl = row.querySelector('.disc-type-radio:checked');
-        const discType   = discTypeEl ? discTypeEl.value : 'flat';
+        const discType = discTypeEl ? discTypeEl.value : 'flat';
         const base = rate * qty;
         const discAmt = discType === 'percentage' ? (base * discount / 100) : discount;
         const afterDiscount = base - discAmt;
         const gst = (afterDiscount * (cgst + sgst)) / 100;
-
         subtotal += base;
         totalDiscount += discAmt;
         totalGst += gst;
@@ -576,7 +641,30 @@ function calculatechallanTotal() {
     const discountPct = subtotal > 0 ? (totalDiscount / subtotal * 100) : 0;
     const productsTotal = subtotal - totalDiscount + totalGst;
     const transportCharges = parseFloat(document.getElementById('transport_charges').value) || 0;
-    const rawTotal = productsTotal + transportCharges;
+
+    // Whole discount
+    const discMode = document.querySelector('input[name="challan_discount_mode"]:checked')?.value || 'product_wise';
+    let wholeDiscAmt = 0;
+    if (discMode === 'whole') {
+        const wholeDiscType = document.querySelector('input[name="challan_whole_disc_type"]:checked')?.value || 'flat';
+        const wholeDiscVal = parseFloat(document.getElementById('challanWholeDiscInput')?.value) || 0;
+        wholeDiscAmt = wholeDiscType === 'percentage'
+            ? Math.min(productsTotal * wholeDiscVal / 100, productsTotal)
+            : Math.min(wholeDiscVal, productsTotal);
+        const dispEl = document.getElementById('challanWholeDiscDisplay');
+        if (dispEl) dispEl.textContent = '\u20b9' + wholeDiscAmt.toFixed(2);
+        const rowEl = document.getElementById('challanWholeDiscRow');
+        if (rowEl) { rowEl.style.display = wholeDiscAmt > 0 ? '' : 'none'; }
+        const rowVal = document.getElementById('challanWholeDiscRowVal');
+        if (rowVal) rowVal.textContent = wholeDiscAmt.toFixed(2);
+        document.getElementById('challanWholeDiscAmountHidden').value = wholeDiscAmt.toFixed(2);
+    } else {
+        const rowEl = document.getElementById('challanWholeDiscRow');
+        if (rowEl) rowEl.style.display = 'none';
+        document.getElementById('challanWholeDiscAmountHidden').value = '0';
+    }
+
+    const rawTotal = productsTotal + transportCharges - wholeDiscAmt;
     const roundedTotal = Math.round(rawTotal);
 
     const setSpan = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -586,10 +674,8 @@ function calculatechallanTotal() {
     setSpan('challanGstTotal', totalGst.toFixed(2));
     setSpan('challanTotal', roundedTotal.toFixed(2));
 
-    const challanTotalInput = document.querySelector('input[name*="challan_total"]');
-    if (challanTotalInput) {
-        challanTotalInput.value = rawTotal.toFixed(2);
-    }
+    const challanTotalInput = document.querySelector('input[name="challan_total"]');
+    if (challanTotalInput) challanTotalInput.value = rawTotal.toFixed(2);
 }
 
 // Add event listener for transport charges
@@ -1532,8 +1618,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Set products data in hidden field
             const productsDataJson = JSON.stringify(productsData);
-            console.log('Products data JSON:', productsDataJson);
             document.getElementById('productsData').value = productsDataJson;
+            // Sync whole discount hidden fields
+            updateChallanWholeDisc();
+            document.getElementById('challanDiscountModeHidden').value = document.querySelector('input[name="challan_discount_mode"]:checked')?.value || 'product_wise';
             
             // Disable submit button to prevent double submission
             const submitBtn = form.querySelector('button[type="submit"]');

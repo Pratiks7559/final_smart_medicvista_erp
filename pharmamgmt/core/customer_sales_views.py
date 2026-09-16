@@ -53,7 +53,7 @@ def customer_wise_sales_report(request):
                 sales_data = []
                 for invoice in sales_invoices:
                     invoice_items = SalesMaster.objects.filter(sales_invoice_no=invoice).select_related('productid')
-                    invoice_total = sum(item.sale_total_amount for item in invoice_items)
+                    invoice_total = invoice.sales_invoice_total
                     sales_data.append({
                         'invoice': invoice,
                         'items': invoice_items,
@@ -119,7 +119,7 @@ def customer_wise_sales_report(request):
                     sales_invoice_no=invoice
                 ).select_related('productid')
                 
-                invoice_total = sum(item.sale_total_amount for item in invoice_items)
+                invoice_total = invoice.sales_invoice_total
                 invoice_qty = sum(item.sale_quantity for item in invoice_items)
                 
                 sales_data.append({

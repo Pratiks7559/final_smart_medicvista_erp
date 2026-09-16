@@ -79,6 +79,35 @@
                             </div>
                         </div>
 
+                        <!-- Discount Mode Section -->
+                        <div class="ci-discount-mode-section">
+                            <div class="ci-disc-title"><i class="fas fa-tag"></i> Discount Type</div>
+                            <div class="ci-disc-options">
+                                <label class="ci-disc-option-label">
+                                    <input type="radio" name="discount_mode" id="salesDiscModeProductWise" value="product_wise" checked onchange="onSalesDiscountModeChange()">
+                                    <span>Product-wise Discount</span>
+                                </label>
+                                <label class="ci-disc-option-label">
+                                    <input type="radio" name="discount_mode" id="salesDiscModeWhole" value="whole" onchange="onSalesDiscountModeChange()">
+                                    <span>Whole Invoice Discount</span>
+                                </label>
+                            </div>
+                            <!-- Whole discount inputs (hidden by default) -->
+                            <div id="salesWholeDiscSection" class="ci-whole-disc-section" style="display:none;">
+                                <div class="ci-whole-disc-title">Whole Invoice Discount</div>
+                                <div class="ci-whole-disc-row">
+                                    <label class="ci-whole-disc-type-label"><input type="radio" name="sales_whole_disc_type" id="salesWholeDiscFlat" value="flat" checked onchange="updateSalesGrandTotalWithWholeDisc()"> Flat ₹</label>
+                                    <label class="ci-whole-disc-type-label"><input type="radio" name="sales_whole_disc_type" id="salesWholeDiscPercent" value="percentage" onchange="updateSalesGrandTotalWithWholeDisc()"> %</label>
+                                    <input type="number" id="salesWholeDiscountInput" class="ci-whole-disc-input" min="0" step="any" placeholder="0" value="0" oninput="updateSalesGrandTotalWithWholeDisc()">
+                                    <span class="ci-whole-disc-display-text">Discount: <strong id="salesWholeDiscDisplay">₹0.00</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Hidden fields for whole discount -->
+                        <input type="hidden" name="whole_discount_amount" id="salesWholeDiscAmountHidden" value="0">
+                        <input type="hidden" name="whole_discount_type" id="salesWholeDiscTypeHidden" value="flat">
+                        <input type="hidden" name="discount_mode_value" id="salesDiscountModeHidden" value="product_wise">
+
                         <!-- Products Section -->
                         <div class="products-section">
                             <div class="products-header">
@@ -146,8 +175,20 @@
                                                 <td><span id="roundoffDisplay"></span></td>
                                             </tr>
                                             <tr class="totals-row-grand">
-                                                <td>Grand Total:</td>
+                                                <td>Products Total:</td>
                                                 <td>₹<span id="grandTotal" class="total-amount">0.00</span></td>
+                                            </tr>
+                                            <tr id="salesTransportRow">
+                                                <td>Transport Charges:</td>
+                                                <td>₹<span id="salesTransportDisplay">0.00</span></td>
+                                            </tr>
+                                            <tr id="salesWholeDiscRow" style="display:none;color:#c62828;">
+                                                <td>Whole Discount:</td>
+                                                <td>- ₹<span id="salesWholeDiscRowVal">0.00</span></td>
+                                            </tr>
+                                            <tr class="totals-row-grand" style="border-top:2px solid #27ae60;">
+                                                <td><strong>Invoice Total:</strong></td>
+                                                <td>₹<span id="salesInvoiceTotal" class="total-amount">0.00</span></td>
                                             </tr>
                                         </table>
                                         <small class="totals-actual">(Actual: ₹<span id="actualTotal">0.00</span>)</small>
@@ -1037,6 +1078,11 @@ function addProductRow() {
     
     tbody.appendChild(row);
     productRowIndex++;
+
+    // Apply current discount mode to new row
+    const currentDiscMode = document.querySelector('input[name="discount_mode"]:checked')?.value || 'product_wise';
+    const discCell = row.querySelector('.discount-cell');
+    if (discCell) discCell.style.display = currentDiscMode === 'product_wise' ? '' : 'none';
     
     // Don't auto-focus on product select during initial load
     // Only focus when user manually adds a row
@@ -1325,13 +1371,47 @@ function calculateRowTotal(index, immediate = false) {
     }, 200);
 }
 
+function onSalesDiscountModeChange() {
+    const mode = document.querySelector('input[name="discount_mode"]:checked')?.value || 'product_wise';
+    const wholeSection = document.getElementById('salesWholeDiscSection');
+    const discountModeHidden = document.getElementById('salesDiscountModeHidden');
+
+    // Show/hide whole discount section
+    wholeSection.style.display = mode === 'whole' ? 'block' : 'none';
+    if (discountModeHidden) discountModeHidden.value = mode;
+
+    // Show/hide product-wise discount column in table
+    document.querySelectorAll('#productRows tr').forEach(row => {
+        const discCell = row.querySelector('.discount-cell');
+        if (discCell) discCell.style.display = mode === 'product_wise' ? '' : 'none';
+    });
+    const discHeader = document.querySelector('.discount-col');
+    if (discHeader) discHeader.style.display = mode === 'product_wise' ? '' : 'none';
+
+    // Reset whole discount input when switching to product-wise
+    if (mode === 'product_wise') {
+        const inp = document.getElementById('salesWholeDiscountInput');
+        if (inp) inp.value = '0';
+        const hidden = document.getElementById('salesWholeDiscAmountHidden');
+        if (hidden) hidden.value = '0';
+    }
+
+    calculateGrandTotal();
+}
+
+function updateSalesGrandTotalWithWholeDisc() {
+    // Sync hidden fields
+    const discType = document.querySelector('input[name="sales_whole_disc_type"]:checked')?.value || 'flat';
+    const discVal = parseFloat(document.getElementById('salesWholeDiscountInput')?.value) || 0;
+    const hidden = document.getElementById('salesWholeDiscAmountHidden');
+    const typeHidden = document.getElementById('salesWholeDiscTypeHidden');
+    if (hidden) hidden.value = discVal;
+    if (typeHidden) typeHidden.value = discType;
+    calculateGrandTotal();
+}
+
 function calculateGrandTotal() {
-    let subtotal = 0;
-    let totalDiscount = 0;
-    let taxableAmount = 0;
-    let totalCGST = 0;
-    let totalSGST = 0;
-    let grandTotal = 0;
+    let subtotal = 0, totalDiscount = 0, taxableAmount = 0, totalCGST = 0, totalSGST = 0, productsTotal = 0;
 
     document.querySelectorAll('#productRows tr').forEach(row => {
         const rate = parseFloat(row.querySelector('.rate')?.value) || 0;
@@ -1341,46 +1421,73 @@ function calculateGrandTotal() {
         const sgst = parseFloat(row.querySelector('.sgst')?.value) || 0;
         const discModeEl2 = row.querySelector('.disc-mode:checked');
         const discMode2 = discModeEl2 ? discModeEl2.value : 'flat';
-
         const base = rate * qty;
         const discount = discMode2 === 'percentage' ? (base * discountRaw / 100) : discountRaw;
         const afterDiscount = base - discount;
         const cgstAmt = (afterDiscount * cgst) / 100;
         const sgstAmt = (afterDiscount * sgst) / 100;
-
-        subtotal += base;
-        totalDiscount += discount;
-        taxableAmount += afterDiscount;
-        totalCGST += cgstAmt;
-        totalSGST += sgstAmt;
-        grandTotal += afterDiscount + cgstAmt + sgstAmt;
+        subtotal += base; totalDiscount += discount; taxableAmount += afterDiscount;
+        totalCGST += cgstAmt; totalSGST += sgstAmt;
+        productsTotal += afterDiscount + cgstAmt + sgstAmt;
     });
 
     const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val.toFixed(2); };
-    setVal('salesSubtotal', subtotal);
-    setVal('salesTotalDiscount', totalDiscount);
-    setVal('salesTotalTaxable', taxableAmount);
-    setVal('salesTotalCGST', totalCGST);
-    setVal('salesTotalSGST', totalSGST);
+    setVal('salesSubtotal', subtotal); setVal('salesTotalDiscount', totalDiscount);
+    setVal('salesTotalTaxable', taxableAmount); setVal('salesTotalCGST', totalCGST); setVal('salesTotalSGST', totalSGST);
 
-    const transportCharges = parseFloat(document.querySelector('[name="sales_transport_charges"]').value) || 0;
-    const rawTotal = grandTotal + transportCharges;
+    const transportCharges = parseFloat(document.querySelector('[name="sales_transport_charges"]')?.value) || 0;
+
+    const discMode = document.querySelector('input[name="discount_mode"]:checked')?.value || 'product_wise';
+    let wholeDiscAmt = 0;
+    if (discMode === 'whole') {
+        const wholeDiscType = document.querySelector('input[name="sales_whole_disc_type"]:checked')?.value || 'flat';
+        const wholeDiscVal = parseFloat(document.getElementById('salesWholeDiscountInput')?.value) || 0;
+        if (wholeDiscVal > 0) {
+            wholeDiscAmt = wholeDiscType === 'percentage'
+                ? Math.min(productsTotal * wholeDiscVal / 100, productsTotal)
+                : Math.min(wholeDiscVal, productsTotal);
+        }
+        const dispEl = document.getElementById('salesWholeDiscDisplay');
+        if (dispEl) dispEl.textContent = '₹' + wholeDiscAmt.toFixed(2);
+        const rowEl = document.getElementById('salesWholeDiscRow');
+        if (rowEl) {
+            rowEl.style.display = wholeDiscAmt > 0 ? '' : 'none';
+            const valEl = document.getElementById('salesWholeDiscRowVal');
+            if (valEl) valEl.textContent = wholeDiscAmt.toFixed(2);
+        }
+        const hidden = document.getElementById('salesWholeDiscAmountHidden');
+        const typeHidden = document.getElementById('salesWholeDiscTypeHidden');
+        if (hidden) hidden.value = wholeDiscVal;
+        if (typeHidden) typeHidden.value = wholeDiscType;
+    } else {
+        const rowEl = document.getElementById('salesWholeDiscRow');
+        if (rowEl) rowEl.style.display = 'none';
+    }
+
+    const transportEl = document.getElementById('salesTransportDisplay');
+    if (transportEl) transportEl.textContent = transportCharges.toFixed(2);
+
+    const rawTotal = productsTotal + transportCharges - wholeDiscAmt;
     const roundedTotal = Math.round(rawTotal);
     const roundoffAmount = roundedTotal - rawTotal;
 
-    // Update grand total display
-    document.getElementById('grandTotal').textContent = roundedTotal.toFixed(2);
-    document.getElementById('actualTotal').textContent = rawTotal.toFixed(2);
+    const grandTotalEl = document.getElementById('grandTotal');
+    if (grandTotalEl) grandTotalEl.textContent = productsTotal.toFixed(2);
+    const invoiceTotalEl = document.getElementById('salesInvoiceTotal');
+    if (invoiceTotalEl) invoiceTotalEl.textContent = roundedTotal.toFixed(2);
+    const actualEl = document.getElementById('actualTotal');
+    if (actualEl) actualEl.textContent = rawTotal.toFixed(2);
 
-    // Show/hide round-off row
     const roundoffRow = document.getElementById('roundoffRow');
     const roundoffDisplay = document.getElementById('roundoffDisplay');
-    if (Math.abs(roundoffAmount) > 0.001) {
-        const sign = roundoffAmount > 0 ? '+' : '-';
-        roundoffDisplay.textContent = sign + ' ₹' + Math.abs(roundoffAmount).toFixed(2);
-        roundoffRow.style.display = '';
-    } else {
-        roundoffRow.style.display = 'none';
+    if (roundoffRow && roundoffDisplay) {
+        if (Math.abs(roundoffAmount) > 0.001) {
+            const sign = roundoffAmount > 0 ? '+' : '-';
+            roundoffDisplay.textContent = sign + ' ₹' + Math.abs(roundoffAmount).toFixed(2);
+            roundoffRow.style.display = '';
+        } else {
+            roundoffRow.style.display = 'none';
+        }
     }
 }
 
@@ -3240,6 +3347,15 @@ function pullSelectedChallans() {
     .then(data => {
         if (data.success) {
             fillChallanProducts(data.products);
+            // Apply whole discount from challan if present
+            if (data.whole_discount_amount && data.whole_discount_amount > 0) {
+                const wholeRadio = document.querySelector('input[name="discount_mode"][value="whole"]');
+                if (wholeRadio) { wholeRadio.checked = true; wholeRadio.dispatchEvent(new Event('change')); }
+                const flatRadio = document.querySelector('input[name="sales_whole_disc_type"][value="flat"]');
+                if (flatRadio) flatRadio.checked = true;
+                const discInput = document.getElementById('salesWholeDiscountInput');
+                if (discInput) { discInput.value = data.whole_discount_amount.toFixed(2); discInput.dispatchEvent(new Event('input')); }
+            }
             closePullChallanDialog();
         } else {
             alert('Error: ' + data.error);
@@ -3297,6 +3413,12 @@ function fillChallanProducts(products) {
     
     // Calculate grand total
     calculateGrandTotal();
+
+    // Reset whole discount when pulling challan (product-wise mode)
+    const discModeHidden = document.getElementById('salesDiscountModeHidden');
+    if (discModeHidden) discModeHidden.value = 'product_wise';
+    const prodWiseRadio = document.getElementById('salesDiscModeProductWise');
+    if (prodWiseRadio) { prodWiseRadio.checked = true; onSalesDiscountModeChange(); }
 }
 
 // Add Shift+Enter handler for pull challan dialog

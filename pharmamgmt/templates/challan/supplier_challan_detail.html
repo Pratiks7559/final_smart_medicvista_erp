@@ -84,6 +84,12 @@
                             <td style="font-weight: 600;">₹{{ challan.transport_charges|floatformat:2 }}</td>
                         </tr>
                         {% endif %}
+                        {% if challan.whole_discount_amount > 0 %}
+                        <tr style="color:#c62828;">
+                            <td colspan="9" style="text-align: right; font-weight: 600;">Whole Discount (-):</td>
+                            <td style="font-weight: 600;">- ₹{{ challan.whole_discount_amount|floatformat:2 }}</td>
+                        </tr>
+                        {% endif %}
                         <tr style="background: #f8f9fa;">
                             <td colspan="9" style="text-align: right; font-weight: 700; font-size: 16px;">Grand Total:</td>
                             <td style="font-weight: 700; font-size: 16px;">₹{{ challan.challan_total|floatformat:2 }}</td>
@@ -136,6 +142,32 @@
                             <input type="number" id="transport_charges" name="transport_charges" value="{{ challan.transport_charges }}" step="0.01" min="0" onchange="calculateGrandTotal()">
                         </div>
                     </div>
+
+                    <!-- Whole Discount Section -->
+                    <div style="background:linear-gradient(135deg,#fffbeb,#ecfdf5);border:2px solid #d97706;border-radius:10px;padding:12px 16px;margin-bottom:1rem;">
+                        <div style="font-weight:700;color:#374151;font-size:0.82rem;text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;"><i class="fas fa-tag" style="color:#d97706;margin-right:5px;"></i> Discount Type</div>
+                        <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
+                            <label style="cursor:pointer;font-size:0.875rem;font-weight:600;display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid #3b82f6;border-radius:6px;background:#eff6ff;color:#1d4ed8;">
+                                <input type="radio" name="edit_discount_mode" value="product_wise" {% if not challan.whole_discount_amount or challan.whole_discount_amount == 0 %}checked{% endif %} onchange="onEditDiscModeChange()"> Product-wise Discount
+                            </label>
+                            <label style="cursor:pointer;font-size:0.875rem;font-weight:600;display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid #d97706;border-radius:6px;background:#fffbeb;color:#92400e;">
+                                <input type="radio" name="edit_discount_mode" value="whole" {% if challan.whole_discount_amount and challan.whole_discount_amount > 0 %}checked{% endif %} onchange="onEditDiscModeChange()"> Whole Challan Discount
+                            </label>
+                        </div>
+                        <div id="editWholeDiscSection" style="display:{% if challan.whole_discount_amount and challan.whole_discount_amount > 0 %}flex{% else %}none{% endif %};gap:10px;align-items:center;flex-wrap:wrap;background:rgba(255,255,255,.7);border:1px solid #fde68a;border-radius:8px;padding:10px 14px;">
+                            <label style="cursor:pointer;font-size:0.82rem;font-weight:700;display:flex;align-items:center;gap:4px;padding:4px 10px;border:1.5px solid #16a34a;border-radius:6px;background:#f0fdf4;color:#15803d;" id="editWholeDiscFlatLabel">
+                                <input type="radio" name="edit_whole_disc_type" value="flat" checked onchange="calculateGrandTotal()"> Flat &#8377;
+                            </label>
+                            <label style="cursor:pointer;font-size:0.82rem;font-weight:700;display:flex;align-items:center;gap:4px;padding:4px 10px;border:1.5px solid #7c3aed;border-radius:6px;background:#f5f3ff;color:#6d28d9;" id="editWholeDiscPctLabel">
+                                <input type="radio" name="edit_whole_disc_type" value="percentage" onchange="calculateGrandTotal()"> %
+                            </label>
+                            <input type="number" id="editWholeDiscInput" min="0" step="any" placeholder="0" value="{{ challan.whole_discount_amount|floatformat:2 }}" style="width:120px;padding:6px;border:2px solid #d97706;border-radius:6px;font-weight:600;font-size:0.875rem;" oninput="calculateGrandTotal()">
+                            <span style="font-size:0.82rem;background:#fee2e2;color:#991b1b;font-weight:700;padding:4px 10px;border-radius:6px;border:1.5px solid #fca5a5;">Discount: <strong id="editWholeDiscDisplay">&#8377;{{ challan.whole_discount_amount|floatformat:2 }}</strong></span>
+                            <span style="font-size:0.82rem;background:#dcfce7;color:#166534;font-weight:700;padding:4px 10px;border-radius:6px;border:1.5px solid #86efac;">Challan Total: <strong id="editChallanTotalBadge">&#8377;0.00</strong></span>
+                        </div>
+                    </div>
+                    <input type="hidden" name="whole_discount_amount" id="editWholeDiscAmountHidden" value="{{ challan.whole_discount_amount }}">
+                    <input type="hidden" name="discount_mode" id="editDiscountModeHidden" value="{% if challan.whole_discount_amount and challan.whole_discount_amount > 0 %}whole{% else %}product_wise{% endif %}">
                     
                     <h4>Products</h4>
                     <div id="productsContainer"></div>
@@ -323,6 +355,19 @@ function calculateProductTotal(element) {
     calculateGrandTotal();
 }
 
+function onEditDiscModeChange() {
+    const mode = document.querySelector('input[name="edit_discount_mode"]:checked')?.value || 'product_wise';
+    const sec = document.getElementById('editWholeDiscSection');
+    if (sec) sec.style.display = mode === 'whole' ? 'flex' : 'none';
+    document.getElementById('editDiscountModeHidden').value = mode;
+    if (mode === 'product_wise') {
+        const inp = document.getElementById('editWholeDiscInput');
+        if (inp) inp.value = '0';
+        document.getElementById('editWholeDiscAmountHidden').value = '0';
+    }
+    calculateGrandTotal();
+}
+
 function calculateGrandTotal() {
     const productRows = document.querySelectorAll('.product-row');
     let productsTotal = 0;
@@ -346,37 +391,54 @@ function calculateGrandTotal() {
     });
     
     const transportCharges = parseFloat(document.getElementById('transport_charges')?.value) || 0;
-    const grandTotal = productsTotal + transportCharges;
-    
+
+    // Whole discount
+    const discMode = document.querySelector('input[name="edit_discount_mode"]:checked')?.value || 'product_wise';
+    let wholeDiscAmt = 0;
+    if (discMode === 'whole') {
+        const wholeDiscType = document.querySelector('input[name="edit_whole_disc_type"]:checked')?.value || 'flat';
+        const wholeDiscVal = parseFloat(document.getElementById('editWholeDiscInput')?.value) || 0;
+        const baseForDisc = productsTotal + transportCharges;
+        wholeDiscAmt = wholeDiscType === 'percentage'
+            ? Math.min(baseForDisc * wholeDiscVal / 100, baseForDisc)
+            : Math.min(wholeDiscVal, baseForDisc);
+        const dispEl = document.getElementById('editWholeDiscDisplay');
+        if (dispEl) dispEl.textContent = '\u20b9' + wholeDiscAmt.toFixed(2);
+        document.getElementById('editWholeDiscAmountHidden').value = wholeDiscAmt.toFixed(2);
+    } else {
+        document.getElementById('editWholeDiscAmountHidden').value = '0';
+    }
+
+    const grandTotal = productsTotal + transportCharges - wholeDiscAmt;
+    const roundedTotal = Math.round(grandTotal);
     let totalDisplay = document.getElementById('totalDisplay');
     if (!totalDisplay) {
         totalDisplay = document.createElement('div');
         totalDisplay.id = 'totalDisplay';
-        totalDisplay.style.cssText = 'margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; border: 2px solid #28a745;';
         const addButton = document.querySelector('button[onclick="addNewProduct()"]');
-        addButton.parentNode.insertBefore(totalDisplay, addButton);
+        if (addButton) addButton.parentNode.insertBefore(totalDisplay, addButton);
     }
-    
-    const roundedTotal = Math.round(grandTotal);
-    
+
     totalDisplay.innerHTML = `
-        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-            <strong>Products Total:</strong>
-            <strong>₹${productsTotal.toFixed(2)}</strong>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-            <strong>Transport Charges:</strong>
-            <strong>₹${transportCharges.toFixed(2)}</strong>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 1.2rem; color: #28a745; border-top: 2px solid #28a745; padding-top: 0.5rem;">
-            <strong>Grand Total:</strong>
-            <strong>₹${grandTotal.toFixed(2)}</strong>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 1.3rem; color: #007bff; font-weight: 700; background: #e3f2fd; padding: 0.5rem; border-radius: 5px; margin-top: 0.5rem;">
-            <strong>Rounded Amount:</strong>
-            <strong>₹${roundedTotal}</strong>
+        <div style="background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:2px solid #22c55e;border-radius:12px;padding:14px 18px;margin-top:14px;margin-bottom:10px;">
+            <div style="font-weight:700;color:#15803d;font-size:0.82rem;text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;"><i class="fas fa-receipt" style="margin-right:6px;"></i>Challan Total Summary</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;">
+                <div style="background:#fff;border-radius:8px;padding:8px 12px;border-left:3px solid #94a3b8;">
+                    <div style="font-size:0.7rem;color:#64748b;font-weight:600;text-transform:uppercase;">Products Total</div>
+                    <div style="font-size:1rem;font-weight:700;color:#1e293b;">&#8377;${productsTotal.toFixed(2)}</div>
+                </div>
+                ${transportCharges > 0 ? `<div style="background:#fff;border-radius:8px;padding:8px 12px;border-left:3px solid #fb923c;"><div style="font-size:0.7rem;color:#64748b;font-weight:600;text-transform:uppercase;">Transport</div><div style="font-size:1rem;font-weight:700;color:#ea580c;">&#8377;${transportCharges.toFixed(2)}</div></div>` : ''}
+                ${wholeDiscAmt > 0 ? `<div style="background:#fff;border-radius:8px;padding:8px 12px;border-left:3px solid #f43f5e;"><div style="font-size:0.7rem;color:#64748b;font-weight:600;text-transform:uppercase;">Whole Discount</div><div style="font-size:1rem;font-weight:700;color:#e11d48;">- &#8377;${wholeDiscAmt.toFixed(2)}</div></div>` : ''}
+                <div style="background:linear-gradient(135deg,#15803d,#16a34a);border-radius:8px;padding:8px 12px;">
+                    <div style="font-size:0.7rem;color:#bbf7d0;font-weight:600;text-transform:uppercase;">Grand Total</div>
+                    <div style="font-size:1.15rem;font-weight:800;color:#fff;">&#8377;${roundedTotal}</div>
+                </div>
+            </div>
         </div>
     `;
+
+    const badge = document.getElementById('editChallanTotalBadge');
+    if (badge) badge.textContent = '\u20b9' + roundedTotal;
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -429,6 +491,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             formData.append('products_data', JSON.stringify(products));
+            formData.append('whole_discount_amount', document.getElementById('editWholeDiscAmountHidden').value || '0');
+            formData.append('discount_mode', document.getElementById('editDiscountModeHidden').value || 'product_wise');
             
             fetch(window.location.href, {
                 method: 'POST',

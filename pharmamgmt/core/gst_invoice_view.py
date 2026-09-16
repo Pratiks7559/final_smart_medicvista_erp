@@ -209,7 +209,11 @@ def print_gst_sales_invoice(request, invoice_id):
         else Decimal(str(sale.sale_discount))
         for sale in sales
     )
-    grand_total = total_taxable + total_cgst + total_sgst
+    products_total = total_taxable + total_cgst + total_sgst
+    transport = Decimal(str(invoice.sales_transport_charges or 0))
+    whole_discount = Decimal(str(invoice.whole_discount_amount or 0))
+    grand_total = products_total + transport - whole_discount
+    grand_total = Decimal(str(round(grand_total)))
     
     amount_in_words = number_to_words(float(grand_total))
     
@@ -228,6 +232,8 @@ def print_gst_sales_invoice(request, invoice_id):
         'total_cgst': total_cgst,
         'total_sgst': total_sgst,
         'total_discount': total_discount,
+        'transport_charges': transport,
+        'whole_discount': whole_discount,
         'grand_total': grand_total,
         'amount_in_words': amount_in_words,
         'pharmacy': pharmacy,

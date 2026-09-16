@@ -327,6 +327,18 @@
                     <td class="text-left">Total Discount:</td>
                     <td class="text-right">₹{{ total_discount|floatformat:2|default:"0.00" }}</td>
                 </tr>
+                {% if transport_charges and transport_charges > 0 %}
+                <tr>
+                    <td class="text-left">Transport Charges:</td>
+                    <td class="text-right">₹{{ transport_charges|floatformat:2 }}</td>
+                </tr>
+                {% endif %}
+                {% if whole_discount and whole_discount > 0 %}
+                <tr>
+                    <td class="text-left">Whole Disc (-):</td>
+                    <td class="text-right">₹{{ whole_discount|floatformat:2 }}</td>
+                </tr>
+                {% endif %}
                 <tr class="grand-total">
                     <td class="text-left">GRAND TOTAL:</td>
                     <td class="text-right">₹<span class="rounded-amount" data-actual="{{ grand_total }}">{{ grand_total|floatformat:0 }}</span></td>

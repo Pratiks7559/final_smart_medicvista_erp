@@ -105,6 +105,8 @@ def sales2_report_pdf(request):
         invoice_total = SalesMaster.objects.filter(
             sales_invoice_no=invoice.sales_invoice_no
         ).aggregate(Sum('sale_total_amount'))['sale_total_amount__sum'] or 0
+        invoice_total = invoice_total + float(invoice.sales_transport_charges or 0) - float(invoice.whole_discount_amount or 0)
+        invoice_total = round(invoice_total)
         
         balance = invoice_total - invoice.sales_invoice_paid
         invoice_data.append({
@@ -225,6 +227,8 @@ def sales2_report_excel(request):
         invoice_total = SalesMaster.objects.filter(
             sales_invoice_no=invoice.sales_invoice_no
         ).aggregate(Sum('sale_total_amount'))['sale_total_amount__sum'] or 0
+        invoice_total = invoice_total + float(invoice.sales_transport_charges or 0) - float(invoice.whole_discount_amount or 0)
+        invoice_total = round(invoice_total)
         
         balance = invoice_total - invoice.sales_invoice_paid
         data.append({

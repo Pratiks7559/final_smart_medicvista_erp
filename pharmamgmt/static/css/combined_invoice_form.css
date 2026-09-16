@@ -51,9 +51,14 @@
 .ci-header-row th{padding:.4rem .35rem;text-align:left;font-weight:700;color:#fff!important;font-size:.62rem;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid rgba(255,255,255,.15);white-space:nowrap}
 .ci-table-body tr{background:var(--card)!important;color:var(--dark)!important;transition:background .15s}
 .ci-table-body tr:hover{background:var(--p-lite)!important}
-.ci-table-body td{padding:.3rem;border-bottom:1px solid var(--border);vertical-align:middle;background:inherit!important;color:var(--dark)!important}
-.ci-table-body input,.ci-table-body select{width:100%;padding:.25rem .35rem;border:1.5px solid var(--border);border-radius:4px;font-size:.72rem;color:var(--dark)!important;background:var(--card)!important;transition:border-color .2s;height:26px}
-.ci-table-body input:focus,.ci-table-body select:focus{outline:none;border-color:var(--p);box-shadow:0 0 0 2px rgba(79,70,229,.1)}
+.ci-table-body input:not([type=radio]),.ci-table-body select{width:100%;padding:.25rem .35rem;border:1.5px solid var(--border);border-radius:4px;font-size:.72rem;color:var(--dark)!important;background:var(--card)!important;transition:border-color .2s;height:28px;min-height:28px;box-sizing:border-box}
+.ci-table-body input[type=radio]{width:auto;height:auto;min-height:auto;padding:0;border:none;background:none!important}
+.ci-table-body input:not([type=radio]):focus,.ci-table-body select:focus{outline:none;border-color:var(--p);box-shadow:0 0 0 2px rgba(79,70,229,.1)}
+.ci-table-body td{padding:.3rem;border-bottom:1px solid var(--border);vertical-align:top!important;background:inherit!important;color:var(--dark)!important}
+.disc-cell>div{display:flex;flex-direction:column;gap:4px;min-width:120px}
+.disc-cell>div>div{display:flex;gap:6px;align-items:center;font-size:11px;flex-wrap:nowrap}
+.disc-cell>div>div label{display:flex;align-items:center;gap:3px;cursor:pointer;white-space:nowrap;color:var(--dark)!important;font-size:11px;margin:0}
+.disc-cell>div>input{width:100%!important;height:28px!important}
 
 /* col widths */
 .ci-th-product{width:160px}.ci-th-batch{width:80px}.ci-th-expiry{width:75px}.ci-th-mrp{width:62px}.ci-th-purchase-rate{width:75px}.ci-th-qty{width:52px}.ci-th-free-qty{width:56px}.ci-th-discount{width:62px}.ci-th-cgst{width:52px}.ci-th-sgst{width:52px}.ci-th-rate-a{width:58px}.ci-th-rate-b{width:58px}.ci-th-rate-c{width:58px}.ci-th-total{width:72px}.ci-th-action{width:40px}

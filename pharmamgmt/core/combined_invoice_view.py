@@ -282,6 +282,19 @@ def add_invoice_with_products(request):
                     logger.info(f"Invoice {invoice.invoice_no} created without products - header only")
                     messages.info(request, "📄 Invoice created without products. You can add products later by editing the invoice.")
                 
+                # Whole invoice discount
+                # NOTE: invoice.invoice_total already has the correct value from the frontend
+                # (frontend calculates: productsTotal + transport - wholeDisc and sets invoice_total input)
+                # So we do NOT subtract whole_discount again here — that would cause double deduction.
+                # We only store the whole_discount_amount for reference/display.
+                discount_mode = request.POST.get('discount_mode_value', request.POST.get('discount_mode', 'product_wise'))
+                whole_discount = 0.0
+                if discount_mode == 'whole':
+                    try:
+                        whole_discount = float(request.POST.get('whole_discount_amount', '0') or '0')
+                    except (ValueError, TypeError):
+                        whole_discount = 0.0
+
                 # Save round-off info if fields exist
                 roundoff_amount_val = request.POST.get('roundoff_amount', '0')
                 roundoff_type_val = request.POST.get('roundoff_type', 'added')
@@ -441,7 +454,7 @@ def _auto_adjust_advance(invoice):
                 payment_date=today,
                 payment_amount=float(apply_adv),
                 payment_mode=adv.payment_mode,
-                payment_ref_no=f'ADV-ADJ-{adv.advance_id}'
+                payment_ref_no=''
             )
             AdvanceLedger.objects.create(
                 party_type='supplier',
@@ -847,11 +860,21 @@ def get_challan_products(request):
                 'challan_date': challan_date_str
             })
         
+        # Sum whole_discount_amount from all selected challans
+        total_whole_discount = 0.0
+        try:
+            from core.models import Challan1 as _C1
+            for _c in _C1.objects.filter(challan_id__in=challan_ids):
+                total_whole_discount += float(_c.whole_discount_amount or 0)
+        except Exception:
+            pass
+
         return JsonResponse({
             'success': True,
-            'products': products_data
+            'products': products_data,
+            'whole_discount_amount': total_whole_discount
         })
-        
+
     except Exception as e:
         logger.error(f"Error fetching challan products: {e}")
         return JsonResponse({

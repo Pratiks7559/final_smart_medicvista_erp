@@ -50,6 +50,8 @@ def add_supplier_challan(request):
                 supplier_id = request.POST.get('supplierid')
                 transport_charges = Decimal(request.POST.get('transport_charges', 0))
                 challan_total = Decimal(request.POST.get('challan_total', 0))
+                whole_discount_amount = Decimal(request.POST.get('whole_discount_amount', 0))
+                discount_mode = request.POST.get('discount_mode', 'product_wise')
                 products_data = json.loads(request.POST.get('products_data', '[]'))
                 
                 if not products_data:
@@ -57,13 +59,35 @@ def add_supplier_challan(request):
                     return redirect('add_supplier_challan')
                 
                 supplier = SupplierMaster.objects.get(supplierid=supplier_id)
-                
+
+                # Recalculate products total from products_data
+                products_total = Decimal('0')
+                for p in products_data:
+                    r = Decimal(str(p.get('challan_rate', 0)))
+                    q = Decimal(str(p.get('quantity', 0)))
+                    d = Decimal(str(p.get('discount', 0)))
+                    cg = Decimal(str(p.get('cgst', 0)))
+                    sg = Decimal(str(p.get('sgst', 0)))
+                    mode = p.get('calculation_mode', 'flat')
+                    sub = r * q
+                    disc_amt = (sub * d / 100) if mode == 'percentage' else d
+                    after = sub - disc_amt
+                    products_total += after + (after * (cg + sg) / 100)
+
+                # Apply whole discount if selected
+                if discount_mode == 'whole':
+                    final_total = products_total + transport_charges - whole_discount_amount
+                else:
+                    whole_discount_amount = Decimal('0')
+                    final_total = products_total + transport_charges
+
                 challan = Challan1.objects.create(
                     challan_no=challan_no,
                     challan_date=challan_date,
                     supplier=supplier,
-                    challan_total=float(challan_total),
+                    challan_total=float(final_total),
                     transport_charges=float(transport_charges),
+                    whole_discount_amount=float(whole_discount_amount),
                     challan_paid=0.0
                 )
                 
@@ -174,6 +198,8 @@ def view_supplier_challan(request, challan_id):
                 challan_date = request.POST.get('challan_date')
                 supplier_id = request.POST.get('supplier')
                 transport_charges = Decimal(request.POST.get('transport_charges', 0))
+                whole_discount_amount = Decimal(request.POST.get('whole_discount_amount', 0))
+                discount_mode = request.POST.get('discount_mode', 'product_wise')
                 products_data = json.loads(request.POST.get('products_data', '[]'))
                 
                 if not products_data:
@@ -198,7 +224,15 @@ def view_supplier_challan(request, challan_id):
                     disc_amt = (sub * d / 100) if mode == 'percentage' else d
                     after = sub - disc_amt
                     products_total += after + (after * cg / 100) + (after * sg / 100)
-                challan.challan_total = float(products_total + transport_charges)
+
+                if discount_mode == 'whole':
+                    final_total = products_total + transport_charges - whole_discount_amount
+                else:
+                    whole_discount_amount = Decimal('0')
+                    final_total = products_total + transport_charges
+
+                challan.whole_discount_amount = float(whole_discount_amount)
+                challan.challan_total = float(final_total)
                 challan.save()
                 
                 # Delete existing products
@@ -377,14 +411,9 @@ def customer_challan_list(request):
     # Get all active invoice series for the dropdown
     invoice_series = InvoiceSeries.objects.filter(is_active=True).order_by('series_name')
 
-    # Compute correct total for each challan from actual item totals
-    from core.models import CustomerChallanMaster
-    from django.db.models import Sum as _Sum
+    # Use stored challan_total (already = items + transport - whole_discount)
     for ch in page_obj:
-        items_total = CustomerChallanMaster.objects.filter(
-            customer_challan_id=ch
-        ).aggregate(t=_Sum('sale_total_amount'))['t'] or 0
-        ch.computed_total = items_total + (ch.customer_transport_charges or 0)
+        ch.computed_total = ch.challan_total or 0
 
     context = {
         'title': 'Customer Challan List',
@@ -414,6 +443,8 @@ def add_customer_challan(request):
                 customer_id = request.POST.get('customer_id')
                 series_id = request.POST.get('challan_series')
                 transport_charges = Decimal(request.POST.get('transport_charges', 0))
+                whole_discount_amount = Decimal(request.POST.get('whole_discount_amount', 0))
+                discount_mode = request.POST.get('discount_mode', 'product_wise')
                 products_data = json.loads(request.POST.get('products_data', '[]'))
                 
                 if not products_data:
@@ -476,15 +507,21 @@ def add_customer_challan(request):
                     disc_amt = (sub * d / 100) if mode == 'percentage' else d
                     after = sub - disc_amt
                     products_total += after + (after * (cg + sg) / 100)
-                challan_total = products_total + transport_charges
-                
+
+                if discount_mode == 'whole':
+                    final_total = products_total + transport_charges - whole_discount_amount
+                else:
+                    whole_discount_amount = Decimal('0')
+                    final_total = products_total + transport_charges
+
                 challan = CustomerChallan.objects.create(
                     customer_challan_no=challan_no,
                     customer_challan_date=challan_date,
                     customer_name=customer,
                     challan_series=series,
                     customer_transport_charges=float(transport_charges),
-                    challan_total=float(challan_total),
+                    challan_total=float(final_total),
+                    whole_discount_amount=float(whole_discount_amount),
                     challan_invoice_paid=0.0
                 )
                 
@@ -583,6 +620,8 @@ def view_customer_challan(request, challan_id):
                 challan_date = request.POST.get('challan_date')
                 customer_id = request.POST.get('customer_name')
                 transport_charges = Decimal(request.POST.get('transport_charges', 0))
+                whole_discount_amount = Decimal(request.POST.get('whole_discount_amount', 0))
+                discount_mode = request.POST.get('discount_mode', 'product_wise')
                 new_challan_no = request.POST.get('challan_no', '').strip()
                 new_series_id = request.POST.get('challan_series_id', '').strip()
                 products_data = json.loads(request.POST.get('products_data', '[]'))
@@ -625,7 +664,15 @@ def view_customer_challan(request, challan_id):
                     disc_amt = (sub * d / 100) if mode == 'percentage' else d
                     after = sub - disc_amt
                     products_total += after + (after * (cg + sg) / 100)
-                challan.challan_total = float(products_total + transport_charges)
+
+                if discount_mode == 'whole':
+                    final_total = products_total + transport_charges - whole_discount_amount
+                else:
+                    whole_discount_amount = Decimal('0')
+                    final_total = products_total + transport_charges
+
+                challan.whole_discount_amount = float(whole_discount_amount)
+                challan.challan_total = float(final_total)
                 challan.save()
                 
                 # Replace products
@@ -901,10 +948,21 @@ def get_challan_products_api(request):
                 'challan_date': item.customer_challan_id.customer_challan_date.strftime('%Y-%m-%d')
             })
         
+        # Sum whole_discount_amount from all selected challans
+        total_whole_discount = 0.0
+        try:
+            from core.models import CustomerChallan as _CC
+            for _c in _CC.objects.filter(customer_challan_id__in=challan_ids):
+                total_whole_discount += float(_c.whole_discount_amount or 0)
+        except Exception:
+            pass
+
         return JsonResponse({
             'success': True,
-            'products': products
+            'products': products,
+            'whole_discount_amount': total_whole_discount
         })
+
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 

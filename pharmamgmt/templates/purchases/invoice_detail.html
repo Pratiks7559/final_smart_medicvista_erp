@@ -248,6 +248,15 @@
                             <td style="font-weight:600;">{{ invoice.transport_charges|currency }}</td>
                             <td colspan="3"></td>
                         </tr>
+                        {% with products_plus_transport=purchases_total|add:invoice.transport_charges %}
+                        {% if invoice.invoice_total < products_plus_transport %}
+                        <tr style="color:#c62828;">
+                            <td colspan="10" style="text-align:right;font-weight:600;"><strong>Whole Invoice Discount:</strong></td>
+                            <td style="font-weight:600;color:#c62828;">- ₹<span id="wholeDiscDetailDisplay">0.00</span></td>
+                            <td colspan="3"></td>
+                        </tr>
+                        {% endif %}
+                        {% endwith %}
                         <tr class="grand-total-row">
                             <td colspan="10" style="text-align:right;font-weight:700;color:#2c3e50;"><strong>Invoice Total:</strong></td>
                             <td style="font-weight:700;color:#2c3e50;">₹{{ invoice.invoice_total|floatformat:0 }}</td>
@@ -339,17 +348,34 @@
                 </button>
                 
                 <div class="invoice-total-display" style="margin-top: 1.5rem; padding: 1rem; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #27ae60;">
+                    <!-- Whole Invoice Discount Section -->
+                    <div style="margin-bottom:1rem;padding:12px;background:#fff8e1;border:1.5px solid #ffb300;border-radius:8px;">
+                        <div style="font-weight:700;color:#5d4037;margin-bottom:8px;"><i class="fas fa-tag"></i> Whole Invoice Discount (Optional)</div>
+                        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
+                            <div style="display:flex;gap:12px;">
+                                <label style="cursor:pointer;font-weight:600;color:#3e2723;"><input type="radio" name="edit_whole_disc_type" id="editWholeDiscFlat" value="flat" checked onchange="updateInvoiceTotal()"> Flat ₹</label>
+                                <label style="cursor:pointer;font-weight:600;color:#3e2723;"><input type="radio" name="edit_whole_disc_type" id="editWholeDiscPercent" value="percentage" onchange="updateInvoiceTotal()"> %</label>
+                            </div>
+                            <input type="number" id="editWholeDiscountAmount" name="whole_discount_amount" min="0" step="any" placeholder="0" value="0" style="padding:8px 12px;border:2px solid #ffb300;border-radius:8px;width:140px;" oninput="updateInvoiceTotal()">
+                            <input type="hidden" name="whole_discount_type" id="editWholeDiscountTypeHidden" value="flat">
+                            <span style="font-size:0.88rem;color:#5d4037;">Discount: <strong id="editWholeDiscDisplay" style="color:#c62828;">₹0.00</strong></span>
+                        </div>
+                    </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="font-weight: 600;">Products Total:</span>
+                        <span style="font-weight: 600; color: #1a1a1a;">Products Total:</span>
                         <span id="productsTotal" style="font-weight: 600; color: #27ae60;">₹0.00</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="font-weight: 600;">Transport Charges:</span>
-                        <span id="transportChargesDisplay" style="font-weight: 600; color: #3498db;">₹0.00</span>
+                        <span style="font-weight: 600; color: #1a1a1a;">Transport Charges:</span>
+                        <span id="transportChargesDisplay" style="font-weight: 600; color: #1565c0;">₹0.00</span>
+                    </div>
+                    <div id="editWholeDiscRow" style="display:none;justify-content: space-between; margin-bottom: 0.5rem;">
+                        <span style="font-weight:600;color:#c62828;">Whole Discount:</span>
+                        <span id="editWholeDiscRowVal" style="font-weight:600;color:#c62828;">₹0.00</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; border-top: 2px solid #27ae60;">
-                        <span style="font-weight: 700; font-size: 1.1rem;">Invoice Total:</span>
-                        <span id="invoiceTotal" style="font-weight: 700; font-size: 1.1rem; color: #27ae60;">₹0.00</span>
+                        <span style="font-weight: 700; font-size: 1.1rem; color: #1a1a1a;">Invoice Total:</span>
+                        <span id="invoiceTotal" style="font-weight: 700; font-size: 1.1rem; color: #1b5e20;">₹0.00</span>
                     </div>
                 </div>
                 
@@ -370,10 +396,22 @@ function openEditInvoiceModal() {
     document.getElementById('editInvoiceModal').style.display = 'block';
     loadExistingProducts();
     
-    // Add event listener for transport charges
+    // Autofill whole discount if it was applied when invoice was saved
+    // Must be set AFTER loadExistingProducts() so updateInvoiceTotal() recalculates with correct discount
+    var productsTotal = {{ purchases_total|default:0 }};
+    var transport = {{ invoice.transport_charges|default:0 }};
+    var invoiceTotal = {{ invoice.invoice_total|default:0 }};
+    var savedWholeDisc = (productsTotal + transport) - invoiceTotal;
+    if (savedWholeDisc > 0.01) {
+        document.getElementById('editWholeDiscountAmount').value = savedWholeDisc.toFixed(2);
+        updateInvoiceTotal(); // recalculate now that discount is filled
+    }
+    
+    // Add event listener for transport charges (guard against duplicate listeners)
     const transportInput = document.getElementById('transport_charges');
-    if (transportInput) {
+    if (transportInput && !transportInput.dataset.listenerAdded) {
         transportInput.addEventListener('input', updateInvoiceTotal);
+        transportInput.dataset.listenerAdded = '1';
     }
 }
 
@@ -734,8 +772,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         rate_C: rateCInput ? (parseFloat(rateCInput.value) || 0) : 0,
                         rate_a: rateAInput ? (parseFloat(rateAInput.value) || 0) : 0,
                         rate_b: rateBInput ? (parseFloat(rateBInput.value) || 0) : 0,
-                        rate_c: rateCInput ? (parseFloat(rateCInput.value) || 0) : 0,
-                        calculation_mode: 'flat'
+                        rate_c: rateCInput ? (parseFloat(rateCInput.value) || 0) : 0
                     });
                 }
             });
@@ -846,15 +883,36 @@ function updateInvoiceTotal() {
     });
     
     const transportCharges = parseFloat(document.getElementById('transport_charges')?.value) || 0;
-    const rawTotal = productsTotal + transportCharges;
+
+    // Whole invoice discount in edit modal
+    const editWholeDiscTypeEl = document.querySelector('input[name="edit_whole_disc_type"]:checked');
+    const editWholeDiscType = editWholeDiscTypeEl ? editWholeDiscTypeEl.value : 'flat';
+    const editWholeDiscVal = parseFloat(document.getElementById('editWholeDiscountAmount')?.value) || 0;
+    let wholeDisc = 0;
+    if (editWholeDiscVal > 0) {
+        wholeDisc = editWholeDiscType === 'percentage'
+            ? Math.min(productsTotal * editWholeDiscVal / 100, productsTotal)
+            : Math.min(editWholeDiscVal, productsTotal);
+    }
+    // Sync hidden field and display
+    const hiddenDiscType = document.getElementById('editWholeDiscountTypeHidden');
+    if (hiddenDiscType) hiddenDiscType.value = editWholeDiscType;
+    const wholeDiscDisplay = document.getElementById('editWholeDiscDisplay');
+    if (wholeDiscDisplay) wholeDiscDisplay.textContent = '₹' + wholeDisc.toFixed(2);
+    const wholeDiscRow = document.getElementById('editWholeDiscRow');
+    if (wholeDiscRow) {
+        wholeDiscRow.style.display = wholeDisc > 0 ? 'flex' : 'none';
+        const wholeDiscRowVal = document.getElementById('editWholeDiscRowVal');
+        if (wholeDiscRowVal) wholeDiscRowVal.textContent = '₹' + wholeDisc.toFixed(2);
+    }
+
+    const rawTotal = productsTotal + transportCharges - wholeDisc;
     const roundedTotal = Math.round(rawTotal);
     const roundoffAmount = roundedTotal - rawTotal;
     
-    // Display rounded total with actual amount in parentheses
     document.getElementById('productsTotal').textContent = '₹' + productsTotal.toFixed(2);
     document.getElementById('transportChargesDisplay').textContent = '₹' + transportCharges.toFixed(2);
     
-    // Show rounded total prominently with actual amount
     const invoiceTotalElement = document.getElementById('invoiceTotal');
     if (Math.abs(roundoffAmount) > 0.001) {
         const sign = roundoffAmount > 0 ? '+' : '-';
@@ -916,17 +974,18 @@ function addProductRow(data = {}) {
             <div class="form-group">
                 <label>Disc Type:</label>
                 <select name="products[${productId}][calculation_mode]" onchange="updateInvoiceTotal()" style="padding:0.75rem;border:1px solid #ddd;border-radius:5px;font-size:0.9rem;">
-                    <option value="flat" ${(data.purchase_calculation_mode||'flat')==='flat'?'selected':''}>₹ Flat</option>
+                    <option value="flat" ${(data.purchase_calculation_mode||'flat')==='flat'?'selected':''}>&#8377; Flat</option>
                     <option value="percentage" ${data.purchase_calculation_mode==='percentage'?'selected':''}>% Percent</option>
                 </select>
             </div>
             <div class="form-group">
                 <label>Discount:</label>
-                <input type="number" name="products[${productId}][discount]" value="${data.product_discount_got || ''}" step="0.01" oninput="updateInvoiceTotal()">
+                <input type="number" name="products[${productId}][discount]" value="${data.product_discount_got !== undefined ? data.product_discount_got : ''}" step="0.01" min="0" placeholder="0" oninput="updateInvoiceTotal()">
             </div>
             <div class="form-group">
                 <label>CGST %:</label>
                 <input type="number" name="products[${productId}][cgst]" value="${data.CGST || '2.5'}" step="0.01">
+            </div>
             <div class="form-group">
                 <label>SGST %:</label>
                 <input type="number" name="products[${productId}][sgst]" value="${data.SGST || '2.5'}" step="0.01">
@@ -1770,6 +1829,17 @@ function calculateDetailTotals() {
     document.getElementById('detailDiscount').textContent = totalDiscount.toFixed(2);
     document.getElementById('detailTaxable').textContent  = taxable.toFixed(2);
     document.getElementById('detailGST').textContent      = totalGST.toFixed(2);
+
+    // Whole invoice discount = invoice_total vs (products_total + transport)
+    // invoice_total already has whole discount applied, so:
+    var productsTotal = {{ purchases_total|default:0 }};
+    var transport = {{ invoice.transport_charges|default:0 }};
+    var invoiceTotal = {{ invoice.invoice_total|default:0 }};
+    var wholeDisc = (productsTotal + transport) - invoiceTotal;
+    var wholeDiscEl = document.getElementById('wholeDiscDetailDisplay');
+    if (wholeDiscEl) {
+        wholeDiscEl.textContent = wholeDisc > 0.01 ? wholeDisc.toFixed(2) : '0.00';
+    }
 }
 
 document.addEventListener('DOMContentLoaded', calculateDetailTotals);

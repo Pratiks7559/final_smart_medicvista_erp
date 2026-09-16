@@ -87,11 +87,13 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD', 'Pratik@123'),
         'HOST': os.getenv('DB_HOST', 'localhost'),
         'PORT': os.getenv('DB_PORT', '3306'),
-        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '0')),
+        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '60')),
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            'connect_timeout': 30,
+            'connect_timeout': 60,
+            'read_timeout': 60,
+            'write_timeout': 60,
         },
     }
 }
