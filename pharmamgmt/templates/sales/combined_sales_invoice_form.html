@@ -1083,7 +1083,12 @@ function addProductRow() {
     const currentDiscMode = document.querySelector('input[name="discount_mode"]:checked')?.value || 'product_wise';
     const discCell = row.querySelector('.discount-cell');
     if (discCell) discCell.style.display = currentDiscMode === 'product_wise' ? '' : 'none';
-    
+    const discHeader = document.querySelector('.discount-col');
+    if (discHeader) discHeader.style.display = currentDiscMode === 'product_wise' ? '' : 'none';
+
+    // Recalculate totals so whole discount applies to new row immediately
+    calculateGrandTotal();
+
     // Don't auto-focus on product select during initial load
     // Only focus when user manually adds a row
     if (productRowIndex > 1) {

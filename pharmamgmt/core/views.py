@@ -720,8 +720,9 @@ def update_supplier(request, pk):
 def supplier_detail(request, pk):
     supplier = get_object_or_404(SupplierMaster, supplierid=pk)
     
-    # Get invoices for this supplier
+    # Get invoices for this supplier filtered by selected financial year
     invoices = InvoiceMaster.objects.filter(supplierid=pk).order_by('-invoice_date')
+    invoices = apply_year_filter(invoices, request, 'invoice_date')
     
     # Calculate total purchase and payment amounts
     total_purchase = invoices.aggregate(Sum('invoice_total'))['invoice_total__sum'] or 0
@@ -884,11 +885,11 @@ def update_customer(request, pk):
 def customer_detail(request, pk):
     customer = get_object_or_404(CustomerMaster, customerid=pk)
     
-    # Get invoices for this customer
+    # Get invoices for this customer filtered by selected financial year
     invoices = SalesInvoiceMaster.objects.filter(customerid=pk).order_by('-sales_invoice_date')
+    invoices = apply_year_filter(invoices, request, 'sales_invoice_date')
     
     # Calculate total sales and payment amounts
-    # We need to calculate sales total through SalesMaster since sales_invoice_total is a property
     total_sales = 0
     total_paid = 0
     

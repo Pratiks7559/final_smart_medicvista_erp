@@ -18,7 +18,11 @@ def supplier_challan_list(request):
     challans = Challan1.objects.select_related('supplier').filter(is_invoiced=False).order_by('-challan_date', '-challan_id')
     challans = apply_year_filter(challans, request, 'challan_date')
     suppliers = SupplierMaster.objects.all().order_by('supplier_name')
-    
+
+    from core.year_filter_utils import get_current_financial_year
+    selected_year = request.session.get('selected_year', get_current_financial_year())
+    fy_label = f"FY {selected_year}-{str(selected_year + 1)[2:]}"
+
     # Pagination
     paginator = Paginator(challans, 10)
     page_number = request.GET.get('page')
@@ -28,7 +32,8 @@ def supplier_challan_list(request):
         'title': 'Supplier Challan List',
         'challans': page_obj,
         'suppliers': suppliers,
-        'page_obj': page_obj
+        'page_obj': page_obj,
+        'fy_label': fy_label,
     }
     return render(request, 'challan/supplier_challan_list.html', context)
 
@@ -378,6 +383,10 @@ def customer_challan_list(request):
     challans = CustomerChallan.objects.select_related('customer_name').filter(is_invoiced=False)
     challans = apply_year_filter(challans, request, 'customer_challan_date')
     
+    from core.year_filter_utils import get_current_financial_year as _get_fy
+    selected_year = request.session.get('selected_year', _get_fy())
+    fy_label = f"FY {selected_year}-{str(selected_year + 1)[2:]}"
+    
     # Apply date filters
     from_date = request.GET.get('from_date')
     to_date = request.GET.get('to_date')
@@ -422,7 +431,8 @@ def customer_challan_list(request):
         'from_date': from_date,
         'to_date': to_date,
         'search_query': search_query,
-        'page_obj': page_obj
+        'page_obj': page_obj,
+        'fy_label': fy_label,
     }
     return render(request, 'challan/customer_challan_list.html', context)
 

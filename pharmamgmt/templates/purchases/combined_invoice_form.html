@@ -990,6 +990,8 @@ function addProductRow() {
         if (discCell) { discCell.style.opacity = '0.35'; discCell.style.pointerEvents = 'none'; }
         const discInput = row.querySelector('.discount');
         if (discInput) discInput.value = 0;
+        // Recalculate totals so whole discount applies to new product
+        calculateInvoiceTotal();
     }
     
     /* SELECT2 INITIALIZATION - COMMENTED OUT
@@ -1104,7 +1106,7 @@ function calculateInvoiceTotal() {
     const transportInput = document.querySelector('input[name*="transport_charges"]');
     const transportCharges = parseFloat(transportInput?.value) || 0;
 
-    // Whole invoice discount
+    // Whole invoice discount — always recalculate fresh from input value
     const discModeEl = document.querySelector('input[name="discount_mode"]:checked');
     const discMode = discModeEl ? discModeEl.value : 'product_wise';
     let wholeDisc = 0;
@@ -1117,7 +1119,7 @@ function calculateInvoiceTotal() {
         } else {
             wholeDisc = Math.min(wholeDiscVal, productsTotal);
         }
-        // Keep hidden field in sync
+        // Always keep hidden field and display in sync with fresh calculation
         const hiddenEl = document.getElementById('wholeDiscountAmountHidden');
         if (hiddenEl) hiddenEl.value = wholeDisc.toFixed(2);
         const dispEl = document.getElementById('wholeDiscDisplay');

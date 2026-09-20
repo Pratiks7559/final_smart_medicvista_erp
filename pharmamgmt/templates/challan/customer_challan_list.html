@@ -11,7 +11,9 @@
 <div class="cust-challan-container">
     <!-- Header Section -->
     <div class="cust-challan-header">
-        <h1 class="cust-challan-title">Customer Challan List</h1>
+        <h1 class="cust-challan-title">Customer Challan List
+            {% if fy_label %}<span style="font-size:0.75rem;font-weight:600;background:#e0f2fe;color:#0369a1;padding:3px 10px;border-radius:20px;margin-left:10px;vertical-align:middle;">{{ fy_label }}</span>{% endif %}
+        </h1>
         <div class="cust-challan-actions">
 
             <a href="{% url 'add_customer_challan' %}" class="cust-challan-add-btn">

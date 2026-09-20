@@ -9,13 +9,15 @@ from django.utils import timezone
 from .models import (
     StockIssueMaster, StockIssueDetail, ProductMaster, Web_User
 )
+from .year_filter_utils import apply_year_filter, get_current_financial_year, get_financial_year_dates
 import json
 
 @login_required
 def stock_issue_list(request):
     """Display list of stock issues"""
     issues = StockIssueMaster.objects.all().order_by('-issue_date', '-issue_id')
-    
+    issues = apply_year_filter(issues, request, 'issue_date')
+
     # Search functionality
     search_query = request.GET.get('search', '')
     if search_query:
@@ -30,6 +32,10 @@ def stock_issue_list(request):
     if issue_type_filter:
         issues = issues.filter(issue_type=issue_type_filter)
     
+    # FY info for display
+    selected_year = request.session.get('selected_year', get_current_financial_year())
+    fy_label = f"FY {selected_year}-{str(selected_year + 1)[2:]}"
+
     # Pagination
     paginator = Paginator(issues, 20)
     page_number = request.GET.get('page')
@@ -40,6 +46,7 @@ def stock_issue_list(request):
         'search_query': search_query,
         'issue_type_filter': issue_type_filter,
         'issue_types': StockIssueMaster.ISSUE_TYPES,
+        'fy_label': fy_label,
     }
     
     return render(request, 'stock_issues/stock_issue_list.html', context)

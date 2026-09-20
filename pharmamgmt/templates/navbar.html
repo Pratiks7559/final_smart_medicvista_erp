@@ -703,11 +703,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     body: 'year=' + year
                 })
-                .then(response => response.json())
+                .then(response => {
+                    const ct = response.headers.get('content-type') || '';
+                    if (!ct.includes('application/json')) {
+                        // Session expired or redirected to login page
+                        window.location.reload();
+                        return null;
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    console.log('Response:', data);
+                    if (!data) return;
                     if (data.success) {
-                        // Reload page to apply filter
                         window.location.reload();
                     }
                 })

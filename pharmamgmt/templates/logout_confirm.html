@@ -41,8 +41,17 @@
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                const ct = response.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) {
+                    // No backup, just redirect to login
+                    window.location.href = '/login/';
+                    return null;
+                }
+                return response.json();
+            })
             .then(data => {
+                if (!data) return;
                 if (data.success) {
                     const a = document.createElement('a');
                     a.href = data.backup_url;
@@ -54,8 +63,11 @@
                     setTimeout(() => {
                         window.location.href = '/login/';
                     }, 1000);
+                } else {
+                    window.location.href = '/login/';
                 }
-            });
+            })
+            .catch(() => { window.location.href = '/login/'; });
         }
         
         // Auto-focus on Yes, Backup button

@@ -11,6 +11,7 @@ from django.db.models import Sum, Q
 from django.utils import timezone
 from datetime import datetime, timedelta
 from .models import ContraEntry, Web_User
+from .year_filter_utils import apply_year_filter, get_current_financial_year, get_financial_year_dates
 import json
 
 @login_required
@@ -21,10 +22,11 @@ def contra_list(request):
     end_date = request.GET.get('end_date')
     contra_type = request.GET.get('contra_type')
     
-    # Base queryset
+    # Base queryset with FY filter
     contras = ContraEntry.objects.all()
-    
-    # Apply filters
+    contras = apply_year_filter(contras, request, 'contra_date')
+
+    # Apply additional filters
     if start_date:
         contras = contras.filter(contra_date__gte=start_date)
     if end_date:
@@ -35,6 +37,10 @@ def contra_list(request):
     # Calculate totals
     bank_to_cash_total = contras.filter(contra_type='BANK_TO_CASH').aggregate(Sum('amount'))['amount__sum'] or 0
     cash_to_bank_total = contras.filter(contra_type='CASH_TO_BANK').aggregate(Sum('amount'))['amount__sum'] or 0
+
+    # FY info for display
+    selected_year = request.session.get('selected_year', get_current_financial_year())
+    fy_label = f"FY {selected_year}-{str(selected_year + 1)[2:]}"
     
     context = {
         'title': 'Contra Entries',
@@ -44,6 +50,7 @@ def contra_list(request):
         'start_date': start_date,
         'end_date': end_date,
         'contra_type': contra_type,
+        'fy_label': fy_label,
     }
     return render(request, 'contra/contra_list.html', context)
 

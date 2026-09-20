@@ -11,7 +11,9 @@
 <div class="supplier-challan-container">
     <!-- Header Section -->
     <div class="supplier-challan-header">
-        <h1 class="supplier-challan-title">Supplier Challan List</h1>
+        <h1 class="supplier-challan-title">Supplier Challan List
+            {% if fy_label %}<span style="font-size:0.75rem;font-weight:600;background:#e0f2fe;color:#0369a1;padding:3px 10px;border-radius:20px;margin-left:10px;vertical-align:middle;">{{ fy_label }}</span>{% endif %}
+        </h1>
         <div style="display: flex; gap: 10px;">
 
             <a href="{% url 'add_supplier_challan' %}" class="supplier-challan-add-btn">
