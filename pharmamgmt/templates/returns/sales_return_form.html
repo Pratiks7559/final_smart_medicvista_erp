@@ -38,7 +38,9 @@
                         <div class="sr-form-group required">
                             <label for="return_date" class="sr-field-label">Return Date</label>
                             <input type="date" name="return_sales_invoice_date" id="return_date" class="sr-form-input" 
-                                   title="Enter return date" required>
+                                min="{{ current_fy }}-04-01" max="{{ current_fy|add:'1' }}-03-31"
+                                title="Enter return date within the selected financial year" required>
+                            <small id="returnDateFyError" style="display:none;color:#b91c1c;font-weight:600;margin-top:4px;">Date must be within the selected financial year.</small>
                             <small class="sr-text-muted">📅 Current date auto-filled</small>
                         </div>
                         
@@ -1142,6 +1144,34 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Auto-fill current date
     setCurrentDate();
+    const returnDateError = document.getElementById('returnDateFyError');
+    const returnDateField = document.getElementById('return_date');
+    if (returnDateField) {
+        const validateReturnDate = () => {
+            const invalid = returnDateField.value && (
+                returnDateField.value < returnDateField.min ||
+                returnDateField.value > returnDateField.max
+            );
+            returnDateField.setCustomValidity(invalid ? 'Date must be within the selected financial year.' : '');
+            returnDateField.style.borderColor = invalid ? '#b91c1c' : '';
+            if (returnDateError) returnDateError.style.display = invalid ? 'block' : 'none';
+            return invalid;
+        };
+        returnDateField.addEventListener('input', validateReturnDate);
+        returnDateField.addEventListener('change', validateReturnDate);
+        returnDateField.addEventListener('blur', () => {
+            if (validateReturnDate()) {
+                setTimeout(() => returnDateField.focus(), 0);
+            }
+        });
+        returnDateField.addEventListener('keydown', (event) => {
+            if ((event.key === 'Tab' || event.key === 'Enter') && validateReturnDate()) {
+                event.preventDefault();
+                returnDateField.focus();
+            }
+        });
+        validateReturnDate();
+    }
     
     // Enhanced focus on return date field first
     function focusReturnDate() {

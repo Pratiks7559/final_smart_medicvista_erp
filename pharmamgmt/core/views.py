@@ -32,7 +32,7 @@ from .models import (
     InvoiceMaster, InvoicePaid, PurchaseMaster, SalesInvoiceMaster, SalesMaster,
     SalesInvoicePaid, ProductRateMaster, ReturnInvoiceMaster, PurchaseReturnInvoicePaid,
     ReturnPurchaseMaster, ReturnSalesInvoiceMaster, ReturnSalesInvoicePaid, ReturnSalesMaster,
-    SaleRateMaster, InvoiceSeries, SupplierChallanMaster
+    SaleRateMaster, InvoiceSeries, SupplierChallanMaster, InventoryTransaction
 )
 
 
@@ -306,6 +306,196 @@ def dashboard(request):
     }
     return render(request, 'dashboard.html', context)
 
+@login_required
+def export_product_history_excel(request):
+    """Export product batch history grouped by invoice financial year."""
+    product_id = request.GET.get('product_id')
+    if not product_id:
+        return HttpResponse('Product is required.', status=400)
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+    from .models import CustomerChallanMaster, StockIssueDetail
+
+    product = get_object_or_404(ProductMaster, productid=product_id)
+    transactions = list(InventoryTransaction.objects.filter(
+        product=product,
+    ).order_by('transaction_date', 'transaction_id'))
+
+    invoice_dates = {}
+    purchase_ids = [t.reference_id for t in transactions if t.reference_type == 'INVOICE' and t.transaction_type == 'PURCHASE']
+    sale_ids = [t.reference_id for t in transactions if t.reference_type == 'INVOICE' and t.transaction_type == 'SALE']
+    purchase_return_ids = [t.reference_id for t in transactions if t.reference_type == 'INVOICE' and t.transaction_type == 'PURCHASE_RETURN']
+    sales_return_ids = [t.reference_id for t in transactions if t.reference_type == 'INVOICE' and t.transaction_type == 'SALES_RETURN']
+    supplier_challan_ids = [t.reference_id for t in transactions if t.reference_type == 'CHALLAN' and t.transaction_type == 'SUPPLIER_CHALLAN']
+    customer_challan_ids = [t.reference_id for t in transactions if t.reference_type == 'CHALLAN' and t.transaction_type == 'CUSTOMER_CHALLAN']
+    issue_ids = [t.reference_id for t in transactions if t.reference_type == 'ISSUE']
+
+    invoice_dates.update({
+        ('PURCHASE', row.purchaseid): row.product_invoiceid.invoice_date
+        for row in PurchaseMaster.objects.filter(purchaseid__in=purchase_ids).select_related('product_invoiceid')
+    })
+    invoice_dates.update({
+        ('SALE', row.id): row.sales_invoice_no.sales_invoice_date
+        for row in SalesMaster.objects.filter(id__in=sale_ids).select_related('sales_invoice_no')
+    })
+    invoice_dates.update({
+        ('PURCHASE_RETURN', row.returnpurchaseid): row.returninvoiceid.returninvoice_date
+        for row in ReturnPurchaseMaster.objects.filter(returnpurchaseid__in=purchase_return_ids).select_related('returninvoiceid')
+    })
+    invoice_dates.update({
+        ('SALES_RETURN', row.return_sales_id): row.return_sales_invoice_no.return_sales_invoice_date
+        for row in ReturnSalesMaster.objects.filter(return_sales_id__in=sales_return_ids).select_related('return_sales_invoice_no')
+    })
+    invoice_dates.update({
+        ('SUPPLIER_CHALLAN', row.challan_id): row.product_challan_id.challan_date
+        for row in SupplierChallanMaster.objects.filter(challan_id__in=supplier_challan_ids).select_related('product_challan_id')
+    })
+    invoice_dates.update({
+        ('CUSTOMER_CHALLAN', row.customer_challan_master_id): row.customer_challan_id.customer_challan_date
+        for row in CustomerChallanMaster.objects.filter(customer_challan_master_id__in=customer_challan_ids).select_related('customer_challan_id')
+    })
+    invoice_dates.update({
+        ('STOCK_ISSUE', row.detail_id): row.issue.issue_date
+        for row in StockIssueDetail.objects.filter(detail_id__in=issue_ids).select_related('issue')
+    })
+
+    def get_invoice_date(transaction):
+        return invoice_dates.get(
+            (transaction.transaction_type, transaction.reference_id),
+            transaction.transaction_date.date(),
+        )
+
+    def financial_year_label(value):
+        start_year = value.year if value.month >= 4 else value.year - 1
+        return f'{start_year}-{str(start_year + 1)[-2:]}'
+
+    grouped_transactions = {}
+    for transaction in transactions:
+        invoice_date = get_invoice_date(transaction)
+        transaction.invoice_date = invoice_date
+        fy_label = financial_year_label(invoice_date)
+        fy_start_year = invoice_date.year if invoice_date.month >= 4 else invoice_date.year - 1
+        grouped_transactions.setdefault((fy_start_year, fy_label), []).append(transaction)
+
+    wb = Workbook()
+    detail_ws = wb.active
+    detail_ws.title = 'Transaction Details'
+    summary_ws = wb.create_sheet('Batch Summary')
+    header_fill = PatternFill('solid', fgColor='1F4E78')
+    fy_fill = PatternFill('solid', fgColor='0F766E')
+    header_font = Font(color='FFFFFF', bold=True)
+    title_font = Font(size=14, bold=True, color='1F4E78')
+
+    detail_ws.append([product.product_name, 'All Financial Years'])
+    detail_ws['A1'].font = title_font
+    detail_ws.append([])
+    detail_headers = [
+        'Invoice Date', 'Batch No', 'Expiry', 'Transaction Type', 'Reference No',
+        'Quantity', 'Free Quantity', 'Rate', 'MRP', 'Total Value', 'Remarks'
+    ]
+    batch_summary = {}
+    detail_row = 3
+    for (fy_start_year, fy_label), fy_transactions in sorted(grouped_transactions.items()):
+        fy_transactions = sorted(fy_transactions, key=lambda item: (item.invoice_date, item.transaction_id))
+        detail_ws.cell(row=detail_row, column=1, value=f'Financial Year {fy_label}')
+        detail_ws.cell(row=detail_row, column=1).fill = fy_fill
+        detail_ws.cell(row=detail_row, column=1).font = header_font
+        detail_ws.merge_cells(start_row=detail_row, start_column=1, end_row=detail_row, end_column=len(detail_headers))
+        detail_row += 1
+        detail_ws.append(detail_headers)
+        for cell in detail_ws[detail_row]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center')
+        detail_row += 1
+
+        for transaction in fy_transactions:
+            quantity = float(transaction.quantity or 0)
+            free_quantity = float(transaction.free_quantity or 0)
+            detail_ws.append([
+                transaction.invoice_date.strftime('%d-%m-%Y'),
+                transaction.batch_no,
+                transaction.expiry_date,
+                transaction.get_transaction_type_display(),
+                transaction.reference_number,
+                quantity,
+                free_quantity,
+                float(transaction.rate or 0),
+                float(transaction.mrp or 0),
+                float(transaction.total_value or 0),
+                transaction.remarks or '',
+            ])
+            detail_row += 1
+            summary = batch_summary.setdefault((fy_start_year, fy_label, transaction.batch_no), {
+                'expiry': transaction.expiry_date,
+                'first_date': transaction.invoice_date,
+                'last_date': transaction.invoice_date,
+                'quantity': 0.0,
+                'free_quantity': 0.0,
+                'movement_count': 0,
+            })
+            summary['first_date'] = min(summary['first_date'], transaction.invoice_date)
+            summary['last_date'] = max(summary['last_date'], transaction.invoice_date)
+            summary['quantity'] += quantity
+            summary['free_quantity'] += free_quantity
+            summary['movement_count'] += 1
+        detail_row += 1
+
+    summary_ws.append([product.product_name, 'All Financial Years'])
+    summary_ws['A1'].font = title_font
+    summary_ws.append([])
+    summary_headers = [
+        'Batch No', 'Expiry', 'First Invoice Date', 'Last Invoice Date',
+        'Net Quantity', 'Net Free Quantity', 'Movement Count'
+    ]
+    summary_row = 3
+    current_summary_fy = None
+    for (fy_start_year, fy_label, batch_no), summary in sorted(batch_summary.items()):
+        if current_summary_fy != fy_label:
+            summary_ws.cell(row=summary_row, column=1, value=f'Financial Year {fy_label}')
+            summary_ws.cell(row=summary_row, column=1).fill = fy_fill
+            summary_ws.cell(row=summary_row, column=1).font = header_font
+            summary_ws.merge_cells(start_row=summary_row, start_column=1, end_row=summary_row, end_column=len(summary_headers))
+            summary_row += 1
+            summary_ws.append(summary_headers)
+            for cell in summary_ws[summary_row]:
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center')
+            summary_row += 1
+            current_summary_fy = fy_label
+        summary_ws.append([
+            batch_no,
+            summary['expiry'],
+            summary['first_date'].strftime('%d-%m-%Y'),
+            summary['last_date'].strftime('%d-%m-%Y'),
+            summary['quantity'],
+            summary['free_quantity'],
+            summary['movement_count'],
+        ])
+        summary_row += 1
+    
+    if not transactions:
+        detail_ws.append(['No batch history found'])
+        summary_ws.append(['No batch history found'])
+
+    for worksheet in (detail_ws, summary_ws):
+        worksheet.freeze_panes = 'A5'
+        for column_cells in worksheet.columns:
+            width = min(max(len(str(cell.value or '')) for cell in column_cells) + 2, 28)
+            worksheet.column_dimensions[get_column_letter(column_cells[0].column)].width = width
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = (
+        f'attachment; filename="{product.product_name[:30]}_all_years_batch_history.xlsx"'
+    )
+    wb.save(response)
+    return response
+
 # Pharmacy Details
 @login_required
 def pharmacy_details(request):
@@ -433,11 +623,15 @@ def update_product(request, pk):
 @login_required
 def product_detail(request, pk):
     product = get_object_or_404(ProductMaster, productid=pk)
-    
-    # Get stock status
-    stock_info = get_stock_status(pk)
-    
+
     from .year_filter_utils import apply_year_filter
+    from .year_filter_utils import get_current_financial_year, get_financial_year_dates
+    selected_year = request.session.get('selected_year', get_current_financial_year())
+    fy_start, fy_end = get_financial_year_dates(selected_year)
+
+    # Get stock status for the same financial year as the histories below.
+    stock_info = get_stock_status(pk, fy_start, fy_end)
+
     # Get purchase history - filtered by FY
     purchases = PurchaseMaster.objects.filter(productid=pk).select_related('product_invoiceid').order_by('-product_invoiceid__invoice_date').values(
         'purchaseid', 'product_invoice_no', 'product_batch_no',
@@ -3979,7 +4173,7 @@ def add_sales_return(request):
     from datetime import datetime
     import json
     from django.db import transaction
-    from .year_filter_utils import get_current_financial_year
+    from .year_filter_utils import get_current_financial_year, is_date_in_financial_year
     current_fy = request.session.get('selected_year', get_current_financial_year())
     
     def convert_date_format(date_str):
@@ -4032,6 +4226,12 @@ def add_sales_return(request):
                 # Convert date format
                 return_date_str = request.POST.get('return_sales_invoice_date')
                 return_date = convert_date_format(return_date_str)
+                if not is_date_in_financial_year(return_date, current_fy):
+                    messages.error(
+                        request,
+                        f'Sales return date must be within FY {current_fy}-{str(current_fy + 1)[2:]}.',
+                    )
+                    return redirect('add_sales_return')
                 
                 # Get charges
                 additional_charges = float(request.POST.get('return_sales_charges', 0))
@@ -4643,40 +4843,9 @@ def product_search_suggestions(request):
         return JsonResponse({'success': False, 'error': 'Query too short'})
     
     try:
-        # Progressive search strategy based on query length
-        if len(query) == 1:
-            # For single character, only search product names starting with that letter
-            products = ProductMaster.objects.filter(
-                product_name__istartswith=query
-            ).order_by('product_name')[:8]
-        elif len(query) == 2:
-            # For two characters, expand to company names and more specific matching
-            products = ProductMaster.objects.filter(
-                Q(product_name__istartswith=query) |
-                Q(product_company__istartswith=query)
-            ).order_by('product_name')[:10]
-        else:
-            # For 3+ characters, use comprehensive search with priority ordering
-            # First get exact and starts-with matches
-            exact_matches = ProductMaster.objects.filter(
-                Q(product_name__iexact=query) |
-                Q(product_name__istartswith=query) |
-                Q(product_company__istartswith=query)
-            ).order_by('product_name')[:5]
-            
-            # Then get contains matches
-            contains_matches = ProductMaster.objects.filter(
-                Q(product_name__icontains=query) |
-                Q(product_company__icontains=query) |
-                Q(product_salt__icontains=query) |
-                Q(product_category__icontains=query) |
-                Q(product_barcode__icontains=query)
-            ).exclude(
-                productid__in=[p.productid for p in exact_matches]
-            ).order_by('product_name')[:7]
-            
-            # Combine results
-            products = list(exact_matches) + list(contains_matches)
+        products = ProductMaster.objects.filter(
+            product_name__istartswith=query
+        ).order_by('product_name')[:12]
         
         suggestions = []
         for product in products:
@@ -6051,152 +6220,13 @@ def dateexpiry_inventory_report(request):
     return render(request, 'reports/dateexpiry_inventory_report.html', context)
 
 def sales_report(request):
-    from datetime import datetime
-    from .sales_analytics import SalesAnalytics
-    
-    # Get date range from request
-    start_date_str = request.GET.get('start_date', '')
-    end_date_str = request.GET.get('end_date', '')
-    
-    # Parse dates with defaults - show all available data by default
-    today = datetime.now().date()
-    try:
-        if start_date_str:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-        else:
-            # Get the earliest sales invoice date or default to 6 months ago
-            earliest_invoice = SalesInvoiceMaster.objects.order_by('sales_invoice_date').first()
-            if earliest_invoice:
-                start_date = earliest_invoice.sales_invoice_date
-            else:
-                start_date = today.replace(month=max(1, today.month-5), day=1)
-        
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else today
-    except ValueError:
-        # Fallback to 6 months ago
-        start_date = today.replace(month=max(1, today.month-5), day=1)
-        end_date = today
-    
-    # Get comprehensive analytics
-    analytics = SalesAnalytics(start_date, end_date)
-    report_data = analytics.get_comprehensive_report()
-    
-    # Prepare context with all analytics data
-    context = {
-        'title': 'Enhanced Sales Analytics Report',
-        'start_date': start_date,
-        'end_date': end_date,
-        'sales_invoices': report_data['invoices'],
-        'total_sales': report_data['core_metrics']['total_sales'],
-        'total_received': report_data['core_metrics']['total_received'],
-        'total_pending': report_data['core_metrics']['total_pending'],
-        'product_sales': report_data['product_analytics'],
-        'customer_sales': report_data['customer_analytics'],
-        'invoice_analysis': {
-            'total_invoices': report_data['core_metrics']['total_invoices'],
-            'paid_invoices': report_data['invoice_analysis']['paid_invoices'],
-            'partial_paid': report_data['invoice_analysis']['partial_paid'],
-            'unpaid_invoices': report_data['invoice_analysis']['unpaid_invoices'],
-            'largest_invoice': report_data['invoice_analysis']['largest_invoice'],
-            'smallest_invoice': report_data['invoice_analysis']['smallest_invoice'],
-            'avg_invoice_value': report_data['core_metrics']['avg_invoice_value']
-        },
-        'category_sales': report_data['category_analytics'],
-        'payment_analysis': {
-            'collection_rate': report_data['core_metrics']['collection_rate'],
-            'pending_rate': report_data['core_metrics']['pending_rate'],
-            'avg_payment_per_invoice': report_data['core_metrics']['avg_invoice_value']
-        },
-        'realtime_stats': report_data['realtime_stats'],
-        'daily_sales': report_data['daily_trend'],
-        'monthly_sales': report_data['monthly_trend'],
-        'top_products': report_data['top_performers']['top_products'],
-        'top_customers': report_data['top_performers']['top_customers'],
-        'sales_distribution': {
-            'product_distribution': report_data['product_analytics'][:20],
-            'customer_distribution': report_data['customer_analytics'][:20],
-            'category_distribution': report_data['category_analytics'],
-            'daily_trend': report_data['daily_trend'],
-            'monthly_trend': report_data['monthly_trend']
-        }
-    }
-    
-    return render(request, 'reports/enhanced_sales_analytics.html', context)
+    from .sales2_views import sales2_report
+    return sales2_report(request)
 
 @login_required
 def purchase_report(request):
-    from datetime import datetime
-    from .purchase_analytics import PurchaseAnalytics
-    
-    # Get date range from request
-    start_date_str = request.GET.get('start_date', '')
-    end_date_str = request.GET.get('end_date', '')
-    
-    # Parse dates with defaults - show all available data by default
-    today = datetime.now().date()
-    try:
-        if start_date_str:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-        else:
-            # Get the earliest purchase invoice date or default to 6 months ago
-            earliest_invoice = InvoiceMaster.objects.order_by('invoice_date').first()
-            if earliest_invoice:
-                start_date = earliest_invoice.invoice_date
-            else:
-                start_date = today.replace(month=max(1, today.month-5), day=1)
-        
-        end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date() if end_date_str else today
-    except ValueError:
-        # Fallback to 6 months ago
-        start_date = today.replace(month=max(1, today.month-5), day=1)
-        end_date = today
-    
-    # Get comprehensive analytics
-    analytics = PurchaseAnalytics(start_date, end_date)
-    report_data = analytics.get_comprehensive_report()
-    
-    # Prepare context with all analytics data
-    context = {
-        'title': 'Enhanced Purchase Analytics Report',
-        'start_date': start_date,
-        'end_date': end_date,
-        'purchase_invoices': report_data['invoices'],
-        'total_purchases': report_data['core_metrics']['total_purchases'],
-        'total_paid': report_data['core_metrics']['total_paid'],
-        'total_pending': report_data['core_metrics']['total_pending'],
-        'product_purchases': report_data['product_analytics'],
-        'supplier_purchases': report_data['supplier_analytics'],
-        'invoice_analysis': {
-            'total_invoices': report_data['core_metrics']['total_invoices'],
-            'paid_invoices': report_data['invoice_analysis']['paid_invoices'],
-            'partial_paid': report_data['invoice_analysis']['partial_paid'],
-            'unpaid_invoices': report_data['invoice_analysis']['unpaid_invoices'],
-            'largest_invoice': report_data['invoice_analysis']['largest_invoice'],
-            'smallest_invoice': report_data['invoice_analysis']['smallest_invoice'],
-            'avg_invoice_value': report_data['core_metrics']['avg_invoice_value']
-        },
-        'category_purchases': report_data['category_analytics'],
-        'payment_analysis': {
-            'payment_rate': report_data['core_metrics']['payment_rate'],
-            'pending_rate': report_data['core_metrics']['pending_rate'],
-            'payment_modes': report_data['payment_analysis']['payment_modes'],
-            'avg_payment_days': report_data['payment_analysis']['avg_payment_days']
-        },
-        'realtime_stats': report_data['realtime_stats'],
-        'daily_purchases': report_data['daily_trend'],
-        'monthly_purchases': report_data['monthly_trend'],
-        'top_products': report_data['top_performers']['top_products'],
-        'top_suppliers': report_data['top_performers']['top_suppliers'],
-        'purchase_distribution': {
-            'product_distribution': report_data['product_analytics'][:20],
-            'supplier_distribution': report_data['supplier_analytics'][:20],
-            'category_distribution': report_data['category_analytics'],
-            'daily_trend': report_data['daily_trend'],
-            'monthly_trend': report_data['monthly_trend']
-        }
-    }
-    
-    return render(request, 'reports/enhanced_purchase_analytics.html', context)
+    from .purchase2_views import purchase2_report
+    return purchase2_report(request)
 
 @login_required
 def financial_report(request):

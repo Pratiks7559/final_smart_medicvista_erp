@@ -14,6 +14,15 @@ def get_financial_year_dates(fy_year):
     end_date = date(fy_year + 1, 3, 31)  # 31 March next year
     return start_date, end_date
 
+def is_date_in_financial_year(value, fy_year):
+    """Return whether a date belongs to the selected financial year."""
+    if not value:
+        return False
+    if isinstance(value, datetime):
+        value = value.date()
+    start_date, end_date = get_financial_year_dates(fy_year)
+    return start_date <= value <= end_date
+
 def apply_year_filter(queryset, request, date_field):
     """
     Apply financial year filter (1 April to 31 March)

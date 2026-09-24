@@ -12,6 +12,7 @@ import logging
 from datetime import datetime, timedelta, date
 from decimal import Decimal, ROUND_HALF_UP
 from .roundoff_utils import apply_roundoff, calculate_roundoff
+from .year_filter_utils import get_current_financial_year, is_date_in_financial_year
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,7 +29,6 @@ logger.addHandler(file_handler)
 
 @login_required
 def add_invoice_with_products(request):
-    from .year_filter_utils import get_current_financial_year
     current_fy = request.session.get('selected_year', get_current_financial_year())
 
     if request.method == 'POST':
@@ -54,6 +54,23 @@ def add_invoice_with_products(request):
                     'title': 'Add Invoice with Products'
                 }
                 return render(request, 'purchases/combined_invoice_form.html', context)
+
+            if not is_date_in_financial_year(
+                invoice_form.cleaned_data['invoice_date'], current_fy
+            ):
+                messages.error(
+                    request,
+                    f'Invoice date must be within FY {current_fy}-{str(current_fy + 1)[2:]}.',
+                )
+                suppliers = SupplierMaster.objects.all().order_by('supplier_name')
+                products = ProductMaster.objects.all().order_by('product_name')
+                return render(request, 'purchases/combined_invoice_form.html', {
+                    'invoice_form': invoice_form,
+                    'suppliers': suppliers,
+                    'products': products,
+                    'current_fy': current_fy,
+                    'title': 'Add Invoice with Products',
+                })
             
             # Process products data from JavaScript
             products_data = request.POST.get('products_data')

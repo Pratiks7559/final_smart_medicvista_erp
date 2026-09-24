@@ -1,4 +1,4 @@
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Q, Max
 from django.utils import timezone
 from io import BytesIO
 from datetime import datetime, date
@@ -190,7 +190,7 @@ def get_batch_stock_status(product_id, batch_no, expiry_date=None, exclude_sale_
         return 0, 0, False
 
 
-def get_stock_status(product_id):
+def get_stock_status(product_id, start_date=None, end_date=None):
     """
     Calculate current stock for a product using StockManager
     Includes sales from both SalesMaster and CustomerChallanMaster
@@ -198,8 +198,55 @@ def get_stock_status(product_id):
     """
     try:
         from .stock_manager import StockManager
-        from .models import CustomerChallanMaster, StockIssueDetail
+        from .models import CustomerChallanMaster, StockIssueDetail, InventoryTransaction
         from django.db.models import Sum
+
+        if start_date or end_date:
+            transactions = InventoryTransaction.objects.filter(product_id=product_id)
+            if start_date:
+                transactions = transactions.filter(transaction_date__date__gte=start_date)
+            if end_date:
+                transactions = transactions.filter(transaction_date__date__lte=end_date)
+
+            totals = transactions.aggregate(
+                purchased=Sum('quantity', filter=Q(transaction_type__in=['PURCHASE', 'SUPPLIER_CHALLAN'])),
+                sold=Sum('quantity', filter=Q(transaction_type__in=['SALE', 'CUSTOMER_CHALLAN'])),
+                purchase_returns=Sum('quantity', filter=Q(transaction_type='PURCHASE_RETURN')),
+                sales_returns=Sum('quantity', filter=Q(transaction_type='SALES_RETURN')),
+                stock_issues=Sum('quantity', filter=Q(transaction_type='STOCK_ISSUE')),
+                free_quantity=Sum('free_quantity'),
+            )
+            batches = transactions.values('batch_no', 'expiry_date').annotate(
+                quantity=Sum('quantity'),
+                free_qty=Sum('free_quantity'),
+                mrp=Max('mrp'),
+                rate=Max('rate'),
+            ).order_by('batch_no')
+            expiry_stock = [{
+                'batch_no': batch['batch_no'],
+                'expiry': batch['expiry_date'],
+                'quantity': batch['quantity'] or 0,
+                'free_qty': batch['free_qty'] or 0,
+                'total_qty': (batch['quantity'] or 0) + (batch['free_qty'] or 0),
+                'purchase_rate': batch['rate'] or 0,
+                'mrp': batch['mrp'] or 0,
+            } for batch in batches]
+            current_stock = totals['purchased'] or 0
+            current_stock += totals['sold'] or 0
+            current_stock += totals['purchase_returns'] or 0
+            current_stock += totals['sales_returns'] or 0
+            current_stock += totals['stock_issues'] or 0
+            return {
+                'purchased': totals['purchased'] or 0,
+                'sold': abs(totals['sold'] or 0),
+                'purchase_returns': abs(totals['purchase_returns'] or 0),
+                'sales_returns': totals['sales_returns'] or 0,
+                'stock_issues': abs(totals['stock_issues'] or 0),
+                'current_stock': current_stock,
+                'total_free_qty': sum(item['free_qty'] for item in expiry_stock),
+                'current_stock_with_free': current_stock + sum(item['free_qty'] for item in expiry_stock),
+                'expiry_stock': expiry_stock,
+            }
         
         stock_summary = StockManager.get_stock_summary(product_id)
         

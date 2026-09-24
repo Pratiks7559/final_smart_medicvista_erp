@@ -32,7 +32,11 @@ class FastInventory:
         products_query = ProductMaster.objects.all().order_by('product_name')
         if search_query:
             products_query = products_query.filter(
-                Q(product_name__icontains=search_query) | Q(product_company__icontains=search_query)
+                Q(product_name__istartswith=search_query) |
+                Q(product_company__istartswith=search_query) |
+                Q(product_salt__istartswith=search_query) |
+                Q(product_category__istartswith=search_query) |
+                Q(product_barcode__istartswith=search_query)
             )
         if fy_product_ids is not None:
             products_query = products_query.filter(productid__in=fy_product_ids)

@@ -58,6 +58,7 @@ def add_supplier_challan(request):
                 transport_charges = Decimal(request.POST.get('transport_charges', 0))
                 challan_total = Decimal(request.POST.get('challan_total', 0))
                 whole_discount_amount = Decimal(request.POST.get('whole_discount_amount', 0))
+                whole_discount_type = request.POST.get('whole_discount_type', 'flat')
                 discount_mode = request.POST.get('discount_mode', 'whole')
                 products_data = json.loads(request.POST.get('products_data', '[]'))
                 
@@ -83,6 +84,9 @@ def add_supplier_challan(request):
 
                 # Apply whole discount if selected
                 if discount_mode == 'whole':
+                    if whole_discount_type == 'percentage':
+                        whole_discount_amount = products_total * whole_discount_amount / Decimal('100')
+                    whole_discount_amount = min(max(whole_discount_amount, Decimal('0')), products_total)
                     final_total = products_total + transport_charges - whole_discount_amount
                 else:
                     whole_discount_amount = Decimal('0')
@@ -452,6 +456,22 @@ def add_customer_challan(request):
                 challan_date = request.POST.get('challan_date')
                 customer_id = request.POST.get('customer_id')
                 series_id = request.POST.get('challan_series')
+
+                from datetime import datetime
+                from core.year_filter_utils import get_current_financial_year, is_date_in_financial_year
+                try:
+                    parsed_challan_date = datetime.strptime(challan_date, '%Y-%m-%d').date()
+                except (TypeError, ValueError):
+                    messages.error(request, 'Please enter a valid challan date.')
+                    return redirect('add_customer_challan')
+                fy_year = request.session.get('selected_year', get_current_financial_year())
+                if not is_date_in_financial_year(parsed_challan_date, fy_year):
+                    messages.error(
+                        request,
+                        f'Challan date must be within FY {fy_year}-{str(fy_year + 1)[2:]}.',
+                    )
+                    return redirect('add_customer_challan')
+
                 transport_charges = Decimal(request.POST.get('transport_charges', 0))
                 whole_discount_amount = Decimal(request.POST.get('whole_discount_amount', 0))
                 discount_mode = 'whole'
@@ -470,7 +490,6 @@ def add_customer_challan(request):
                 from core.year_filter_utils import get_current_financial_year
                 from django.db import transaction as _tx
                 
-                fy_year = request.session.get('selected_year', get_current_financial_year())
                 fy_start = _date(fy_year, 4, 1)
                 fy_end = _date(fy_year + 1, 3, 31)
                 

@@ -32,12 +32,12 @@ def sales2_report(request):
         end_date = None
     
     invoices = SalesInvoiceMaster.objects.select_related('customerid').order_by('-sales_invoice_date')
-    invoices = apply_year_filter(invoices, request, 'sales_invoice_date')
-    
-    if start_date and end_date:
-        invoices = invoices.filter(sales_invoice_date__range=[start_date, end_date])
-    else:
-        invoices = invoices[:500]
+    if start_date:
+        invoices = invoices.filter(sales_invoice_date__gte=start_date)
+    if end_date:
+        invoices = invoices.filter(sales_invoice_date__lte=end_date)
+    if not start_date and not end_date:
+        invoices = apply_year_filter(invoices, request, 'sales_invoice_date')[:500]
     
     invoice_data = []
     total_sales = total_received = total_pending = 0

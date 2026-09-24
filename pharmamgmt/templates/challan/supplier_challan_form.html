@@ -80,7 +80,7 @@
 
                         <input type="hidden" name="whole_discount_amount" id="challanWholeDiscAmountHidden" value="0">
                         <input type="hidden" name="whole_discount_type" id="challanWholeDiscTypeHidden" value="flat">
-                        <input type="hidden" name="discount_mode" id="challanDiscountModeHidden" value="product_wise">
+                        <input type="hidden" name="discount_mode" id="challanDiscountModeHidden" value="whole">
 
                         <!-- Products Section -->
                         <div class="ci-products-section">
@@ -1546,7 +1546,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('productsData').value = productsDataJson;
             // Sync whole discount hidden fields
             updateChallanWholeDisc();
-            document.getElementById('challanDiscountModeHidden').value = document.querySelector('input[name="challan_discount_mode"]:checked')?.value || 'product_wise';
+            document.getElementById('challanDiscountModeHidden').value = 'whole';
             
             // Disable submit button to prevent double submission
             const submitBtn = form.querySelector('button[type="submit"]');

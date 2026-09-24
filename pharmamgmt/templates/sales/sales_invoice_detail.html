@@ -351,13 +351,13 @@
                                 <button type="button" class="btn btn-sm btn-outline-primary py-0" onclick="openEditAddSeriesDialog()"><i class="fas fa-plus"></i> Add</button>
                             </div>
                             <input type="hidden" name="invoice_series_id" id="edit_invoice_series_id" value="{{ invoice.invoice_series_id|default:'' }}">
-                            <div class="series-display" id="editSeriesDisplay" onclick="toggleEditSeriesList()" tabindex="0" style="padding:8px 12px;border:1px solid #ced4da;border-radius:4px;background:#fff;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+                            <div class="series-display" id="editSeriesDisplay" onclick="toggleEditSeriesList()" tabindex="0" style="padding:8px 12px;border:1px solid #ced4da;border-radius:4px;background:#fff;color:#1f2937;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
                                 <span id="editSelectedSeriesText">{% if invoice.invoice_series %}{{ invoice.invoice_series.series_name }}{% else %}Select Series{% endif %}</span>
                                 <i class="fas fa-chevron-down"></i>
                             </div>
-                            <div id="editSeriesList" style="display:none;position:absolute;background:#fff;border:1px solid #ced4da;border-radius:4px;z-index:1000;min-width:150px;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+                            <div id="editSeriesList" style="display:none;position:absolute;background:#fff;color:#1f2937;border:1px solid #ced4da;border-radius:4px;z-index:1000;min-width:150px;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
                                 {% for series in invoice_series %}
-                                <div class="series-item" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #e9ecef;" onclick="selectEditSeries({{ series.series_id }}, '{{ series.series_name }}')" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#fff'">{{ series.series_name }}</div>
+                                <div class="series-item" style="padding:8px 12px;color:#1f2937;cursor:pointer;border-bottom:1px solid #e9ecef;" onclick="selectEditSeries({{ series.series_id }}, '{{ series.series_name }}')" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#fff'">{{ series.series_name }}</div>
                                 {% endfor %}
                             </div>
                             <div id="editInvoicePreview" style="display:none;margin-top:6px;padding:6px 8px;background:#e8f5e9;border-radius:4px;border-left:3px solid #4caf50;">
@@ -393,10 +393,10 @@
                             <div style="background:linear-gradient(135deg,#fffbeb,#ecfdf5);border:2px solid #d97706;border-radius:10px;padding:12px 16px;">
                                 <div style="font-weight:700;color:#374151;margin-bottom:10px;font-size:0.85rem;text-transform:uppercase;letter-spacing:.3px;"><i class="fas fa-tag" style="color:#d97706;"></i> Whole Invoice Discount</div>
                                 <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-                                    <label style="cursor:pointer;font-weight:600;font-size:0.85rem;display:flex;align-items:center;gap:5px;padding:4px 10px;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff;" id="editWholeDiscFlatLabel">
+                                    <label style="cursor:pointer;color:#1f2937;font-weight:600;font-size:0.85rem;display:flex;align-items:center;gap:5px;padding:4px 10px;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff;" id="editWholeDiscFlatLabel">
                                         <input type="radio" name="edit_whole_disc_type" value="flat" id="editWholeDiscFlat" onchange="updateEditWholeDisc()"> Flat ₹
                                     </label>
-                                    <label style="cursor:pointer;font-weight:600;font-size:0.85rem;display:flex;align-items:center;gap:5px;padding:4px 10px;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff;" id="editWholeDiscPctLabel">
+                                    <label style="cursor:pointer;color:#1f2937;font-weight:600;font-size:0.85rem;display:flex;align-items:center;gap:5px;padding:4px 10px;border:1.5px solid #e5e7eb;border-radius:6px;background:#fff;" id="editWholeDiscPctLabel">
                                         <input type="radio" name="edit_whole_disc_type" value="percentage" id="editWholeDiscPct" onchange="updateEditWholeDisc()"> %
                                     </label>
                                     <input type="number" id="editWholeDiscInput" min="0" step="any" placeholder="0" value="{{ invoice.whole_discount_amount|default:0 }}"

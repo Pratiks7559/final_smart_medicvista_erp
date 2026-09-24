@@ -473,3 +473,14 @@
         page-break-inside: avoid;
     }
 }
+
+/* Delete confirmation modal */
+.sid-modal[hidden] { display: none; }
+.sid-modal { position: fixed; inset: 0; z-index: 1050; display: grid; place-items: center; padding: 20px; }
+.sid-modal-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.58); }
+.sid-modal-dialog { position: relative; width: min(100%, 430px); padding: 30px; text-align: center; background: #fff; border-radius: 14px; box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28); }
+.sid-modal-close { position: absolute; top: 10px; right: 14px; border: 0; background: transparent; color: #8792a6; font-size: 1.6rem; cursor: pointer; }
+.sid-modal-icon { display: grid; width: 48px; height: 48px; margin: 0 auto 14px; place-items: center; color: #dc3545; background: #fff1f2; border-radius: 50%; }
+.sid-modal-dialog h2 { margin: 0 0 8px; color: #172033; font-size: 1.15rem; }
+.sid-modal-dialog p { margin: 0; color: #526078; }
+.sid-modal-actions { display: flex; justify-content: center; gap: 10px; margin-top: 24px; }

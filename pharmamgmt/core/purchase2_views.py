@@ -32,12 +32,12 @@ def purchase2_report(request):
         end_date = None
     
     invoices = InvoiceMaster.objects.select_related('supplierid').order_by('-invoice_date')
-    invoices = apply_year_filter(invoices, request, 'invoice_date')
-    
-    if start_date and end_date:
-        invoices = invoices.filter(invoice_date__range=[start_date, end_date])
-    else:
-        invoices = invoices[:500]
+    if start_date:
+        invoices = invoices.filter(invoice_date__gte=start_date)
+    if end_date:
+        invoices = invoices.filter(invoice_date__lte=end_date)
+    if not start_date and not end_date:
+        invoices = apply_year_filter(invoices, request, 'invoice_date')[:500]
     
     invoice_data = []
     total_purchases = total_paid = total_pending = 0

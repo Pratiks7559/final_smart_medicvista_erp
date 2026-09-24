@@ -260,6 +260,69 @@
     overflow: hidden;
 }
 
+.db-product-report {
+    background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 54%, #eff6ff 100%);
+    border: 1px solid #b8e4df;
+    border-radius: 14px;
+    padding: 1.35rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 8px 24px rgba(15, 118, 110, 0.08);
+}
+
+.db-product-report-controls {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) auto;
+    gap: 0.75rem;
+    align-items: start;
+}
+
+.db-product-search-wrap { position: relative; }
+.db-product-search {
+    width: 100%;
+    border: 1px solid #9ccfc9;
+    border-radius: 9px;
+    padding: 0.8rem 1rem;
+    font-size: 0.95rem;
+    background: rgba(255, 255, 255, 0.92);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.db-product-search:focus { outline: none; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.16); }
+.db-product-suggestions {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #b8e4df;
+    border-radius: 9px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.db-product-suggestion {
+    width: 100%;
+    border: 0;
+    background: #fff;
+    text-align: left;
+    padding: 0.7rem 0.85rem;
+    cursor: pointer;
+    border-bottom: 1px solid #edf5f4;
+    transition: background 0.15s, padding-left 0.15s;
+}
+
+.db-product-suggestion:hover, .db-product-suggestion:focus,
+.db-product-suggestion.is-active { background: #ccfbf1; padding-left: 1rem; outline: none; }
+.db-product-suggestion small { display: block; color: var(--text-muted); margin-top: 0.15rem; }
+.db-selected-product { margin-top: 0.55rem; color: #0f766e; font-size: 0.85rem; font-weight: 600; min-height: 1.2rem; }
+.db-report-error { color: var(--danger); font-size: 0.85rem; margin-top: 0.45rem; min-height: 1.2rem; }
+
+@media (max-width: 640px) {
+    .db-product-report-controls { grid-template-columns: 1fr; }
+}
+
 .db-fin-card::before {
     content: '';
     position: absolute;
@@ -498,6 +561,31 @@
         </div>
     </div>
 
+    <!-- ── PRODUCT BATCH HISTORY ── -->
+    <section class="db-product-report">
+        <div class="db-section-head">
+            <div class="db-section-title">
+                <div class="db-section-icon" style="background:linear-gradient(135deg,#0f766e,#0891b2);">
+                    <i class="fas fa-file-excel"></i>
+                </div>
+                Product Batch History
+            </div>
+            <span class="db-fy-label">All Financial Years</span>
+        </div>
+        <div class="db-product-report-controls">
+            <div class="db-product-search-wrap">
+                <input type="search" id="dashboardProductSearch" class="db-product-search"
+                      placeholder="Start typing product name, company, salt or barcode..." autocomplete="off">
+                <div id="dashboardProductSuggestions" class="db-product-suggestions" hidden></div>
+                <div id="dashboardSelectedProduct" class="db-selected-product"></div>
+                <div id="dashboardProductReportError" class="db-report-error" role="status"></div>
+            </div>
+            <button type="button" id="dashboardProductReportButton" class="db-btn db-btn-primary" disabled>
+                <i class="fas fa-download"></i> Get Excel Report
+            </button>
+        </div>
+    </section>
+
     <!-- ── FINANCIAL OVERVIEW ── -->
     <div class="db-financial">
         <div class="db-section-head">
@@ -641,4 +729,103 @@
 
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const search = document.getElementById('dashboardProductSearch');
+    const suggestions = document.getElementById('dashboardProductSuggestions');
+    const selected = document.getElementById('dashboardSelectedProduct');
+    const reportButton = document.getElementById('dashboardProductReportButton');
+    const error = document.getElementById('dashboardProductReportError');
+    let selectedProductId = '';
+    let searchRequest;
+    let activeSuggestionIndex = -1;
+
+    function clearSelection() {
+        selectedProductId = '';
+        selected.textContent = '';
+        reportButton.disabled = true;
+    }
+
+    function showSuggestions(items) {
+        suggestions.innerHTML = items.map(product => `
+            <button type="button" class="db-product-suggestion" data-product-id="${product.productid}"
+                    data-product-name="${String(product.product_name).replace(/"/g, '&quot;')}">
+                <strong>${product.product_name}</strong>
+                <small>${product.product_company || ''} ${product.product_packing ? '· ' + product.product_packing : ''}</small>
+            </button>
+        `).join('');
+        activeSuggestionIndex = -1;
+        suggestions.hidden = items.length === 0;
+    }
+
+    function selectSuggestion(option) {
+        if (!option) return;
+        selectedProductId = option.dataset.productId;
+        search.value = option.dataset.productName;
+        selected.textContent = `Selected: ${option.dataset.productName}`;
+        reportButton.disabled = false;
+        suggestions.hidden = true;
+        activeSuggestionIndex = -1;
+    }
+
+    function setActiveSuggestion(index) {
+        const options = suggestions.querySelectorAll('.db-product-suggestion');
+        if (!options.length) return;
+        activeSuggestionIndex = (index + options.length) % options.length;
+        options.forEach((option, optionIndex) => {
+            option.classList.toggle('is-active', optionIndex === activeSuggestionIndex);
+            option.setAttribute('aria-selected', optionIndex === activeSuggestionIndex ? 'true' : 'false');
+        });
+    }
+
+    search.addEventListener('keydown', function (event) {
+        const options = suggestions.querySelectorAll('.db-product-suggestion');
+        if (event.key === 'ArrowDown' && !suggestions.hidden && options.length) {
+            event.preventDefault();
+            setActiveSuggestion(activeSuggestionIndex + 1);
+        } else if (event.key === 'ArrowUp' && !suggestions.hidden && options.length) {
+            event.preventDefault();
+            setActiveSuggestion(activeSuggestionIndex - 1);
+        } else if (event.key === 'Enter' && !suggestions.hidden && activeSuggestionIndex >= 0) {
+            event.preventDefault();
+            selectSuggestion(options[activeSuggestionIndex]);
+        } else if (event.key === 'Escape') {
+            suggestions.hidden = true;
+            activeSuggestionIndex = -1;
+        }
+    });
+
+    search.addEventListener('input', function () {
+        clearSelection();
+        error.textContent = '';
+        const query = search.value.trim();
+        if (!query) {
+            suggestions.hidden = true;
+            return;
+        }
+        if (searchRequest) searchRequest.abort();
+        searchRequest = new AbortController();
+        fetch(`{% url 'product_search_suggestions' %}?q=${encodeURIComponent(query)}`, { signal: searchRequest.signal })
+            .then(response => response.json())
+            .then(data => showSuggestions(data.success ? data.suggestions : []))
+            .catch(fetchError => {
+                if (fetchError.name !== 'AbortError') error.textContent = 'Product search failed.';
+            });
+    });
+
+    suggestions.addEventListener('click', function (event) {
+        const option = event.target.closest('.db-product-suggestion');
+        selectSuggestion(option);
+    });
+
+    document.addEventListener('click', function (event) {
+        if (!event.target.closest('.db-product-search-wrap')) suggestions.hidden = true;
+    });
+
+    reportButton.addEventListener('click', function () {
+        if (!selectedProductId) return;
+        window.location.href = `{% url 'export_product_history_excel' %}?product_id=${encodeURIComponent(selectedProductId)}`;
+    });
+});
+</script>
 {% endblock %}

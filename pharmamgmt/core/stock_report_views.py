@@ -80,10 +80,6 @@ def stock_statement_report(request):
     if company_filter:
         products_query = products_query.filter(product_company__icontains=company_filter)
     
-    # Limit to 100 products if no filters
-    if not has_filters:
-        products_query = products_query[:100]
-    
     # Get unique categories and companies for filter dropdowns
     categories = ProductMaster.objects.values_list('product_category', flat=True).distinct().order_by('product_category')
     companies = ProductMaster.objects.values_list('product_company', flat=True).distinct().order_by('product_company')

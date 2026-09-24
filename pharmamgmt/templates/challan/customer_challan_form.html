@@ -23,7 +23,9 @@
                         <div class="cust-chal-form-row">
                             <div class="cust-chal-form-group">
                                 <label for="challan_date" class="cust-chal-label">Challan Date</label>
-                                <input type="date" name="challan_date" id="challan_date" class="cust-chal-input" required>
+                                    <input type="date" name="challan_date" id="challan_date" class="cust-chal-input"
+                                        min="{{ current_fy }}-04-01" max="{{ current_fy|add:'1' }}-03-31" required>
+                                        <small id="challanDateFyError" style="display:none;color:#b91c1c;font-weight:600;margin-top:4px;">Date must be within the selected financial year.</small>
                             </div>
                             <div class="cust-chal-form-group">
                                 <div class="cust-chal-series-header">
@@ -193,6 +195,32 @@ document.addEventListener('DOMContentLoaded', function() {
     if (dateField && !dateField.value) {
         const fyYear = parseInt('{{ current_fy|default:"" }}', 10);
         if (Number.isInteger(fyYear)) dateField.value = `${fyYear}-04-01`;
+    }
+    const challanDateError = document.getElementById('challanDateFyError');
+    if (dateField) {
+        const validateChallanDate = () => {
+            const invalid = dateField.value && (
+                dateField.value < dateField.min || dateField.value > dateField.max
+            );
+            dateField.setCustomValidity(invalid ? 'Date must be within the selected financial year.' : '');
+            dateField.style.borderColor = invalid ? '#b91c1c' : '';
+            if (challanDateError) challanDateError.style.display = invalid ? 'block' : 'none';
+            return invalid;
+        };
+        dateField.addEventListener('input', validateChallanDate);
+        dateField.addEventListener('change', validateChallanDate);
+        dateField.addEventListener('blur', () => {
+            if (validateChallanDate()) {
+                setTimeout(() => dateField.focus(), 0);
+            }
+        });
+        dateField.addEventListener('keydown', (event) => {
+            if ((event.key === 'Tab' || event.key === 'Enter') && validateChallanDate()) {
+                event.preventDefault();
+                dateField.focus();
+            }
+        });
+        validateChallanDate();
     }
     
     // Auto-select first challan series

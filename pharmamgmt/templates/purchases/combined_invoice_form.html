@@ -34,7 +34,9 @@
                                         <label for="invoice_date" class="ci-field-label">Invoice Date*</label>
                                         <input type="date" name="invoice_date" id="invoice_date" class="ci-form-input" 
                                                value="{{ invoice_form.invoice_date.value|default:'' }}" 
+                                                 min="{{ current_fy }}-04-01" max="{{ current_fy|add:'1' }}-03-31"
                                                title="Enter invoice date" required>
+                                             <small id="invoiceDateFyError" style="display:none;color:#b91c1c;font-weight:600;margin-top:4px;">Date must be within the selected financial year.</small>
                                     </div>
                                 </div>
                             </div>
@@ -1500,6 +1502,34 @@ function duplicateLastProductRow() {
 // Enhanced date input handling
 document.addEventListener('DOMContentLoaded', function() {
     setCurrentDate();
+    const invoiceDateField = document.getElementById('invoice_date');
+    const invoiceDateError = document.getElementById('invoiceDateFyError');
+    if (invoiceDateField) {
+        const validateInvoiceDate = () => {
+            const invalid = invoiceDateField.value && (
+                invoiceDateField.value < invoiceDateField.min ||
+                invoiceDateField.value > invoiceDateField.max
+            );
+            invoiceDateField.setCustomValidity(invalid ? 'Date must be within the selected financial year.' : '');
+            invoiceDateField.style.borderColor = invalid ? '#b91c1c' : '';
+            if (invoiceDateError) invoiceDateError.style.display = invalid ? 'block' : 'none';
+            return invalid;
+        };
+        invoiceDateField.addEventListener('input', validateInvoiceDate);
+        invoiceDateField.addEventListener('change', validateInvoiceDate);
+        invoiceDateField.addEventListener('blur', () => {
+            if (validateInvoiceDate()) {
+                setTimeout(() => invoiceDateField.focus(), 0);
+            }
+        });
+        invoiceDateField.addEventListener('keydown', (event) => {
+            if ((event.key === 'Tab' || event.key === 'Enter') && validateInvoiceDate()) {
+                event.preventDefault();
+                invoiceDateField.focus();
+            }
+        });
+        validateInvoiceDate();
+    }
     
     // Handle expiry date inputs with MM-YYYY format - ONLY for expiry fields
     document.addEventListener('input', function(e) {
