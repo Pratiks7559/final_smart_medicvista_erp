@@ -49,12 +49,15 @@
     background: white;
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    overflow: hidden;
+    overflow-x: auto;
 }
 
 .txn-table {
     width: 100%;
+    min-width: 1080px;
     border-collapse: collapse;
+    color: #1f2937;
+    background: #ffffff;
 }
 
 .txn-table thead {
@@ -75,10 +78,46 @@
     padding: 15px;
     border-bottom: 1px solid #f3f4f6;
     font-size: 14px;
+    color: #1f2937 !important;
+    background: #ffffff;
+    vertical-align: middle;
 }
 
 .txn-table tbody tr:hover {
     background: #f9fafb;
+}
+
+.txn-table tbody tr:hover td {
+    background: #f9fafb;
+}
+
+/* Keep financial values readable even when global table styles are present. */
+.txn-table th:nth-child(1),
+.txn-table td:nth-child(1) { width: 145px; white-space: nowrap; }
+.txn-table th:nth-child(7),
+.txn-table td:nth-child(7),
+.txn-table th:nth-child(8),
+.txn-table td:nth-child(8),
+.txn-table th:nth-child(9),
+.txn-table td:nth-child(9) {
+    min-width: 105px;
+    white-space: nowrap;
+    text-align: right;
+    color: #111827 !important;
+    font-weight: 600;
+}
+.txn-table th:nth-child(10),
+.txn-table td:nth-child(10) {
+    min-width: 260px;
+    max-width: 360px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    color: #374151 !important;
+}
+.txn-table td:nth-child(4) {
+    min-width: 130px;
+    white-space: nowrap;
+    color: #374151 !important;
 }
 
 .txn-type-badge {
@@ -213,14 +252,14 @@
                     <th>Free Qty</th>
                     <th>Rate</th>
                     <th>Value</th>
-                    <th>Balance</th>
+                    <th>Balance After Posting</th>
                     <th>Remarks</th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in transactions %}
                 <tr>
-                    <td>{{ item.transaction.transaction_date|date:"d-m-Y H:i" }}</td>
+                    <td>{{ item.transaction_display_date|date:"d-m-Y" }}</td>
                     <td>
                         <span class="txn-type-badge 
                             {% if 'PURCHASE' in item.transaction.transaction_type %}purchase

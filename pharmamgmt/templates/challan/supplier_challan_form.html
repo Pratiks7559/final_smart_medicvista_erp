@@ -78,33 +78,6 @@
                             </div>
                         </div>
 
-                        <!-- Discount Mode Section -->
-                        <div class="ci-discount-mode-section">
-                            <div class="ci-disc-title"><i class="fas fa-tag"></i> Discount Type</div>
-                            <div class="ci-disc-options">
-                                <label class="ci-disc-option-label">
-                                    <input type="radio" name="challan_discount_mode" id="challanDiscModeProductWise" value="product_wise" checked onchange="onChallanDiscountModeChange()">
-                                    <span>Product-wise Discount</span>
-                                </label>
-                                <label class="ci-disc-option-label">
-                                    <input type="radio" name="challan_discount_mode" id="challanDiscModeWhole" value="whole" onchange="onChallanDiscountModeChange()">
-                                    <span>Whole Challan Discount</span>
-                                </label>
-                            </div>
-                            <div id="challanWholeDiscSection" class="ci-whole-disc-section" style="display:none;">
-                                <div class="ci-whole-disc-title">Whole Challan Discount</div>
-                                <div class="ci-whole-disc-row">
-                                    <label class="ci-whole-disc-type-label" id="challanWholeDiscFlatLabel">
-                                        <input type="radio" name="challan_whole_disc_type" value="flat" id="challanWholeDiscFlat" checked onchange="updateChallanWholeDisc()"> Flat ₹
-                                    </label>
-                                    <label class="ci-whole-disc-type-label" id="challanWholeDiscPctLabel">
-                                        <input type="radio" name="challan_whole_disc_type" value="percentage" id="challanWholeDiscPct" onchange="updateChallanWholeDisc()"> %
-                                    </label>
-                                    <input type="number" id="challanWholeDiscInput" min="0" step="any" placeholder="0" value="0" class="ci-whole-disc-input" oninput="updateChallanWholeDisc()">
-                                    <span class="ci-whole-disc-display-text">Discount: <strong id="challanWholeDiscDisplay" style="color:#dc2626;">₹0.00</strong></span>
-                                </div>
-                            </div>
-                        </div>
                         <input type="hidden" name="whole_discount_amount" id="challanWholeDiscAmountHidden" value="0">
                         <input type="hidden" name="whole_discount_type" id="challanWholeDiscTypeHidden" value="flat">
                         <input type="hidden" name="discount_mode" id="challanDiscountModeHidden" value="product_wise">
@@ -117,7 +90,7 @@
                                     <small class="ci-keyboard-shortcuts">⚡ F2 (Quick Search), Ctrl+Enter (Add Product), Ctrl+D (Duplicate), Ctrl+S (Save), Alt+W (Batch)</small>
                                 </div>
                                 <div class="ci-header-buttons">
-                                    <button type="button" class="ci-add-product-btn" onclick="addProductRow()">
+                                    <button type="button" class="ci-add-product-btn" onclick="openQuickProductSearch()">
                                         <i class="fas fa-plus"></i> Add Product
                                     </button>
                                 </div>
@@ -133,7 +106,7 @@
                                             <th class="ci-th-challan-rate">challan Rate</th>
                                             <th class="ci-th-qty">Qty</th>
                                             <th class="ci-th-free-qty">Free Qty</th>
-                                            <th class="ci-th-discount">Disc Type / Amt</th>
+                                            <th class="ci-th-discount">Disc %</th>
                                             <th class="ci-th-cgst">CGST %</th>
                                             <th class="ci-th-sgst">SGST %</th>
                                             <th class="ci-th-rate-a">Rate A</th>
@@ -162,9 +135,16 @@
                                         <td style="padding:4px 12px; text-align:right;">GST Total (CGST + SGST):</td>
                                         <td style="padding:4px 12px; text-align:right;">₹<span id="challanGstTotal">0.00</span></td>
                                     </tr>
-                                    <tr id="challanWholeDiscRow" style="display:none;color:#c62828;">
-                                        <td style="padding:4px 12px; text-align:right; font-weight:600;">Whole Discount (-):</td>
-                                        <td style="padding:4px 12px; text-align:right; font-weight:600;">- ₹<span id="challanWholeDiscRowVal">0.00</span></td>
+                                    <tr id="challanWholeDiscRow">
+                                        <td style="padding:4px 12px; text-align:right; color:#c62828;">
+                                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                                                <span>Whole Discount:</span>
+                                                <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="challan_whole_disc_type" value="flat" id="challanWholeDiscFlat" checked onchange="updateChallanWholeDisc()"> Flat ₹</label>
+                                                <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="challan_whole_disc_type" value="percentage" id="challanWholeDiscPct" onchange="updateChallanWholeDisc()"> %</label>
+                                                <input type="number" id="challanWholeDiscInput" min="0" step="any" placeholder="0" value="0" style="padding:4px 8px;border:1.5px solid #ffb300;border-radius:6px;width:110px;font-size:0.9rem;" oninput="updateChallanWholeDisc()">
+                                            </div>
+                                        </td>
+                                        <td style="padding:4px 12px; text-align:right; font-weight:600; color:#c62828;">- ₹<span id="challanWholeDiscRowVal">0.00</span></td>
                                     </tr>
                                     <tr style="border-top:2px solid #333;">
                                         <td style="padding:6px 12px; text-align:right; font-weight:700;">Challan Total:</td>
@@ -529,12 +509,9 @@ function addProductRow() {
         <td><input type="number" class="qty" placeholder="Qty" min="0.01" step="0.01" onchange="calculateRowTotal(${productRowIndex})" required></td>
         <td><input type="number" class="free-qty" placeholder="Free Qty" min="0" step="0.01" value="0"></td>
         <td>
-            <div style="display:flex;flex-direction:column;gap:3px;min-width:120px;">
-                <div style="display:flex;gap:6px;font-size:11px;">
-                    <label style="cursor:pointer;"><input type="radio" name="disc_type_${productRowIndex}" class="disc-type-radio" value="flat" checked onchange="onDiscTypeChange(${productRowIndex})"> Flat ₹</label>
-                    <label style="cursor:pointer;"><input type="radio" name="disc_type_${productRowIndex}" class="disc-type-radio" value="percentage" onchange="onDiscTypeChange(${productRowIndex})"> %</label>
-                </div>
-                <input type="number" class="discount" step="0.01" placeholder="0" min="0" onchange="calculateRowTotal(${productRowIndex})" style="width:100%;">
+            <div style="min-width:90px;">
+                <input type="hidden" class="disc-type-radio" value="percentage">
+                <input type="number" class="discount" step="0.01" placeholder="% disc" min="0" max="100" onchange="calculateRowTotal(${productRowIndex})" style="width:100%;">
             </div>
         </td>
         <td><input type="number" class="cgst-rate" step="0.01" placeholder="CGST %" min="0" max="50" value="2.5" onchange="calculateRowTotal(${productRowIndex})"></td>
@@ -564,62 +541,25 @@ function removeProductRow(rowIndex) {
 function calculateRowTotal(rowIndex) {
     const row = document.getElementById(`productRow_${rowIndex}`);
     if (!row) return;
-    
     const rate = parseFloat(row.querySelector('.challan-rate').value) || 0;
     const qty = parseFloat(row.querySelector('.qty').value) || 0;
     const discount = parseFloat(row.querySelector('.discount').value) || 0;
     const cgstRate = parseFloat(row.querySelector('.cgst-rate').value) || 0;
     const sgstRate = parseFloat(row.querySelector('.sgst-rate').value) || 0;
-    const discTypeEl = row.querySelector('.disc-type-radio:checked');
-    const discType = discTypeEl ? discTypeEl.value : 'flat';
-    
     const subtotal = rate * qty;
-    const discountAmount = discType === 'percentage' ? (subtotal * discount / 100) : discount;
+    const discountAmount = subtotal * discount / 100; // always percentage
     const afterDiscount = subtotal - discountAmount;
-    const cgstAmount = (afterDiscount * cgstRate) / 100;
-    const sgstAmount = (afterDiscount * sgstRate) / 100;
-    const total = afterDiscount + cgstAmount + sgstAmount;
-    
+    const total = afterDiscount + (afterDiscount * cgstRate / 100) + (afterDiscount * sgstRate / 100);
     row.querySelector('.row-total').textContent = total.toFixed(2);
     calculatechallanTotal();
 }
 
-function onChallanDiscountModeChange() {
-    const mode = document.querySelector('input[name="challan_discount_mode"]:checked')?.value || 'product_wise';
-    const wholeSection = document.getElementById('challanWholeDiscSection');
-    const modeHidden = document.getElementById('challanDiscountModeHidden');
-    wholeSection.style.display = mode === 'whole' ? 'block' : 'none';
-    if (modeHidden) modeHidden.value = mode;
-    // Show/hide product-wise discount column
-    document.querySelectorAll('#productRows tr').forEach(row => {
-        const discCell = row.querySelector('td:nth-child(8)');
-        if (discCell) discCell.style.display = mode === 'product_wise' ? '' : 'none';
-    });
-    const discHeader = document.querySelector('.ci-th-discount');
-    if (discHeader) discHeader.style.display = mode === 'product_wise' ? '' : 'none';
-    if (mode === 'product_wise') {
-        document.getElementById('challanWholeDiscInput').value = '0';
-        document.getElementById('challanWholeDiscAmountHidden').value = '0';
-    }
-    calculatechallanTotal();
-}
+function onChallanDiscountModeChange() {}
 
-function updateChallanWholeDisc() {
-    const discType = document.querySelector('input[name="challan_whole_disc_type"]:checked')?.value || 'flat';
-    const discVal = parseFloat(document.getElementById('challanWholeDiscInput')?.value) || 0;
-    // Style active label
-    const flatLbl = document.getElementById('challanWholeDiscFlatLabel');
-    const pctLbl = document.getElementById('challanWholeDiscPctLabel');
-    if (flatLbl) { flatLbl.style.borderColor = discType === 'flat' ? '#d97706' : ''; flatLbl.style.background = discType === 'flat' ? '#fef3c7' : ''; }
-    if (pctLbl) { pctLbl.style.borderColor = discType === 'percentage' ? '#d97706' : ''; pctLbl.style.background = discType === 'percentage' ? '#fef3c7' : ''; }
-    document.getElementById('challanWholeDiscTypeHidden').value = discType;
-    calculatechallanTotal();
-}
+function updateChallanWholeDisc() { calculatechallanTotal(); }
 
 function calculatechallanTotal() {
-    let subtotal = 0;
-    let totalDiscount = 0;
-    let totalGst = 0;
+    let subtotal = 0, totalDiscount = 0, totalGst = 0;
 
     document.querySelectorAll('#productRows tr').forEach(row => {
         const rate = parseFloat(row.querySelector('.challan-rate')?.value) || 0;
@@ -627,42 +567,34 @@ function calculatechallanTotal() {
         const discount = parseFloat(row.querySelector('.discount')?.value) || 0;
         const cgst = parseFloat(row.querySelector('.cgst-rate')?.value) || 0;
         const sgst = parseFloat(row.querySelector('.sgst-rate')?.value) || 0;
-        const discTypeEl = row.querySelector('.disc-type-radio:checked');
-        const discType = discTypeEl ? discTypeEl.value : 'flat';
         const base = rate * qty;
-        const discAmt = discType === 'percentage' ? (base * discount / 100) : discount;
+        const discAmt = base * discount / 100; // always percentage
         const afterDiscount = base - discAmt;
-        const gst = (afterDiscount * (cgst + sgst)) / 100;
         subtotal += base;
         totalDiscount += discAmt;
-        totalGst += gst;
+        totalGst += (afterDiscount * (cgst + sgst)) / 100;
     });
 
     const discountPct = subtotal > 0 ? (totalDiscount / subtotal * 100) : 0;
     const productsTotal = subtotal - totalDiscount + totalGst;
     const transportCharges = parseFloat(document.getElementById('transport_charges').value) || 0;
 
-    // Whole discount
-    const discMode = document.querySelector('input[name="challan_discount_mode"]:checked')?.value || 'product_wise';
+    // Whole discount - always active
+    const wholeDiscType = document.querySelector('input[name="challan_whole_disc_type"]:checked')?.value || 'flat';
+    const wholeDiscVal = parseFloat(document.getElementById('challanWholeDiscInput')?.value) || 0;
     let wholeDiscAmt = 0;
-    if (discMode === 'whole') {
-        const wholeDiscType = document.querySelector('input[name="challan_whole_disc_type"]:checked')?.value || 'flat';
-        const wholeDiscVal = parseFloat(document.getElementById('challanWholeDiscInput')?.value) || 0;
+    if (wholeDiscVal > 0) {
         wholeDiscAmt = wholeDiscType === 'percentage'
             ? Math.min(productsTotal * wholeDiscVal / 100, productsTotal)
             : Math.min(wholeDiscVal, productsTotal);
-        const dispEl = document.getElementById('challanWholeDiscDisplay');
-        if (dispEl) dispEl.textContent = '\u20b9' + wholeDiscAmt.toFixed(2);
-        const rowEl = document.getElementById('challanWholeDiscRow');
-        if (rowEl) { rowEl.style.display = wholeDiscAmt > 0 ? '' : 'none'; }
+    }
+    const rowEl = document.getElementById('challanWholeDiscRow');
+    if (rowEl) {
         const rowVal = document.getElementById('challanWholeDiscRowVal');
         if (rowVal) rowVal.textContent = wholeDiscAmt.toFixed(2);
-        document.getElementById('challanWholeDiscAmountHidden').value = wholeDiscAmt.toFixed(2);
-    } else {
-        const rowEl = document.getElementById('challanWholeDiscRow');
-        if (rowEl) rowEl.style.display = 'none';
-        document.getElementById('challanWholeDiscAmountHidden').value = '0';
     }
+    document.getElementById('challanWholeDiscAmountHidden').value = wholeDiscAmt.toFixed(2);
+    document.getElementById('challanWholeDiscTypeHidden').value = wholeDiscType;
 
     const rawTotal = productsTotal + transportCharges - wholeDiscAmt;
     const roundedTotal = Math.round(rawTotal);
@@ -718,11 +650,8 @@ function formatExpiryDate(input) {
 
 // Set current date in YYYY-MM-DD format for HTML5 date input
 function setCurrentDate() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const dateString = `${year}-${month}-${day}`;
+    const fyYear = parseInt('{{ current_fy|default:"" }}', 10);
+    const dateString = Number.isInteger(fyYear) ? `${fyYear}-04-01` : '';
     
     const challanDateInput = document.querySelector('input[name="challan_date"]');
     if (challanDateInput && !challanDateInput.value) {
@@ -1128,7 +1057,7 @@ function collectProductsData() {
                 discount: discount,
                 cgst: cgstRate,
                 sgst: sgstRate,
-                calculation_mode: (row.querySelector('.disc-type-radio:checked')?.value || 'flat'),
+                calculation_mode: 'percentage',
                 rate_a: rateA,
                 rate_b: rateB,
                 rate_c: rateC
@@ -1374,157 +1303,153 @@ function showBatchSelectionDialog(productId, rowIndex) {
 function createBatchSelectionModal(batches, rowIndex, productId) {
     const existingModal = document.getElementById('batchSelectionModal');
     if (existingModal) existingModal.remove();
-    
     const modalHTML = `
-        <div id="batchSelectionModal" class="batch-modal-overlay">
-            <div class="batch-modal-content">
-                <div class="batch-modal-header">
-                    <h3>Select Existing Batch or Update Stock</h3>
-                    <button type="button" class="batch-modal-close" onclick="closeBatchModal()">&times;</button>
+        <div id="batchSelectionModal" tabindex="0" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:10000;display:flex;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:10px;width:96%;max-width:780px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.28);overflow:hidden;">
+                <div style="padding:14px 20px;background:#1e40af;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                    <h3 style="margin:0;font-size:1rem;font-weight:600;">Select Batch</h3>
+                    <button onclick="closeBatchModal()" style="background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;">&times;</button>
                 </div>
-                <div class="batch-modal-body">
-                    <div class="batch-search">
-                        <input type="text" id="batchSearch" placeholder="Search batch..." onkeyup="filterBatches()">
-                    </div>
-                    <div class="batch-list" id="batchList">
-                        ${batches.map(batch => `
-                            <div class="batch-item" onclick="selectBatch('${batch.batch_no}', ${rowIndex}, ${JSON.stringify(batch).replace(/"/g, '&quot;')})">
-                                <div class="batch-info">
-                                    <div class="batch-no"><strong>${batch.batch_no}</strong></div>
-                                    <div class="batch-details">
-                                        <span>Exp: ${batch.expiry}</span>
-                                        <span class="${batch.stock <= 10 ? 'text-danger' : 'text-success'}">Stock: ${batch.stock}</span>
-                                        <span>MRP: ₹${batch.mrp}</span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        `).join('')}
+                <div style="padding:12px 16px;flex:1;overflow-y:auto;background:#fff;">
+                    <input type="text" id="batchSearch" placeholder="Search batch..." oninput="filterBatches()" style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:0.9rem;box-sizing:border-box;margin-bottom:10px;">
+                    <div id="batchSelectionStatus" style="margin:0 0 8px;padding:6px 10px;border-left:3px solid #2563eb;background:#eff6ff;color:#1e3a8a;font-size:0.8rem;font-weight:600;">Selected batch: ${batches[0]?.batch_no || '-'}</div>
+                    <div id="batchList" style="border:1px solid #e2e8f0;border-radius:6px;overflow:auto;max-height:320px;">
+                        <table style="width:100%;min-width:680px;border-collapse:collapse;font-size:0.85rem;table-layout:fixed;color:#1f2937;">
+                            <thead><tr style="background:#f1f5f9;">
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Batch No</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Packing</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Expiry</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">MRP</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Rate A</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Stock</th>
+                            </tr></thead>
+                            <tbody>
+                            ${batches.map(b => `
+                                <tr tabindex="-1" class="sc-batch-row" onclick="selectBatch('${b.batch_no}', ${rowIndex}, ${JSON.stringify(b).replace(/"/g, '&quot;')})" style="display:table-row;cursor:pointer;background:#fff;transition:background 0.12s;">
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;color:#1f2937!important;"><strong style="color:#1f2937!important;">${b.batch_no}</strong></td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;color:#1f2937!important;">${b.packing || '-'}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;color:#1f2937!important;">${b.expiry}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;color:#1f2937!important;">&#8377;${b.mrp}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;color:#2563eb!important;font-weight:600;">${b.rate_a > 0 ? '&#8377;' + b.rate_a.toFixed(2) : '-'}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;color:#1f2937!important;" class="${b.stock <= 10 ? 'text-danger' : 'text-success'}">${b.stock}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="batch-modal-footer">
-                    <div class="batch-shortcuts">
-                        <small>↑↓: Navigate | Enter: Select | Esc: Close</small>
-                    </div>
-                    <button type="button" class="btn btn-secondary" onclick="closeBatchModal()">Cancel</button>
+                <div style="padding:10px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                    <small style="color:#64748b;">&#8593;&#8595;: Navigate | Enter: Select | Esc: Close</small>
+                    <button onclick="closeBatchModal()" class="btn btn-secondary">Cancel</button>
                 </div>
             </div>
-        </div>
-    `;
-    
+        </div>`;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    setTimeout(() => {
+    (() => {
+        const modal = document.getElementById('batchSelectionModal');
         const searchInput = document.getElementById('batchSearch');
-        searchInput.focus();
-        
-        const firstBatch = document.querySelector('.batch-item');
-        if (firstBatch) firstBatch.classList.add('batch-selected');
-        
-        searchInput.addEventListener('keydown', function(e) {
-            const visibleItems = document.querySelectorAll('.batch-item:not([style*="display: none"])');
-            let selectedIndex = Array.from(visibleItems).findIndex(item => item.classList.contains('batch-selected'));
-            
-            switch(e.key) {
-                case 'ArrowDown':
-                    e.preventDefault();
-                    if (selectedIndex < visibleItems.length - 1) {
-                        if (selectedIndex >= 0) visibleItems[selectedIndex].classList.remove('batch-selected');
-                        selectedIndex++;
-                        visibleItems[selectedIndex].classList.add('batch-selected');
-                        visibleItems[selectedIndex].scrollIntoView({ block: 'nearest' });
-                    }
-                    break;
-                    
-                case 'ArrowUp':
-                    e.preventDefault();
-                    if (selectedIndex > 0) {
-                        visibleItems[selectedIndex].classList.remove('batch-selected');
-                        selectedIndex--;
-                        visibleItems[selectedIndex].classList.add('batch-selected');
-                        visibleItems[selectedIndex].scrollIntoView({ block: 'nearest' });
-                    }
-                    break;
-                    
-                case 'Enter':
-                    e.preventDefault();
-                    if (selectedIndex >= 0 && visibleItems[selectedIndex]) {
-                        visibleItems[selectedIndex].click();
-                    }
-                    break;
-                    
-                case 'Escape':
-                    e.preventDefault();
-                    closeBatchModal();
-                    break;
+        const batchList = document.getElementById('batchList');
+        let selectedIndex = 0;
+
+        const getVisibleBatches = () => Array.from(
+            batchList.querySelectorAll('.sc-batch-row')
+        ).filter(item => item.style.display !== 'none');
+
+        const updateSelection = (items, index, shouldScroll = true) => {
+            const status = document.getElementById('batchSelectionStatus');
+            items.forEach((item, itemIndex) => {
+                const isSelected = itemIndex === index;
+                item.classList.toggle('sc-batch-selected', isSelected);
+                item.dataset.selected = isSelected ? 'true' : 'false';
+                item.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+                item.style.backgroundColor = isSelected ? '#dbeafe' : '#fff';
+                item.style.outline = isSelected ? '2px solid #2563eb' : 'none';
+            });
+            if (status) status.textContent = items[index]
+                ? `Selected batch: ${items[index].querySelector('td')?.textContent.trim() || '-'}`
+                : 'Selected batch: -';
+            if (items[index] && shouldScroll) {
+                items[index].scrollIntoView({block: 'nearest', inline: 'nearest'});
             }
+        };
+
+        searchInput.focus({preventScroll: true});
+        updateSelection(getVisibleBatches(), selectedIndex, false);
+        modal._resetBatchSelection = function() {
+            selectedIndex = 0;
+            updateSelection(getVisibleBatches(), selectedIndex, false);
+        };
+        searchInput.addEventListener('input', () => {
+            modal._resetBatchSelection();
         });
-    }, 100);
+
+        const handleBatchNavigation = function(e) {
+            const key = e.key || e.code;
+            const navigationKeys = ['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', 'Escape'];
+            if (!navigationKeys.includes(key) && !['Down', 'Up'].includes(key)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const items = getVisibleBatches();
+            if (key === 'Escape') { closeBatchModal(); return; }
+            if (!items.length) return;
+            selectedIndex = Math.max(0, Math.min(selectedIndex, items.length - 1));
+
+            if (key === 'ArrowDown' || key === 'Down') selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            else if (key === 'ArrowUp' || key === 'Up') selectedIndex = Math.max(selectedIndex - 1, 0);
+            else if (key === 'Home') selectedIndex = 0;
+            else if (key === 'End') selectedIndex = items.length - 1;
+            else if (key === 'Enter') { items[selectedIndex]?.click(); return; }
+
+            updateSelection(items, selectedIndex);
+        };
+        modal._batchNavigationHandler = handleBatchNavigation;
+        document.addEventListener('keydown', handleBatchNavigation, true);
+    })();
 }
 
 function selectBatch(batchNo, rowIndex, batchData) {
     const row = document.getElementById(`productRow_${rowIndex}`);
     if (row) {
         row.querySelector('.batch-no').value = batchNo;
-        // Ensure expiry is in MM-YYYY format
-        let expiry = batchData.expiry;
-        if (expiry && expiry.length === 10 && expiry.includes('-')) {
-            // Convert YYYY-MM-DD to MM-YYYY if needed
-            const parts = expiry.split('-');
-            if (parts.length === 3 && parts[0].length === 4) {
-                expiry = `${parts[1]}-${parts[0]}`;
-            }
-        }
+        let expiry = batchData.expiry || '';
+        if (expiry.length === 10 && expiry.includes('-') && expiry.split('-')[0].length === 4)
+            expiry = expiry.split('-')[1] + '-' + expiry.split('-')[0];
         row.querySelector('.expiry').value = expiry;
-        row.querySelector('.mrp').value = batchData.mrp;
-        row.querySelector('.challan-rate').value = batchData.challan_rate || '';
-        row.querySelector('.cgst-rate').value = '9';
-        row.querySelector('.sgst-rate').value = '9';
-        
+        row.querySelector('.mrp').value = batchData.mrp || '';
+        row.querySelector('.challan-rate').value = batchData.purchase_rate || '';
+        if (row.querySelector('.rate-a') && batchData.rate_a > 0) row.querySelector('.rate-a').value = batchData.rate_a;
         calculateRowTotal(rowIndex);
-        
-        // Auto-focus on QTY field after batch selection
-        setTimeout(() => {
-            const qtyField = row.querySelector('.qty');
-            if (qtyField) {
-                qtyField.focus();
-                qtyField.select();
-            }
-        }, 100);
+        setTimeout(() => { const q = row.querySelector('.qty'); if(q){q.focus();q.select();} }, 100);
     }
     closeBatchModal();
 }
 
 function closeBatchModal() {
     const modal = document.getElementById('batchSelectionModal');
-    if (modal) modal.remove();
+    if (modal) {
+        if (modal._batchNavigationHandler) {
+            document.removeEventListener('keydown', modal._batchNavigationHandler, true);
+        }
+        modal.remove();
+    }
 }
 
 function filterBatches() {
-    const searchTerm = document.getElementById('batchSearch').value.toLowerCase();
-    const batchItems = document.querySelectorAll('.batch-item');
-    
-    batchItems.forEach(item => {
-        const batchNo = item.querySelector('.batch-no').textContent.toLowerCase();
-        if (batchNo.includes(searchTerm)) {
-            item.style.display = 'block';
-        } else {
-            item.style.display = 'none';
-        }
+    const term = document.getElementById('batchSearch').value.toLowerCase();
+    const items = Array.from(document.querySelectorAll('#batchList .sc-batch-row'));
+    items.forEach(item => {
+        item.style.display = item.textContent.toLowerCase().includes(term) ? '' : 'none';
     });
+    const firstVisible = items.find(item => item.style.display !== 'none');
+    items.forEach(item => {
+        item.classList.toggle('sc-batch-selected', item === firstVisible);
+        item.dataset.selected = item === firstVisible ? 'true' : 'false';
+        item.setAttribute('aria-selected', item === firstVisible ? 'true' : 'false');
+    });
+    const modal = document.getElementById('batchSelectionModal');
+    if (modal && modal._resetBatchSelection) modal._resetBatchSelection();
 }
 
-function onDiscTypeChange(rowIndex) {
-    const row = document.getElementById(`productRow_${rowIndex}`);
-    if (!row) return;
-    const discInput = row.querySelector('.discount');
-    const discTypeEl = row.querySelector('.disc-type-radio:checked');
-    if (discInput && discTypeEl) {
-        discInput.placeholder = discTypeEl.value === 'percentage' ? '% e.g. 5' : '₹ amount';
-        discInput.max = discTypeEl.value === 'percentage' ? '100' : '';
-    }
-    calculateRowTotal(rowIndex);
-}
+function onDiscTypeChange(rowIndex) { calculateRowTotal(rowIndex); }
 
 // Form submission handler
 document.addEventListener('DOMContentLoaded', function() {

@@ -949,7 +949,7 @@ function addProductRow(data = {}) {
             </div>
             <div class="form-group">
                 <label>Batch No:</label>
-                <input type="text" name="products[${productId}][batch_no]" value="${data.product_batch_no || ''}">
+                <input type="text" name="products[${productId}][batch_no]" value="${data.product_batch_no || ''}" class="edit-batch-no" data-product-id="${productId}">
             </div>
             <div class="form-group">
                 <label>Expiry (MM-YYYY):</label>
@@ -1051,6 +1051,24 @@ document.addEventListener('keydown', function(e) {
         const modal = document.getElementById('editInvoiceModal');
         if (modal && modal.style.display === 'block') {
             openQuickProductSearch();
+        }
+    }
+    
+    // Alt+W: Batch selection (only when edit modal is open)
+    if (e.altKey && e.key.toLowerCase() === 'w') {
+        e.preventDefault();
+        const modal = document.getElementById('editInvoiceModal');
+        if (modal && modal.style.display === 'block') {
+            const focused = document.activeElement;
+            if (focused && focused.classList.contains('edit-batch-no')) {
+                const productRow = focused.closest('.product-row');
+                const productSelect = productRow ? productRow.querySelector('select[name*="[productid]"]') : null;
+                if (productSelect && productSelect.value) {
+                    showBatchSelectionDialog(productSelect.value, focused);
+                } else {
+                    alert('Please select a product first!');
+                }
+            }
         }
     }
     
@@ -1285,6 +1303,138 @@ function closeQuickSearch() {
     if (modal) {
         modal.remove();
     }
+}
+
+// Batch selection for edit invoice modal
+function showBatchSelectionDialog(productId, batchInput) {
+    fetch(`/api/existing-batches/?product_id=${productId}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.batches.length > 0) {
+                createBatchSelectionModal(data.batches, batchInput);
+            } else {
+                alert('No batches found for this product.');
+            }
+        })
+        .catch(() => alert('Error loading batch information.'));
+}
+
+function createBatchSelectionModal(batches, batchInput) {
+    const existing = document.getElementById('batchSelectionModal');
+    if (existing) existing.remove();
+
+    const modalHTML = `
+        <div id="batchSelectionModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:20000;display:flex;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:10px;width:96%;max-width:780px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.28);overflow:hidden;color:#212529;">
+                <div style="padding:14px 20px;background:#1e40af;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                    <h3 style="margin:0;font-size:1rem;font-weight:600;color:#fff;">Select Batch</h3>
+                    <button onclick="closeBatchModal()" style="background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;">&times;</button>
+                </div>
+                <div style="padding:14px 16px;flex:1;overflow-y:auto;background:#fff;">
+                    <div style="margin-bottom:10px;">
+                        <input type="text" id="batchSearch" placeholder="Search batch..." onkeyup="filterBatches()" style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:0.9rem;color:#212529;background:#fff;box-sizing:border-box;">
+                    </div>
+                    <div id="batchList" style="border:1px solid #e2e8f0;border-radius:6px;overflow:auto;max-height:340px;background:#fff;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;background:#fff;color:#212529;table-layout:auto;">
+                            <thead>
+                                <tr style="background:#f1f5f9;">
+                                    <th style="padding:9px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Batch No</th>
+                                    <th style="padding:9px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Packing</th>
+                                    <th style="padding:9px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Expiry</th>
+                                    <th style="padding:9px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">MRP</th>
+                                    <th style="padding:9px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Rate A</th>
+                                    <th style="padding:9px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Stock</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${batches.map(b => `
+                                <tr class="edit-batch-item" onclick="selectEditBatch(this, ${JSON.stringify(b).replace(/"/g, '&quot;')})" style="cursor:pointer;background:#fff;transition:background 0.12s;">
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#212529;white-space:nowrap;"><strong>${b.batch_no}</strong></td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#212529;white-space:nowrap;">${b.packing || '-'}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#212529;white-space:nowrap;">${b.expiry}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#212529;white-space:nowrap;">&#8377;${b.mrp}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#2563eb;font-weight:600;white-space:nowrap;">${b.rate_a > 0 ? '&#8377;' + b.rate_a.toFixed(2) : '-'}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;" class="${b.stock <= 10 ? 'text-danger' : 'text-success'}">${b.stock}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div style="padding:10px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                    <small style="color:#64748b;font-size:0.78rem;">&#8593;&#8595;: Navigate | Enter: Select | Esc: Close</small>
+                    <button onclick="closeBatchModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    window._editBatchInput = batchInput;
+
+    setTimeout(() => {
+        const search = document.getElementById('batchSearch');
+        search.focus();
+        const first = document.querySelector('.edit-batch-item');
+        if (first) first.style.background = '#dbeafe';
+
+        search.addEventListener('keydown', function(e) {
+            const items = Array.from(document.querySelectorAll('.edit-batch-item')).filter(i => i.style.display !== 'none');
+            let idx = items.findIndex(i => i.style.background === 'rgb(219, 234, 254)');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (idx >= 0) items[idx].style.background = '#fff';
+                idx = Math.min(idx + 1, items.length - 1);
+                if (items[idx]) { items[idx].style.background = '#dbeafe'; items[idx].scrollIntoView({block:'nearest'}); }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (idx >= 0) items[idx].style.background = '#fff';
+                idx = Math.max(idx - 1, 0);
+                if (items[idx]) { items[idx].style.background = '#dbeafe'; items[idx].scrollIntoView({block:'nearest'}); }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const sel = items[idx] || items[0];
+                if (sel) sel.click();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                closeBatchModal();
+            }
+        });
+    }, 100);
+}
+
+function selectEditBatch(tr, batchData) {
+    const inp = window._editBatchInput;
+    if (!inp) { closeBatchModal(); return; }
+    const row = inp.closest('.product-row');
+    if (row) {
+        inp.value = batchData.batch_no;
+        let expiry = batchData.expiry || '';
+        if (expiry.length === 10 && expiry.includes('-') && expiry.split('-')[0].length === 4)
+            expiry = expiry.split('-')[1] + '-' + expiry.split('-')[0];
+        const expiryInp = row.querySelector('input[name*="[expiry]"]');
+        const mrpInp = row.querySelector('input[name*="[mrp]"]');
+        const rateInp = row.querySelector('input[name*="[purchase_rate]"]');
+        const rateAInp = row.querySelector('input[name*="[rate_a]"]');
+        if (expiryInp) expiryInp.value = expiry;
+        if (mrpInp) mrpInp.value = batchData.mrp || '';
+        if (rateInp) rateInp.value = batchData.purchase_rate || '';
+        if (rateAInp && batchData.rate_a > 0) rateAInp.value = batchData.rate_a;
+        updateInvoiceTotal();
+        setTimeout(() => { const q = row.querySelector('input[name*="[quantity]"]'); if (q) { q.focus(); q.select(); } }, 100);
+    }
+    closeBatchModal();
+}
+
+function closeBatchModal() {
+    const m = document.getElementById('batchSelectionModal');
+    if (m) m.remove();
+    window._editBatchInput = null;
+}
+
+function filterBatches() {
+    const term = document.getElementById('batchSearch').value.toLowerCase();
+    document.querySelectorAll('.edit-batch-item').forEach(item => {
+        item.style.display = item.textContent.toLowerCase().includes(term) ? '' : 'none';
+    });
 }
 
 // Close modal when clicking outside
@@ -2155,10 +2305,10 @@ document.addEventListener('DOMContentLoaded', calculateDetailTotals);
         <span style="background: #374151; padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 0.7rem;">Ctrl+P</span>
         <span>Print Purchase Receipt</span>
     </div>
-    <!-- <div style="display: flex; align-items: center; gap: 5px;">
+    <div style="display: flex; align-items: center; gap: 5px;">
         <span style="background: #374151; padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 0.7rem;">Alt+W</span>
-        <span>Batch Selector</span>
-    </div> -->
+        <span>Batch Select</span>
+    </div>
     <!-- <div style="display: flex; align-items: center; gap: 5px;">
         <span style="background: #374151; padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 0.7rem;">Ctrl+S</span>
         <span>Save Invoice</span>

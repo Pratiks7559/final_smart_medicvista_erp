@@ -4,7 +4,12 @@ from django.db.models import Q, Sum, Count, Max, F, Case, When, DecimalField, Va
 from django.core.paginator import Paginator
 from django.db import connection
 from django.http import JsonResponse, HttpResponse
-from .models import InventoryTransaction, ProductMaster, Pharmacy_Details, SaleRateMaster, InvoiceMaster, PurchaseMaster
+from .models import (
+    InventoryTransaction, ProductMaster, Pharmacy_Details, SaleRateMaster,
+    InvoiceMaster, PurchaseMaster, SalesMaster, ReturnPurchaseMaster,
+    ReturnSalesMaster, SupplierChallanMaster, CustomerChallanMaster,
+    StockIssueDetail,
+)
 from .year_filter_utils import get_financial_year_dates, get_current_financial_year
 from decimal import Decimal
 import time
@@ -85,10 +90,11 @@ def inventory_list2(request):
     all_batches = InventoryTransaction.objects.filter(
         product_id__in=product_ids
     ).values(
-        'product_id', 'batch_no', 'expiry_date', 'mrp'
+        'product_id', 'batch_no', 'expiry_date'
     ).annotate(
         stock=Sum('quantity'),
-        free_stock=Sum('free_quantity')
+        free_stock=Sum('free_quantity'),
+        mrp=Max('mrp')
     ).order_by('product_id', 'expiry_date', 'batch_no')
     
     # OPTIMIZATION: Prefetch all rates in one query
@@ -275,6 +281,48 @@ def inventory_transaction_history(request, product_id):
     
     if batch_no:
         transactions = transactions.filter(batch_no=batch_no)
+
+    # Apply the selected financial year using the source document date.
+    selected_year = request.session.get('selected_year', get_current_financial_year())
+    fy_start, fy_end = get_financial_year_dates(selected_year)
+    purchase_ids = PurchaseMaster.objects.filter(
+        productid=product,
+        product_invoiceid__invoice_date__range=(fy_start, fy_end),
+    ).values_list('purchaseid', flat=True)
+    sale_ids = SalesMaster.objects.filter(
+        productid=product,
+        sales_invoice_no__sales_invoice_date__range=(fy_start, fy_end),
+    ).values_list('id', flat=True)
+    purchase_return_ids = ReturnPurchaseMaster.objects.filter(
+        returnproductid=product,
+        returninvoiceid__returninvoice_date__range=(fy_start, fy_end),
+    ).values_list('returnpurchaseid', flat=True)
+    sales_return_ids = ReturnSalesMaster.objects.filter(
+        return_productid=product,
+        return_sales_invoice_no__return_sales_invoice_date__range=(fy_start, fy_end),
+    ).values_list('return_sales_id', flat=True)
+    supplier_challan_ids = SupplierChallanMaster.objects.filter(
+        product_id=product,
+        product_challan_id__challan_date__range=(fy_start, fy_end),
+    ).values_list('challan_id', flat=True)
+    customer_challan_ids = CustomerChallanMaster.objects.filter(
+        product_id=product,
+        customer_challan_id__customer_challan_date__range=(fy_start, fy_end),
+    ).values_list('customer_challan_master_id', flat=True)
+    stock_issue_ids = StockIssueDetail.objects.filter(
+        product=product,
+        issue__issue_date__range=(fy_start, fy_end),
+    ).values_list('detail_id', flat=True)
+
+    transactions = transactions.filter(
+        Q(transaction_type='PURCHASE', reference_id__in=purchase_ids)
+        | Q(transaction_type='SALE', reference_id__in=sale_ids)
+        | Q(transaction_type='PURCHASE_RETURN', reference_id__in=purchase_return_ids)
+        | Q(transaction_type='SALES_RETURN', reference_id__in=sales_return_ids)
+        | Q(transaction_type='SUPPLIER_CHALLAN', reference_id__in=supplier_challan_ids)
+        | Q(transaction_type='CUSTOMER_CHALLAN', reference_id__in=customer_challan_ids)
+        | Q(transaction_type='STOCK_ISSUE', reference_id__in=stock_issue_ids)
+    )
     
     transactions = transactions.select_related('created_by').order_by('-transaction_date')
     
@@ -298,7 +346,10 @@ def inventory_transaction_history(request, product_id):
         # Get all transactions in chronological order for balance calculation
         all_txns = list(InventoryTransaction.objects.filter(
             product=product
-        ).order_by('transaction_date', 'transaction_id'))
+        ).order_by('created_at', 'transaction_id'))
+
+        all_txns = [txn for txn in all_txns if txn.transaction_id in
+                    set(transactions.values_list('transaction_id', flat=True))]
         
         if batch_no:
             all_txns = [t for t in all_txns if t.batch_no == batch_no]
@@ -312,9 +363,48 @@ def inventory_transaction_history(request, product_id):
             balance_lookup[txn.transaction_id] = running_balance
         
         # Add balance to current page transactions
+        page_transactions = list(page_obj)
+        reference_ids = {}
+        for txn in page_transactions:
+            reference_ids.setdefault(txn.transaction_type, set()).add(txn.reference_id)
+
+        invoice_dates = dict(PurchaseMaster.objects.filter(
+            purchaseid__in=reference_ids.get('PURCHASE', set())
+        ).values_list('purchaseid', 'product_invoiceid__invoice_date'))
+        sale_dates = dict(SalesMaster.objects.filter(
+            id__in=reference_ids.get('SALE', set())
+        ).values_list('id', 'sales_invoice_no__sales_invoice_date'))
+        purchase_return_dates = dict(ReturnPurchaseMaster.objects.filter(
+            returnpurchaseid__in=reference_ids.get('PURCHASE_RETURN', set())
+        ).values_list('returnpurchaseid', 'returninvoiceid__returninvoice_date'))
+        sales_return_dates = dict(ReturnSalesMaster.objects.filter(
+            return_sales_id__in=reference_ids.get('SALES_RETURN', set())
+        ).values_list('return_sales_id', 'return_sales_invoice_no__return_sales_invoice_date'))
+        supplier_challan_dates = dict(SupplierChallanMaster.objects.filter(
+            challan_id__in=reference_ids.get('SUPPLIER_CHALLAN', set())
+        ).values_list('challan_id', 'product_challan_id__challan_date'))
+        customer_challan_dates = dict(CustomerChallanMaster.objects.filter(
+            customer_challan_master_id__in=reference_ids.get('CUSTOMER_CHALLAN', set())
+        ).values_list('customer_challan_master_id', 'customer_challan_id__customer_challan_date'))
+        stock_issue_dates = dict(StockIssueDetail.objects.filter(
+            detail_id__in=reference_ids.get('STOCK_ISSUE', set())
+        ).values_list('detail_id', 'issue__issue_date'))
+
+        source_dates = {
+            'PURCHASE': invoice_dates,
+            'SALE': sale_dates,
+            'PURCHASE_RETURN': purchase_return_dates,
+            'SALES_RETURN': sales_return_dates,
+            'SUPPLIER_CHALLAN': supplier_challan_dates,
+            'CUSTOMER_CHALLAN': customer_challan_dates,
+            'STOCK_ISSUE': stock_issue_dates,
+        }
         for txn in page_obj:
             transaction_list.append({
                 'transaction': txn,
+                'transaction_display_date': source_dates.get(
+                    txn.transaction_type, {}
+                ).get(txn.reference_id, txn.transaction_date),
                 'balance': balance_lookup.get(txn.transaction_id, 0)
             })
     

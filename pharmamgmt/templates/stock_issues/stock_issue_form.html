@@ -41,7 +41,7 @@
                     <div class="form-group">
                         <label for="issue_date">Issue Date *</label>
                         <input type="date" name="issue_date" id="issue_date" 
-                               value="{{ today|date:'Y-m-d' }}" required class="form-control">
+                               value="{{ fy_start_date|date:'Y-m-d' }}" required class="form-control">
                     </div>
                     <div class="form-group">
                         <label for="remarks">Remarks</label>
@@ -55,7 +55,12 @@
 
             <!-- Selected Products -->
             <div class="form-section">
-                <h3><i class="fas fa-list"></i> Selected Products</h3>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:15px;">
+                    <h3 style="margin:0;"><i class="fas fa-list"></i> Selected Products</h3>
+                    <button type="button" class="btn btn-primary" onclick="openQuickProductSearch()">
+                        <i class="fas fa-plus"></i> Add Product
+                    </button>
+                </div>
                 <div class="shortcuts-info" style="background: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 0.9em; color: #6c757d;">
                     <strong>Keyboard Shortcuts:</strong> Press <kbd>Ctrl + F2</kbd> to open Quick Product Search
                 </div>
@@ -258,11 +263,12 @@ function createBatchSelectionModal(batches, product) {
                                     <div class="batch-no"><strong>${batch.batch_no}</strong></div>
                                     <div class="batch-details">
                                         <span class="batch-expiry">Exp: ${batch.expiry}</span>
+                                        <span class="batch-packing">Packing: ${batch.packing || '-'}</span>
                                         <span class="batch-stock">Stock: ${batch.stock}</span>
                                         <span class="batch-mrp">MRP: ₹${batch.mrp}</span>
                                     </div>
                                     <div class="batch-rates">
-                                        <span>Rate: ₹${batch.purchase_rate || batch.mrp}</span>
+                                        <span>Rate A: ₹${batch.rate_a || batch.purchase_rate || batch.mrp}</span>
                                     </div>
                                 </div>
                                 <div class="batch-status">

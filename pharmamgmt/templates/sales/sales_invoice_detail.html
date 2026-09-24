@@ -1702,7 +1702,7 @@ function closeEditQuickSearch() {
 
 // Batch selection for edit modal
 function showEditBatchSelectionDialog(productId, rowIndex) {
-    fetch(`/api/product-batch-selector/?product_id=${productId}`)
+    fetch(`/api/existing-batches/?product_id=${productId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success && data.batches.length > 0) {
@@ -1711,10 +1711,81 @@ function showEditBatchSelectionDialog(productId, rowIndex) {
                 alert('No batches found for this product.');
             }
         })
-        .catch(error => {
-            console.error('Error fetching batches:', error);
-            alert('Error loading batch information.');
+        .catch(error => { console.error('Error:', error); alert('Error loading batch information.'); });
+}
+
+function createEditBatchSelectionModal(batches, rowIndex) {
+    const existing = document.getElementById('editBatchSelectionModal');
+    if (existing) existing.remove();
+    const modalHTML = `
+        <div id="editBatchSelectionModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:20000;display:flex;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:10px;width:96%;max-width:820px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.28);overflow:hidden;">
+                <div style="padding:14px 20px;background:#1e40af;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                    <h3 style="margin:0;font-size:1rem;font-weight:600;">Select Batch</h3>
+                    <button onclick="closeEditBatchModal()" style="background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;">&times;</button>
+                </div>
+                <div style="padding:12px 16px;flex:1;overflow-y:auto;background:#fff;">
+                    <input type="text" id="editBatchSearch" placeholder="Search batch..." style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:0.9rem;box-sizing:border-box;margin-bottom:10px;">
+                    <div id="editBatchList" style="border:1px solid #e2e8f0;border-radius:6px;overflow:auto;max-height:320px;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;table-layout:auto;">
+                            <thead><tr style="background:#f1f5f9;">
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Batch No</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Packing</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Expiry</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">MRP</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Rate A</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Stock</th>
+                            </tr></thead>
+                            <tbody>
+                            ${batches.map((b, i) => `
+                                <tr class="edit-batch-item ${i === 0 ? 'batch-selected' : ''}" data-row-index="${rowIndex}" data-batch-data='${JSON.stringify(b)}' style="cursor:pointer;background:#fff;transition:background 0.12s;">
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;"><strong>${b.batch_no}</strong></td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">${b.packing || '-'}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">${b.expiry}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">&#8377;${b.mrp}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;color:#2563eb;font-weight:600;">${b.rate_a > 0 ? '&#8377;' + b.rate_a.toFixed(2) : '-'}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;" class="${b.stock <= 10 ? 'text-danger' : 'text-success'}">${b.stock}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div style="padding:10px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                    <small style="color:#64748b;">&#8593;&#8595;: Navigate | Enter: Select | Esc: Close</small>
+                    <button onclick="closeEditBatchModal()" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    setTimeout(() => {
+        const s = document.getElementById('editBatchSearch'); s.focus();
+        s.addEventListener('input', function() {
+            const term = this.value.toLowerCase();
+            const items = document.querySelectorAll('.edit-batch-item');
+            items.forEach(i => { i.classList.remove('batch-selected'); i.style.display = i.textContent.toLowerCase().includes(term) ? '' : 'none'; });
+            const first = Array.from(items).find(i => i.style.display !== 'none');
+            if (first) first.classList.add('batch-selected');
         });
+        document.querySelectorAll('.edit-batch-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const b = JSON.parse(this.getAttribute('data-batch-data'));
+                const ri = this.getAttribute('data-row-index');
+                selectEditBatch(b.batch_no, ri, b);
+            });
+        });
+        document.addEventListener('keydown', handleEditBatchKeys);
+    }, 50);
+}
+
+function handleEditBatchKeys(e) {
+    const modal = document.getElementById('editBatchSelectionModal');
+    if (!modal) return;
+    const items = Array.from(document.querySelectorAll('.edit-batch-item')).filter(i => i.style.display !== 'none');
+    let idx = items.findIndex(i => i.classList.contains('batch-selected'));
+    if (e.key === 'ArrowDown') { e.preventDefault(); items.forEach(i=>i.classList.remove('batch-selected')); idx=Math.min(idx+1,items.length-1); if(items[idx]){items[idx].classList.add('batch-selected');items[idx].scrollIntoView({block:'nearest'});} }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); items.forEach(i=>i.classList.remove('batch-selected')); idx=Math.max(idx-1,0); if(items[idx]){items[idx].classList.add('batch-selected');items[idx].scrollIntoView({block:'nearest'});} }
+    else if (e.key === 'Enter') { e.preventDefault(); const sel=items[idx]; if(sel){const b=JSON.parse(sel.getAttribute('data-batch-data'));selectEditBatch(b.batch_no,sel.getAttribute('data-row-index'),b);} }
+    else if (e.key === 'Escape') { e.preventDefault(); closeEditBatchModal(); }
 }
 
 function createEditBatchSelectionModal(batches, rowIndex) {
@@ -1747,11 +1818,12 @@ function createEditBatchSelectionModal(batches, rowIndex) {
                                         <span class="batch-stock">Stock: ${batch.stock}</span>
                                         <span class="batch-free" style="color: #28a745; font-weight: 600;">Free: ${batch.free_qty || 0}</span>
                                         <span class="batch-mrp">MRP: ₹${batch.mrp}</span>
+                                        ${batch.packing ? `<span class="batch-packing" style="color:#6c757d;">Pkg: ${batch.packing}</span>` : ''}
                                     </div>
                                     <div class="batch-rates">
-                                        <span>A: ₹${batch.rates ? batch.rates.rate_A : 0}</span>
-                                        <span>B: ₹${batch.rates ? batch.rates.rate_B : 0}</span>
-                                        <span>C: ₹${batch.rates ? batch.rates.rate_C : 0}</span>
+                                        <span>A: ₹${batch.rates ? batch.rates.rate_A : batch.rate_a || 0}</span>
+                                        <span>B: ₹${batch.rates ? batch.rates.rate_B : batch.rate_b || 0}</span>
+                                        <span>C: ₹${batch.rates ? batch.rates.rate_C : batch.rate_c || 0}</span>
                                     </div>
                                 </div>
                                 <div class="batch-status">

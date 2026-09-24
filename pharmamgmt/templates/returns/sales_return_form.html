@@ -77,7 +77,7 @@
                             <h6 class="sr-section-title">Return Products</h6>
                             <small class="sr-keyboard-shortcuts">⚡ F2 (Quick Search), Ctrl+Enter (Add Row), Alt+W (Batch Selector), Ctrl+S (Save)</small>
                         </div>
-                        <button type="button" class="sr-add-product-btn" onclick="addProductRow()">
+                        <button type="button" class="sr-add-product-btn" onclick="openQuickProductSearch()">
                             <i class="fas fa-plus"></i> Add Product
                         </button>
                     </div>
@@ -638,9 +638,11 @@ function createBatchSelectionModal(batches, rowIndex) {
                                     <div class="batch-no"><strong>${batch.batch_no}</strong></div>
                                     <div class="batch-details">
                                         <span>Exp: ${batch.expiry}</span>
+                                        <span>Packing: ${batch.packing || '-'}</span>
                                         <span>Stock: ${batch.stock}</span>
                                         <span style="color: #28a745; font-weight: 600;">Free: ${batch.free_qty || 0}</span>
                                         <span>MRP: ₹${batch.mrp}</span>
+                                        <span class="rate-badge">Rate A: ₹${batch.rates?.rate_A || batch.rate_a || batch.mrp}</span>
                                     </div>
                                     <div class="batch-rates">
                                         <span class="rate-badge">Rate A: ₹${rateA}</span>
@@ -672,14 +674,23 @@ function createBatchSelectionModal(batches, rowIndex) {
         if (firstBatch) firstBatch.classList.add('batch-selected');
         
         searchInput.addEventListener('keydown', function(e) {
-            const visibleItems = document.querySelectorAll('.batch-item:not([style*="display: none"])');
-            let selectedIndex = Array.from(visibleItems).findIndex(item => item.classList.contains('batch-selected'));
+            const visibleItems = Array.from(document.querySelectorAll('.batch-item')).filter(item => item.style.display !== 'none');
+            let selectedIndex = visibleItems.findIndex(item => item.classList.contains('batch-selected'));
+
+            if (!visibleItems.length) {
+                return;
+            }
+
+            if (selectedIndex === -1) {
+                selectedIndex = 0;
+                visibleItems[0].classList.add('batch-selected');
+            }
             
             switch(e.key) {
                 case 'ArrowDown':
                     e.preventDefault();
                     if (selectedIndex < visibleItems.length - 1) {
-                        if (selectedIndex >= 0) visibleItems[selectedIndex].classList.remove('batch-selected');
+                        visibleItems[selectedIndex].classList.remove('batch-selected');
                         selectedIndex++;
                         visibleItems[selectedIndex].classList.add('batch-selected');
                         visibleItems[selectedIndex].scrollIntoView({ block: 'nearest' });
@@ -698,7 +709,7 @@ function createBatchSelectionModal(batches, rowIndex) {
                     
                 case 'Enter':
                     e.preventDefault();
-                    if (selectedIndex >= 0 && visibleItems[selectedIndex]) {
+                    if (visibleItems[selectedIndex]) {
                         visibleItems[selectedIndex].click();
                     }
                     break;
@@ -1113,11 +1124,8 @@ function fetchBatchDetails(productId, batchNo, rowIndex) {
 function setCurrentDate() {
     const dateField = document.querySelector('[name="return_sales_invoice_date"]');
     if (dateField && !dateField.value) {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        dateField.value = `${year}-${month}-${day}`;
+        const fyYear = parseInt('{{ current_fy|default:"" }}', 10);
+        if (Number.isInteger(fyYear)) dateField.value = `${fyYear}-04-01`;
         console.log('✓ Return date auto-filled:', dateField.value);
     }
 }

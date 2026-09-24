@@ -130,11 +130,24 @@
 .batch-modal-body{padding:.75rem;max-height:300px;overflow-y:auto}
 .batch-search input{width:100%;padding:.45rem .75rem;border:1.5px solid var(--border);border-radius:var(--rs);margin-bottom:.625rem;font-size:.8rem;background:var(--card)!important;color:var(--dark)!important}
 .batch-search input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(5,150,105,.12)}
-.batch-list{max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--rs)}
-.batch-item{padding:.5rem .75rem;border-bottom:1px solid var(--border);cursor:pointer;transition:all .2s;display:flex;justify-content:space-between;align-items:center;background:var(--card)!important;color:var(--dark)!important;font-size:.72rem}
-.batch-item:last-child{border-bottom:none}
-.batch-item:hover{background:var(--p-lite)!important;transform:translateX(3px)}
-.batch-item.batch-selected{background:var(--g-lite)!important;border-color:var(--green)}
+.batch-list{max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:var(--rs)}
+.batch-list table{width:100%;min-width:680px;border-collapse:collapse;table-layout:fixed;background:#fff;color:#212529}
+.batch-list th:nth-child(1),.batch-list td:nth-child(1){width:22%}
+.batch-list th:nth-child(2),.batch-list td:nth-child(2){width:14%}
+.batch-list th:nth-child(3),.batch-list td:nth-child(3){width:16%}
+.batch-list th:nth-child(4),.batch-list td:nth-child(4){width:14%}
+.batch-list th:nth-child(5),.batch-list td:nth-child(5){width:18%}
+.batch-list th:nth-child(6),.batch-list td:nth-child(6){width:16%}
+.batch-list .sc-batch-row{display:table-row!important;padding:0;background:#fff!important;color:#212529!important;transform:none!important}
+.batch-list .sc-batch-row td{padding:.5rem .6rem;vertical-align:middle;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #f1f5f9;background:#fff!important;color:#1f2937!important}
+.batch-list .sc-batch-row td strong{color:#1f2937!important}
+.batch-list .sc-batch-row:hover td,.batch-list .sc-batch-row.sc-batch-selected td{background:#dbeafe!important;color:#1e3a8a!important}
+.batch-list .sc-batch-row.sc-batch-selected{
+	outline:2px solid #2563eb;
+	outline-offset:-2px;
+	position:relative;
+	z-index:1;
+}
 .batch-info{flex:1}
 .batch-no{font-size:.82rem;font-weight:700;margin-bottom:.2rem;color:var(--dark)!important}
 .batch-details{display:flex;gap:.625rem;font-size:.68rem;color:var(--muted)!important}

@@ -147,14 +147,11 @@
                     <div style="background:linear-gradient(135deg,#fffbeb,#ecfdf5);border:2px solid #d97706;border-radius:10px;padding:12px 16px;margin-bottom:1rem;">
                         <div style="font-weight:700;color:#374151;font-size:0.82rem;text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;"><i class="fas fa-tag" style="color:#d97706;margin-right:5px;"></i> Discount Type</div>
                         <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
-                            <label style="cursor:pointer;font-size:0.875rem;font-weight:600;display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid #3b82f6;border-radius:6px;background:#eff6ff;color:#1d4ed8;">
-                                <input type="radio" name="edit_discount_mode" value="product_wise" {% if not challan.whole_discount_amount or challan.whole_discount_amount == 0 %}checked{% endif %} onchange="onEditDiscModeChange()"> Product-wise Discount
-                            </label>
-                            <label style="cursor:pointer;font-size:0.875rem;font-weight:600;display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid #d97706;border-radius:6px;background:#fffbeb;color:#92400e;">
-                                <input type="radio" name="edit_discount_mode" value="whole" {% if challan.whole_discount_amount and challan.whole_discount_amount > 0 %}checked{% endif %} onchange="onEditDiscModeChange()"> Whole Challan Discount
+                            <label style="cursor:default;font-size:0.875rem;font-weight:600;display:flex;align-items:center;gap:6px;padding:5px 12px;border:1.5px solid #d97706;border-radius:6px;background:#fffbeb;color:#92400e;">
+                                <input type="radio" checked disabled> Whole Challan Discount
                             </label>
                         </div>
-                        <div id="editWholeDiscSection" style="display:{% if challan.whole_discount_amount and challan.whole_discount_amount > 0 %}flex{% else %}none{% endif %};gap:10px;align-items:center;flex-wrap:wrap;background:rgba(255,255,255,.7);border:1px solid #fde68a;border-radius:8px;padding:10px 14px;">
+                        <div id="editWholeDiscSection" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:rgba(255,255,255,.7);border:1px solid #fde68a;border-radius:8px;padding:10px 14px;">
                             <label style="cursor:pointer;font-size:0.82rem;font-weight:700;display:flex;align-items:center;gap:4px;padding:4px 10px;border:1.5px solid #16a34a;border-radius:6px;background:#f0fdf4;color:#15803d;" id="editWholeDiscFlatLabel">
                                 <input type="radio" name="edit_whole_disc_type" value="flat" checked onchange="calculateGrandTotal()"> Flat &#8377;
                             </label>
@@ -167,7 +164,7 @@
                         </div>
                     </div>
                     <input type="hidden" name="whole_discount_amount" id="editWholeDiscAmountHidden" value="{{ challan.whole_discount_amount }}">
-                    <input type="hidden" name="discount_mode" id="editDiscountModeHidden" value="{% if challan.whole_discount_amount and challan.whole_discount_amount > 0 %}whole{% else %}product_wise{% endif %}">
+                    <input type="hidden" name="discount_mode" id="editDiscountModeHidden" value="whole">
                     
                     <h4>Products</h4>
                     <div id="productsContainer"></div>
@@ -265,6 +262,10 @@ function addProductRow(data = {}) {
     
     const productRow = document.createElement('div');
     productRow.className = 'product-row';
+    const productSubtotal = (parseFloat(data.product_purchase_rate) || 0) * (parseFloat(data.product_quantity) || 0);
+    const discountPercent = productSubtotal > 0
+        ? ((parseFloat(data.product_discount) || 0) / productSubtotal * 100).toFixed(2)
+        : '0';
     
     let productOptions = '<option value="">Select Product</option>';
     {% for product in products %}
@@ -304,15 +305,8 @@ function addProductRow(data = {}) {
                 <input type="number" name="products[${productId}][free_qty]" value="${data.product_free_qty || '0'}" step="0.01">
             </div>
             <div class="form-group">
-                <label>Disc Type:</label>
-                <select name="products[${productId}][calculation_mode]" onchange="calculateGrandTotal()" style="padding:0.5rem;border:1px solid #ddd;border-radius:5px;font-size:0.85rem;">
-                    <option value="flat" ${(data.challan_calculation_mode||'flat')==='flat'?'selected':''}>₹ Flat</option>
-                    <option value="percentage" ${data.challan_calculation_mode==='percentage'?'selected':''}>% Percent</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Discount:</label>
-                <input type="number" name="products[${productId}][discount]" value="${data.product_discount || ''}" step="0.01" onchange="calculateProductTotal(this)">
+                <label>Discount %:</label>
+                <input type="number" name="products[${productId}][discount]" value="${discountPercent}" step="0.01" min="0" max="100" onchange="calculateProductTotal(this)">
             </div>
             <div class="form-group">
                 <label>CGST %:</label>
@@ -356,15 +350,10 @@ function calculateProductTotal(element) {
 }
 
 function onEditDiscModeChange() {
-    const mode = document.querySelector('input[name="edit_discount_mode"]:checked')?.value || 'product_wise';
+    const mode = 'whole';
     const sec = document.getElementById('editWholeDiscSection');
-    if (sec) sec.style.display = mode === 'whole' ? 'flex' : 'none';
+    if (sec) sec.style.display = 'flex';
     document.getElementById('editDiscountModeHidden').value = mode;
-    if (mode === 'product_wise') {
-        const inp = document.getElementById('editWholeDiscInput');
-        if (inp) inp.value = '0';
-        document.getElementById('editWholeDiscAmountHidden').value = '0';
-    }
     calculateGrandTotal();
 }
 
@@ -376,13 +365,12 @@ function calculateGrandTotal() {
         const rate = parseFloat(row.querySelector('input[name*="[purchase_rate]"]')?.value) || 0;
         const qty = parseFloat(row.querySelector('input[name*="[quantity]"]')?.value) || 0;
         const discount = parseFloat(row.querySelector('input[name*="[discount]"]')?.value) || 0;
-        const calcMode = row.querySelector('select[name*="[calculation_mode]"]')?.value || 'flat';
         const cgst = parseFloat(row.querySelector('input[name*="[cgst]"]')?.value) || 0;
         const sgst = parseFloat(row.querySelector('input[name*="[sgst]"]')?.value) || 0;
         
         const subtotal = rate * qty;
-        const discountAmt = calcMode === 'percentage' ? (subtotal * discount / 100) : discount;
-        const afterDiscount = subtotal - discountAmt;
+        const discountAmount = Math.min(subtotal, subtotal * discount / 100);
+        const afterDiscount = subtotal - discountAmount;
         const cgstAmount = (afterDiscount * cgst) / 100;
         const sgstAmount = (afterDiscount * sgst) / 100;
         const total = afterDiscount + cgstAmount + sgstAmount;
@@ -393,7 +381,7 @@ function calculateGrandTotal() {
     const transportCharges = parseFloat(document.getElementById('transport_charges')?.value) || 0;
 
     // Whole discount
-    const discMode = document.querySelector('input[name="edit_discount_mode"]:checked')?.value || 'product_wise';
+    const discMode = 'whole';
     let wholeDiscAmt = 0;
     if (discMode === 'whole') {
         const wholeDiscType = document.querySelector('input[name="edit_whole_disc_type"]:checked')?.value || 'flat';
@@ -405,8 +393,6 @@ function calculateGrandTotal() {
         const dispEl = document.getElementById('editWholeDiscDisplay');
         if (dispEl) dispEl.textContent = '\u20b9' + wholeDiscAmt.toFixed(2);
         document.getElementById('editWholeDiscAmountHidden').value = wholeDiscAmt.toFixed(2);
-    } else {
-        document.getElementById('editWholeDiscAmountHidden').value = '0';
     }
 
     const grandTotal = productsTotal + transportCharges - wholeDiscAmt;
@@ -463,7 +449,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const qtyInput = row.querySelector('input[name*="[quantity]"]');
                 const freeQtyInput = row.querySelector('input[name*="[free_qty]"]');
                 const discountInput = row.querySelector('input[name*="[discount]"]');
-                const calcModeSelect = row.querySelector('select[name*="[calculation_mode]"]');
                 const cgstInput = row.querySelector('input[name*="[cgst]"]');
                 const sgstInput = row.querySelector('input[name*="[sgst]"]');
                 const rateAInput = row.querySelector('input[name*="[rate_a]"]');
@@ -479,8 +464,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         purchase_rate: rateInput ? parseFloat(rateInput.value) || 0 : 0,
                         quantity: qtyInput ? parseFloat(qtyInput.value) || 0 : 0,
                         free_qty: freeQtyInput ? parseFloat(freeQtyInput.value) || 0 : 0,
-                        discount: discountInput ? parseFloat(discountInput.value) || 0 : 0,
-                        calculation_mode: calcModeSelect ? calcModeSelect.value : 'flat',
+                        discount: discountInput ? Math.min(100, Math.max(0, parseFloat(discountInput.value) || 0)) : 0,
+                        calculation_mode: 'percentage',
                         cgst: cgstInput ? parseFloat(cgstInput.value) || 0 : 0,
                         sgst: sgstInput ? parseFloat(sgstInput.value) || 0 : 0,
                         rate_a: rateAInput ? parseFloat(rateAInput.value) || 0 : 0,
@@ -492,7 +477,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             formData.append('products_data', JSON.stringify(products));
             formData.append('whole_discount_amount', document.getElementById('editWholeDiscAmountHidden').value || '0');
-            formData.append('discount_mode', document.getElementById('editDiscountModeHidden').value || 'product_wise');
+            formData.append('discount_mode', 'whole');
             
             fetch(window.location.href, {
                 method: 'POST',
@@ -717,7 +702,7 @@ function closeQuickSearch() {
 }
 
 function showBatchSelectionDialog(productId, row) {
-    fetch(`/api/product-batch-selector/?product_id=${productId}`)
+    fetch(`/api/existing-batches/?product_id=${productId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success && data.batches.length > 0) {
@@ -735,48 +720,55 @@ function showBatchSelectionDialog(productId, row) {
 function createBatchSelectionModal(batches, row) {
     const existingModal = document.getElementById('batchSelectionModal');
     if (existingModal) existingModal.remove();
-    
     const modalHTML = `
-        <div id="batchSelectionModal" class="batch-modal-overlay">
-            <div class="batch-modal-content">
-                <div class="batch-modal-header">
-                    <h3>Select Batch</h3>
-                    <button type="button" class="batch-modal-close" onclick="closeBatchModal()">&times;</button>
+        <div id="batchSelectionModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:10001;display:flex;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:10px;width:96%;max-width:780px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.28);overflow:hidden;">
+                <div style="padding:14px 20px;background:#1e40af;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                    <h3 style="margin:0;font-size:1rem;font-weight:600;">Select Batch</h3>
+                    <button onclick="closeBatchModal()" style="background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;">&times;</button>
                 </div>
-                <div class="batch-modal-body">
-                    <div class="batch-search">
-                        <input type="text" id="batchSearch" placeholder="Search batch...">
-                    </div>
-                    <div class="batch-list" id="batchList">
-                        ${batches.map((batch, index) => `
-                            <div class="batch-item ${index === 0 ? 'batch-selected' : ''}" 
-                                 data-batch-index="${index}" 
-                                 data-batch-data='${JSON.stringify(batch)}'
-                                 onclick="selectBatch(this)">
-                                <div class="batch-info">
-                                    <div class="batch-no"><strong>${batch.batch_no}</strong></div>
-                                    <div class="batch-details">
-                                        <span>Exp: ${batch.expiry}</span>
-                                        <span>Stock: ${batch.stock}</span>
-                                        <span>MRP: ₹${batch.mrp}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `).join('')}
+                <div style="padding:12px 16px;flex:1;overflow-y:auto;background:#fff;">
+                    <input type="text" id="batchSearch" placeholder="Search batch..." style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:0.9rem;box-sizing:border-box;margin-bottom:10px;">
+                    <div id="batchList" style="border:1px solid #e2e8f0;border-radius:6px;overflow:auto;max-height:320px;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;table-layout:auto;">
+                            <thead><tr style="background:#f1f5f9;">
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Batch No</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Packing</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Expiry</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">MRP</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Rate A</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Stock</th>
+                            </tr></thead>
+                            <tbody>
+                            ${batches.map(b => `
+                                <tr class="batch-item" data-batch='${JSON.stringify(b).replace(/'/g, "&#39;")}' onclick="selectBatch(this)" style="cursor:pointer;background:#fff;transition:background 0.12s;">
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;"><strong>${b.batch_no}</strong></td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">${b.packing || '-'}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">${b.expiry}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">&#8377;${b.mrp}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;color:#2563eb;font-weight:600;">${b.rate_a > 0 ? '&#8377;' + b.rate_a.toFixed(2) : '-'}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;" class="${b.stock <= 10 ? 'text-danger' : 'text-success'}">${b.stock}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="batch-modal-footer">
-                    <small>↑↓: Navigate | Enter: Select | Esc: Close</small>
+                <div style="padding:10px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                    <small style="color:#64748b;">&#8593;&#8595;: Navigate | Enter: Select | Esc: Close</small>
+                    <button onclick="closeBatchModal()" class="btn btn-secondary">Cancel</button>
                 </div>
             </div>
-        </div>
-    `;
-    
+        </div>`;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
+    window._batchTargetRow = row;
     setTimeout(() => {
-        const searchInput = document.getElementById('batchSearch');
-        searchInput.focus();
-        searchInput.addEventListener('input', filterBatches);
+        const s = document.getElementById('batchSearch'); s.focus();
+        const first = document.querySelector('#batchList .batch-item');
+        if (first) first.style.background = '#dbeafe';
+        s.addEventListener('input', function() {
+            const term = this.value.toLowerCase();
+            document.querySelectorAll('#batchList .batch-item').forEach(i => { i.style.display = i.textContent.toLowerCase().includes(term) ? '' : 'none'; });
+        });
         document.addEventListener('keydown', handleBatchKeys);
     }, 50);
 }
@@ -841,45 +833,31 @@ function navigateBatches(items, direction) {
 }
 
 function selectBatch(element) {
-    const batchData = JSON.parse(element.getAttribute('data-batch-data'));
+    const batchData = JSON.parse(element.getAttribute('data-batch'));
     const rows = document.querySelectorAll('.product-row');
-    
-    // Find the active row (where batch selection was triggered)
-    let targetRow = null;
-    for (let row of rows) {
-        const batchInput = row.querySelector('input[name*="[batch_no]"]');
-        if (batchInput && (document.activeElement.closest('.product-row') === row || !batchInput.value)) {
-            targetRow = row;
-            break;
+    let targetRow = window._batchTargetRow || null;
+    if (!targetRow) {
+        for (let row of rows) {
+            const batchInput = row.querySelector('input[name*="[batch_no]"]');
+            if (batchInput && (document.activeElement.closest('.product-row') === row || !batchInput.value)) {
+                targetRow = row; break;
+            }
         }
     }
-    
-    // If no specific row found, use the last row
-    if (!targetRow && rows.length > 0) {
-        targetRow = rows[rows.length - 1];
-    }
-    
+    if (!targetRow && rows.length > 0) targetRow = rows[rows.length - 1];
     if (targetRow) {
-        // Auto-fill all batch details
         targetRow.querySelector('input[name*="[batch_no]"]').value = batchData.batch_no;
-        targetRow.querySelector('input[name*="[expiry]"]').value = batchData.expiry;
+        let expiry = batchData.expiry || '';
+        if (expiry.length === 10 && expiry.includes('-') && expiry.split('-')[0].length === 4)
+            expiry = expiry.split('-')[1] + '-' + expiry.split('-')[0];
+        targetRow.querySelector('input[name*="[expiry]"]').value = expiry;
         targetRow.querySelector('input[name*="[mrp]"]').value = batchData.mrp;
-        targetRow.querySelector('input[name*="[purchase_rate]"]').value = batchData.mrp;
-        targetRow.querySelector('input[name*="[quantity]"]').value = '1';
-        targetRow.querySelector('input[name*="[discount]"]').value = '0';
-        targetRow.querySelector('input[name*="[cgst]"]').value = '2.5';
-        targetRow.querySelector('input[name*="[sgst]"]').value = '2.5';
-        
-        // Focus on quantity field
-        setTimeout(() => {
-            const qtyField = targetRow.querySelector('input[name*="[quantity]"]');
-            if (qtyField) {
-                qtyField.focus();
-                qtyField.select();
-            }
-        }, 100);
+        targetRow.querySelector('input[name*="[purchase_rate]"]').value = batchData.purchase_rate || '';
+        const rateA = targetRow.querySelector('input[name*="[rate_a]"]');
+        if (rateA && batchData.rate_a > 0) rateA.value = batchData.rate_a;
+        calculateGrandTotal();
+        setTimeout(() => { const q = targetRow.querySelector('input[name*="[quantity]"]'); if(q){q.focus();q.select();} }, 100);
     }
-    
     closeBatchModal();
 }
 

@@ -79,32 +79,8 @@
                             </div>
                         </div>
 
-                        <!-- Discount Mode Section -->
-                        <div class="ci-discount-mode-section">
-                            <div class="ci-disc-title"><i class="fas fa-tag"></i> Discount Type</div>
-                            <div class="ci-disc-options">
-                                <label class="ci-disc-option-label">
-                                    <input type="radio" name="discount_mode" id="salesDiscModeProductWise" value="product_wise" checked onchange="onSalesDiscountModeChange()">
-                                    <span>Product-wise Discount</span>
-                                </label>
-                                <label class="ci-disc-option-label">
-                                    <input type="radio" name="discount_mode" id="salesDiscModeWhole" value="whole" onchange="onSalesDiscountModeChange()">
-                                    <span>Whole Invoice Discount</span>
-                                </label>
-                            </div>
-                            <!-- Whole discount inputs (hidden by default) -->
-                            <div id="salesWholeDiscSection" class="ci-whole-disc-section" style="display:none;">
-                                <div class="ci-whole-disc-title">Whole Invoice Discount</div>
-                                <div class="ci-whole-disc-row">
-                                    <label class="ci-whole-disc-type-label"><input type="radio" name="sales_whole_disc_type" id="salesWholeDiscFlat" value="flat" checked onchange="updateSalesGrandTotalWithWholeDisc()"> Flat ₹</label>
-                                    <label class="ci-whole-disc-type-label"><input type="radio" name="sales_whole_disc_type" id="salesWholeDiscPercent" value="percentage" onchange="updateSalesGrandTotalWithWholeDisc()"> %</label>
-                                    <input type="number" id="salesWholeDiscountInput" class="ci-whole-disc-input" min="0" step="any" placeholder="0" value="0" oninput="updateSalesGrandTotalWithWholeDisc()">
-                                    <span class="ci-whole-disc-display-text">Discount: <strong id="salesWholeDiscDisplay">₹0.00</strong></span>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Hidden fields for whole discount -->
                         <input type="hidden" name="whole_discount_amount" id="salesWholeDiscAmountHidden" value="0">
+                        <input type="hidden" name="whole_discount_value" id="salesWholeDiscValueHidden" value="0">
                         <input type="hidden" name="whole_discount_type" id="salesWholeDiscTypeHidden" value="flat">
                         <input type="hidden" name="discount_mode_value" id="salesDiscountModeHidden" value="product_wise">
 
@@ -115,7 +91,7 @@
                                     <h6 class="section-title">Products</h6>
                                     <small class="keyboard-shortcuts">⚡ F2 (Quick Search), Ctrl+Enter (Add Row), Alt+P (Focus Product), Ctrl+S (Save)</small>
                                 </div>
-                                <button type="button" class="add-product-btn" onclick="addProductRow()">
+                                <button type="button" class="add-product-btn" onclick="openQuickProductSearch()">
                                     <i class="fas fa-plus"></i> Add More Products
                                 </button>
                                 <button type="button" class="show-fields" onclick="showProductFields()" title="Show Product Fields">
@@ -134,7 +110,7 @@
                                                 <th class="rate-col">Rate</th>
                                                 <th class="qty-col">Qty</th>
                                                 <th class="free-qty-col">Free Qty</th>
-                                                <th class="discount-col">Discount</th>
+                                                <th class="discount-col">Disc %</th>
                                                 <th class="cgst-col">CGST%</th>
                                                 <th class="sgst-col">SGST%</th>
                                                 <th class="total-col">Total</th>
@@ -182,9 +158,16 @@
                                                 <td>Transport Charges:</td>
                                                 <td>₹<span id="salesTransportDisplay">0.00</span></td>
                                             </tr>
-                                            <tr id="salesWholeDiscRow" style="display:none;color:#c62828;">
-                                                <td>Whole Discount:</td>
-                                                <td>- ₹<span id="salesWholeDiscRowVal">0.00</span></td>
+                                            <tr id="salesWholeDiscRow">
+                                                <td style="color:#c62828;">
+                                                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                                        <span>Whole Discount:</span>
+                                                        <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="sales_whole_disc_type" id="salesWholeDiscFlat" value="flat" checked onchange="updateSalesGrandTotalWithWholeDisc()"> Flat ₹</label>
+                                                        <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="sales_whole_disc_type" id="salesWholeDiscPercent" value="percentage" onchange="updateSalesGrandTotalWithWholeDisc()"> %</label>
+                                                        <input type="number" id="salesWholeDiscountInput" min="0" step="any" placeholder="0" value="0" style="padding:4px 8px;border:1.5px solid #ffb300;border-radius:6px;width:110px;font-size:0.9rem;" oninput="updateSalesGrandTotalWithWholeDisc()">
+                                                    </div>
+                                                </td>
+                                                <td style="color:#c62828;font-weight:600;">- ₹<span id="salesWholeDiscRowVal">0.00</span></td>
                                             </tr>
                                             <tr class="totals-row-grand" style="border-top:2px solid #27ae60;">
                                                 <td><strong>Invoice Total:</strong></td>
@@ -1069,7 +1052,7 @@ function addProductRow() {
             <div class="stock-error" style="display: none; color: #dc3545; font-size: 0.75rem; margin-top: 4px; padding: 2px 4px; background: #f8d7da; border-radius: 3px; border-left: 3px solid #dc3545;"></div>
         </td>
         <td class="free-qty-cell"><input type="number" class="free-qty form-control" step="any" placeholder="0" min="0" value="0"></td>
-        <td class="discount-cell"><div class="disc-type-group"><label class="disc-type-label active"><input type="radio" class="disc-mode" name="disc_mode_${productRowIndex}" value="flat" checked onchange="onDiscModeChange(${productRowIndex})">Flat</label><label class="disc-type-label"><input type="radio" class="disc-mode" name="disc_mode_${productRowIndex}" value="percentage" onchange="onDiscModeChange(${productRowIndex})">%</label></div><input type="number" class="discount form-control" step="any" placeholder="0.00" min="0" onchange="calculateRowTotal(${productRowIndex})" value="0"></td>
+        <td class="discount-cell"><input type="hidden" class="disc-mode" value="percentage"><input type="number" class="discount form-control" step="any" placeholder="% disc" min="0" max="100" onchange="calculateRowTotal(${productRowIndex})" value="0"></td>
         <td class="cgst-cell"><input type="number" class="cgst form-control" step="any" placeholder="0.00" min="0" max="100" onchange="calculateRowTotal(${productRowIndex})" value="2.5"></td>
         <td class="sgst-cell"><input type="number" class="sgst form-control" step="any" placeholder="0.00" min="0" max="100" onchange="calculateRowTotal(${productRowIndex})" value="2.5"></td>
         <td class="total-cell"><strong class="row-total">₹0.00</strong></td>
@@ -1302,118 +1285,29 @@ function lockFormInputs(lock) {
     }
 }
 
-// Debounced row calculation to prevent excessive calculations
-let calculationTimeout;
-function onDiscModeChange(index) {
-    const row = document.getElementById(`productRow_${index}`);
-    if (!row) return;
-    const discInput = row.querySelector('.discount');
-    const discModeEl = row.querySelector('.disc-mode:checked');
-    const mode = discModeEl ? discModeEl.value : 'flat';
-    row.querySelectorAll('.disc-type-label').forEach(l => l.classList.remove('active'));
-    if (discModeEl) discModeEl.closest('.disc-type-label').classList.add('active');
-    if (discInput) {
-        discInput.placeholder = mode === 'percentage' ? '0 %' : '0.00';
-        discInput.value = '0';
-    }
-    calculateRowTotal(index);
-}
+function onDiscModeChange(index) { calculateRowTotal(index); }
 
 function calculateRowTotal(index, immediate = false) {
-    if (immediate) {
-        // Direct calculation without debounce
-        const row = document.getElementById(`productRow_${index}`);
-        if (!row) return;
-        
-        const rate = parseFloat(row.querySelector('.rate').value) || 0;
-        const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
-        const discountRaw = parseFloat(row.querySelector('.discount').value) || 0;
-        const cgst = parseFloat(row.querySelector('.cgst').value) || 0;
-        const sgst = parseFloat(row.querySelector('.sgst').value) || 0;
-        const discModeEl = row.querySelector('.disc-mode:checked');
-        const discMode = discModeEl ? discModeEl.value : 'flat';
-        const baseAmount = rate * quantity;
-        const discount = discMode === 'percentage' ? (baseAmount * discountRaw / 100) : discountRaw;
-        const discountedAmount = baseAmount - discount;
-        const totalAmount = discountedAmount * (1 + ((cgst + sgst) / 100));
-        
-        row.querySelector('.row-total').textContent = '₹' + totalAmount.toFixed(2);
-        
-        if (rate > 0 && quantity > 0) {
-            row.classList.add('table-success');
-        } else {
-            row.classList.remove('table-success');
-        }
-        return;
-    }
-    
-    clearTimeout(calculationTimeout);
-    calculationTimeout = setTimeout(() => {
-        const row = document.getElementById(`productRow_${index}`);
-        if (!row) return;
-        
-        const rate = parseFloat(row.querySelector('.rate').value) || 0;
-        const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
-        const discountRaw = parseFloat(row.querySelector('.discount').value) || 0;
-        const cgst = parseFloat(row.querySelector('.cgst').value) || 0;
-        const sgst = parseFloat(row.querySelector('.sgst').value) || 0;
-        const discModeEl = row.querySelector('.disc-mode:checked');
-        const discMode = discModeEl ? discModeEl.value : 'flat';
-        const baseAmount = rate * quantity;
-        const discount = discMode === 'percentage' ? (baseAmount * discountRaw / 100) : discountRaw;
-        const discountedAmount = baseAmount - discount;
-        const totalAmount = discountedAmount * (1 + ((cgst + sgst) / 100));
-        
-        row.querySelector('.row-total').textContent = '₹' + totalAmount.toFixed(2);
-        calculateGrandTotal();
-        
-        // Add visual feedback for completed rows
-        if (rate > 0 && quantity > 0) {
-            row.classList.add('table-success');
-        } else {
-            row.classList.remove('table-success');
-        }
-    }, 200);
+    const row = document.getElementById(`productRow_${index}`);
+    if (!row) return;
+    const rate = parseFloat(row.querySelector('.rate').value) || 0;
+    const quantity = parseFloat(row.querySelector('.quantity').value) || 0;
+    const discountRaw = parseFloat(row.querySelector('.discount').value) || 0;
+    const cgst = parseFloat(row.querySelector('.cgst').value) || 0;
+    const sgst = parseFloat(row.querySelector('.sgst').value) || 0;
+    const baseAmount = rate * quantity;
+    const discount = baseAmount * discountRaw / 100; // always percentage
+    const discountedAmount = baseAmount - discount;
+    const totalAmount = discountedAmount * (1 + ((cgst + sgst) / 100));
+    row.querySelector('.row-total').textContent = '\u20b9' + totalAmount.toFixed(2);
+    if (!immediate) calculateGrandTotal();
+    if (rate > 0 && quantity > 0) row.classList.add('table-success');
+    else row.classList.remove('table-success');
 }
 
-function onSalesDiscountModeChange() {
-    const mode = document.querySelector('input[name="discount_mode"]:checked')?.value || 'product_wise';
-    const wholeSection = document.getElementById('salesWholeDiscSection');
-    const discountModeHidden = document.getElementById('salesDiscountModeHidden');
+function onSalesDiscountModeChange() {}
 
-    // Show/hide whole discount section
-    wholeSection.style.display = mode === 'whole' ? 'block' : 'none';
-    if (discountModeHidden) discountModeHidden.value = mode;
-
-    // Show/hide product-wise discount column in table
-    document.querySelectorAll('#productRows tr').forEach(row => {
-        const discCell = row.querySelector('.discount-cell');
-        if (discCell) discCell.style.display = mode === 'product_wise' ? '' : 'none';
-    });
-    const discHeader = document.querySelector('.discount-col');
-    if (discHeader) discHeader.style.display = mode === 'product_wise' ? '' : 'none';
-
-    // Reset whole discount input when switching to product-wise
-    if (mode === 'product_wise') {
-        const inp = document.getElementById('salesWholeDiscountInput');
-        if (inp) inp.value = '0';
-        const hidden = document.getElementById('salesWholeDiscAmountHidden');
-        if (hidden) hidden.value = '0';
-    }
-
-    calculateGrandTotal();
-}
-
-function updateSalesGrandTotalWithWholeDisc() {
-    // Sync hidden fields
-    const discType = document.querySelector('input[name="sales_whole_disc_type"]:checked')?.value || 'flat';
-    const discVal = parseFloat(document.getElementById('salesWholeDiscountInput')?.value) || 0;
-    const hidden = document.getElementById('salesWholeDiscAmountHidden');
-    const typeHidden = document.getElementById('salesWholeDiscTypeHidden');
-    if (hidden) hidden.value = discVal;
-    if (typeHidden) typeHidden.value = discType;
-    calculateGrandTotal();
-}
+function updateSalesGrandTotalWithWholeDisc() { calculateGrandTotal(); }
 
 function calculateGrandTotal() {
     let subtotal = 0, totalDiscount = 0, taxableAmount = 0, totalCGST = 0, totalSGST = 0, productsTotal = 0;
@@ -1424,10 +1318,8 @@ function calculateGrandTotal() {
         const discountRaw = parseFloat(row.querySelector('.discount')?.value) || 0;
         const cgst = parseFloat(row.querySelector('.cgst')?.value) || 0;
         const sgst = parseFloat(row.querySelector('.sgst')?.value) || 0;
-        const discModeEl2 = row.querySelector('.disc-mode:checked');
-        const discMode2 = discModeEl2 ? discModeEl2.value : 'flat';
         const base = rate * qty;
-        const discount = discMode2 === 'percentage' ? (base * discountRaw / 100) : discountRaw;
+        const discount = base * discountRaw / 100; // always percentage
         const afterDiscount = base - discount;
         const cgstAmt = (afterDiscount * cgst) / 100;
         const sgstAmt = (afterDiscount * sgst) / 100;
@@ -1442,31 +1334,27 @@ function calculateGrandTotal() {
 
     const transportCharges = parseFloat(document.querySelector('[name="sales_transport_charges"]')?.value) || 0;
 
-    const discMode = document.querySelector('input[name="discount_mode"]:checked')?.value || 'product_wise';
+    // Whole discount - always active based on input value
+    const wholeDiscType = document.querySelector('input[name="sales_whole_disc_type"]:checked')?.value || 'flat';
+    const wholeDiscVal = parseFloat(document.getElementById('salesWholeDiscountInput')?.value) || 0;
     let wholeDiscAmt = 0;
-    if (discMode === 'whole') {
-        const wholeDiscType = document.querySelector('input[name="sales_whole_disc_type"]:checked')?.value || 'flat';
-        const wholeDiscVal = parseFloat(document.getElementById('salesWholeDiscountInput')?.value) || 0;
-        if (wholeDiscVal > 0) {
-            wholeDiscAmt = wholeDiscType === 'percentage'
-                ? Math.min(productsTotal * wholeDiscVal / 100, productsTotal)
-                : Math.min(wholeDiscVal, productsTotal);
-        }
-        const dispEl = document.getElementById('salesWholeDiscDisplay');
-        if (dispEl) dispEl.textContent = '₹' + wholeDiscAmt.toFixed(2);
-        const rowEl = document.getElementById('salesWholeDiscRow');
-        if (rowEl) {
-            rowEl.style.display = wholeDiscAmt > 0 ? '' : 'none';
-            const valEl = document.getElementById('salesWholeDiscRowVal');
-            if (valEl) valEl.textContent = wholeDiscAmt.toFixed(2);
-        }
-        const hidden = document.getElementById('salesWholeDiscAmountHidden');
-        const typeHidden = document.getElementById('salesWholeDiscTypeHidden');
-        if (hidden) hidden.value = wholeDiscVal;
-        if (typeHidden) typeHidden.value = wholeDiscType;
-    } else {
-        const rowEl = document.getElementById('salesWholeDiscRow');
-        if (rowEl) rowEl.style.display = 'none';
+    if (wholeDiscVal > 0) {
+        wholeDiscAmt = wholeDiscType === 'percentage'
+            ? Math.min(productsTotal * wholeDiscVal / 100, productsTotal)
+            : Math.min(wholeDiscVal, productsTotal);
+    }
+    const hidden = document.getElementById('salesWholeDiscAmountHidden');
+    const valueHidden = document.getElementById('salesWholeDiscValueHidden');
+    const typeHidden = document.getElementById('salesWholeDiscTypeHidden');
+    const modeHidden = document.getElementById('salesDiscountModeHidden');
+    if (hidden) hidden.value = wholeDiscAmt.toFixed(2);
+    if (valueHidden) valueHidden.value = wholeDiscVal.toFixed(2);
+    if (typeHidden) typeHidden.value = wholeDiscType;
+    if (modeHidden) modeHidden.value = wholeDiscAmt > 0 ? 'whole' : 'product_wise';
+    const rowEl = document.getElementById('salesWholeDiscRow');
+    if (rowEl) {
+        const valEl = document.getElementById('salesWholeDiscRowVal');
+        if (valEl) valEl.textContent = wholeDiscAmt.toFixed(2);
     }
 
     const transportEl = document.getElementById('salesTransportDisplay');
@@ -1488,7 +1376,7 @@ function calculateGrandTotal() {
     if (roundoffRow && roundoffDisplay) {
         if (Math.abs(roundoffAmount) > 0.001) {
             const sign = roundoffAmount > 0 ? '+' : '-';
-            roundoffDisplay.textContent = sign + ' ₹' + Math.abs(roundoffAmount).toFixed(2);
+            roundoffDisplay.textContent = sign + ' \u20b9' + Math.abs(roundoffAmount).toFixed(2);
             roundoffRow.style.display = '';
         } else {
             roundoffRow.style.display = 'none';
@@ -1512,25 +1400,9 @@ function validateExpiryDate(dateString) {
     return convertedDate;
 }
 
-document.getElementById('combinedSalesInvoiceForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    console.log('Form submission started');
-    
+function collectProductsData() {
     const products = [];
     const rows = document.querySelectorAll('#productRows tr');
-    
-    console.log(`Found ${rows.length} product rows`);
-    
-    let hasValidProducts = false;
-    let validationErrors = [];
-    
-    // Allow invoice creation without products
-    if (rows.length === 0) {
-        console.log('No product rows found - creating header-only invoice');
-        // Continue with empty products array
-    }
-    
     rows.forEach((row, index) => {
         const productSelect = row.querySelector('.product-select');
         const batchInput = row.querySelector('.batch-no');
@@ -1539,135 +1411,29 @@ document.getElementById('combinedSalesInvoiceForm').addEventListener('submit', f
         const rateInput = row.querySelector('.rate');
         const quantityInput = row.querySelector('.quantity');
         const discountInput = row.querySelector('.discount');
-        const cgstInput = row.querySelector('.cgst');
-        const sgstInput = row.querySelector('.sgst');
-        
-        console.log(`Row ${index + 1}:`, {
-            productSelected: productSelect ? productSelect.value : 'No select',
-            batch: batchInput ? batchInput.value : 'No batch',
-            expiry: expiryInput ? expiryInput.value : 'No expiry',
-            quantity: quantityInput ? quantityInput.value : 'No quantity',
-            rate: rateInput ? rateInput.value : 'No rate'
-        });
-        
-        // Enhanced validation - check all required fields
         const productId = productSelect ? productSelect.value : '';
         const batchNo = batchInput ? batchInput.value.trim() : '';
         const quantity = quantityInput ? parseFloat(quantityInput.value) : 0;
         const rate = rateInput ? parseFloat(rateInput.value) : 0;
-        
-        // Skip completely empty rows
-        if (!productId && !batchNo && quantity === 0 && rate === 0) {
-            console.log(`Row ${index + 1}: Completely empty, skipping`);
-            return;
-        }
-        
-        // Validate partially filled rows
-        if (productId || batchNo || quantity > 0 || rate > 0) {
-            let rowErrors = [];
-            
-            if (!productId) rowErrors.push('Product not selected');
-            if (!batchNo) rowErrors.push('Batch number missing');
-            if (quantity <= 0) rowErrors.push('Quantity must be greater than 0');
-            if (rate <= 0) rowErrors.push('Rate must be greater than 0');
-            
-            if (rowErrors.length > 0) {
-                validationErrors.push(`Row ${index + 1}: ${rowErrors.join(', ')}`);
-                return;
-            }
-            
-            const expiryValue = expiryInput ? expiryInput.value : '';
-            
-            const productData = {
+        const rowChallanNo = row.getAttribute('data-challan-no') || '';
+        const rowChallanDate = row.getAttribute('data-challan-date') || '';
+        if (!productId && !batchNo && quantity === 0 && rate === 0) return;
+        if (productId && batchNo && quantity > 0 && rate > 0) {
+            products.push({
                 productid: productId,
                 batch_no: batchNo,
-                expiry: expiryValue,
+                expiry: expiryInput ? expiryInput.value : '',
                 mrp: parseFloat(mrpInput ? mrpInput.value : 0) || 0,
                 sale_rate: rate,
                 quantity: quantity,
                 free_qty: parseFloat(row.querySelector('.free-qty') ? row.querySelector('.free-qty').value : 0) || 0,
                 discount: parseFloat(discountInput ? discountInput.value : 0) || 0,
-                calculation_mode: (function(){ var el = row.querySelector('.disc-mode:checked'); return el ? el.value : 'flat'; })(),
-                cgst: parseFloat(cgstInput ? cgstInput.value : 0) || 0,
-                sgst: parseFloat(sgstInput ? sgstInput.value : 0) || 0,
-                rate_applied: selectedCustomerRateType,  // ✅ Use customer's rate type
-                source_challan_no: row.getAttribute('data-challan-no') || null,
-                source_challan_date: row.getAttribute('data-challan-date') || null
-            };
-            
-            products.push(productData);
-            hasValidProducts = true;
-            
-            console.log(`Added product ${index + 1}:`, productData);
-        } else {
-            console.log(`Skipped row ${index + 1}: Missing required fields`);
-        }
-    });
-    
-    console.log(`Total valid products: ${products.length}`);
-    
-    // Show validation errors if any
-    if (validationErrors.length > 0) {
-        alert('❌ Validation Errors:\n\n' + validationErrors.join('\n') + '\n\nPlease fix these errors before saving.');
-        return;
-    }
-    
-    // Allow invoice creation without products
-    if (!hasValidProducts || products.length === 0) {
-        console.log('No valid products found - creating header-only invoice');
-        // Continue with empty products array
-    }
-    
-    // Set products data
-    const productsDataField = document.getElementById('productsData');
-    if (productsDataField) {
-        productsDataField.value = JSON.stringify(products);
-        console.log('Products data set:', productsDataField.value);
-    } else {
-        console.error('Products data field not found!');
-        return;
-    }
-    
-    // Convert date format before submission
-    const dateField = document.querySelector('[name="sales_invoice_date"]');
-    if (dateField && dateField.value) {
-        const convertedDate = convertDateFormat(dateField.value);
-        dateField.value = convertedDate;
-        console.log('Date converted:', convertedDate);
-    }
-    
-    // Show loading state
-    const submitBtn = this.querySelector('button[type="submit"]');
-    if (submitBtn) {
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-        submitBtn.disabled = true;
-    }
-    
-    console.log('Submitting form...');
-    this.submit();
-});
-
-
-
-
-
-function collectProductsData() {
-    const products = [];
-    document.querySelectorAll('#productRows tr').forEach(row => {
-        const productSelect = row.querySelector('.product-select');
-        if (productSelect && productSelect.value) {
-            products.push({
-                productid: productSelect.value,
-                batch_no: row.querySelector('.batch-no').value,
-                expiry: row.querySelector('.expiry').value,
-                mrp: row.querySelector('.mrp').value,
-                sale_rate: row.querySelector('.rate').value,
-                quantity: row.querySelector('.quantity').value,
-                discount: row.querySelector('.discount').value,
-                calculation_mode: (function(){ var el = row.querySelector('.disc-mode:checked'); return el ? el.value : 'flat'; })(),
+                calculation_mode: 'percentage',
                 cgst: row.querySelector('.cgst').value,
                 sgst: row.querySelector('.sgst').value,
-                rate_applied: selectedCustomerRateType  // ✅ Use customer's rate type
+                rate_applied: selectedCustomerRateType,
+                source_challan_no: String(rowChallanNo),
+                source_challan_date: String(rowChallanDate)
             });
         }
     });
@@ -1783,89 +1549,6 @@ document.getElementById('combinedSalesInvoiceForm').addEventListener('submit', f
 });
 
     
-    // Customer selection change handler
-    const customerSelect = document.querySelector('[name="customerid"]');
-    if (customerSelect) {
-        customerSelect.addEventListener('change', function() {
-            const customerId = this.value;
-            if (customerId) {
-                fetchCustomerRateInfo(customerId);
-            } else {
-                hideCustomerRateInfo();
-            }
-        });
-    }
-    
-    // Enhanced keyboard shortcuts
-    document.addEventListener('keydown', function(e) {
-        // Prevent Enter key from triggering unwanted actions
-        if (e.key === 'Enter') {
-            // Allow Enter only in specific cases
-            const activeElement = document.activeElement;
-            const tagName = activeElement.tagName.toLowerCase();
-            
-            // Allow Enter in textarea
-            if (tagName === 'textarea') {
-                return;
-            }
-            
-            // Allow Enter on submit button
-            if (activeElement.type === 'submit') {
-                return;
-            }
-            
-            // Prevent Enter in all input fields and selects to avoid form submission
-            if (tagName === 'input' || tagName === 'select') {
-                e.preventDefault();
-                return;
-            }
-        }
-        
-        // Ctrl + Enter to add new product row
-        if (e.ctrlKey && e.key === 'Enter') {
-            e.preventDefault();
-            addProductRow();
-        }
-        
-        // Ctrl + S to save form (prevent if form is locked due to stock errors)
-        if (e.ctrlKey && e.key === 's') {
-            e.preventDefault();
-            if (window.formLocked) {
-                alert('Cannot save! Please fix stock quantity errors first.');
-                // Focus on first stock error input
-                const firstError = document.querySelector('input[data-stock-error="true"]');
-                if (firstError) {
-                    firstError.focus();
-                    firstError.select();
-                }
-                return;
-            }
-            document.getElementById('combinedSalesInvoiceForm').submit();
-        }
-        
-        // F2 to open quick product search
-        if (e.key === 'F2') {
-            e.preventDefault();
-            openQuickProductSearch();
-        }
-        
-        // Alt + P to focus on last product row
-        if (e.altKey && e.key.toLowerCase() === 'p') {
-            e.preventDefault();
-            focusLastProductRow();
-        }
-    });
-    
-    // Debounced transport charges calculation
-    const transportField = document.querySelector('[name="sales_transport_charges"]');
-    if (transportField) {
-        let transportTimeout;
-        transportField.addEventListener('input', function() {
-            clearTimeout(transportTimeout);
-            transportTimeout = setTimeout(calculateGrandTotal, 300);
-        });
-    }
-
 // Auto-load product details when product is selected
 function loadProductDetails(productSelect, rowIndex) {
     if (!productSelect.value) return;
@@ -1967,6 +1650,9 @@ function fillBatchDetails(data, rowIndex) {
     
     // Auto-fill MRP
     row.querySelector('.mrp').value = data.mrp || '';
+    // Auto-fill packing
+    const packingField = row.querySelector('.packing');
+    if (packingField) packingField.value = data.packing || '';
     
     // Auto-fill expiry in MM-YYYY format (data.expiry should already be in MM-YYYY format from backend)
     if (data.expiry) {
@@ -2064,216 +1750,139 @@ function forceShowProductTable() {
     }
 }
 
-// Batch selection dialog functionality with debugging
 function showBatchSelectionDialog(productId, rowIndex) {
-    console.log('📦 Fetching batches for product:', productId, 'row:', rowIndex);
-    
-    const salesDateField = document.querySelector('[name="sales_invoice_date"]');
-    const salesDate = salesDateField ? salesDateField.value : '';
-    const dateParam = salesDate ? `&sales_invoice_date=${salesDate}` : '';
-    
-    fetch(`/api/product-batch-selector/?product_id=${productId}${dateParam}`)
-        .then(response => {
-            console.log('📡 API Response status:', response.status);
-            return response.json();
-        })
+    fetch(`/api/existing-batches/?product_id=${productId}`)
+        .then(r => r.json())
         .then(data => {
-            console.log('📊 API Data received:', data);
-            
             if (data.success && data.batches.length > 0) {
-                console.log('✅ Creating batch modal with', data.batches.length, 'batches');
                 createBatchSelectionModal(data.batches, rowIndex);
             } else {
-                console.log('⚠️ No batches found');
                 alert('No batches found for this product.');
             }
         })
-        .catch(error => {
-            console.error('❌ Error fetching batches:', error);
-            alert('Error loading batch information.');
-        });
+        .catch(() => alert('Error loading batch information.'));
 }
 
 function createBatchSelectionModal(batches, rowIndex) {
-    // Remove existing modal if any
-    const existingModal = document.getElementById('batchSelectionModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-    
-    // Create modal HTML
+    const existing = document.getElementById('batchSelectionModal');
+    if (existing) existing.remove();
     const modalHTML = `
-        <div id="batchSelectionModal" class="batch-modal-overlay">
-            <div class="batch-modal-content">
-                <div class="batch-modal-header">
-                    <h3>Select Batch</h3>
-                    <button type="button" class="batch-modal-close" onclick="closeBatchModal()">&times;</button>
+        <div id="batchSelectionModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:10000;display:flex;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:10px;width:96%;max-width:780px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.28);overflow:hidden;">
+                <div style="padding:14px 20px;background:#1e40af;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                    <h3 style="margin:0;font-size:1rem;font-weight:600;">Select Batch</h3>
+                    <button onclick="closeBatchModal()" style="background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;">&times;</button>
                 </div>
-                <div class="batch-modal-body">
-                    <div class="batch-search">
-                        <input type="text" id="batchSearch" placeholder="🔍 Search batch number..." autocomplete="off">
-                    </div>
-                    <div class="batch-list" id="batchList" tabindex="0">
-                        ${batches.map((batch, index) => `
-                            <div class="batch-item ${index === 0 ? 'batch-selected' : ''} ${batch.is_available ? '' : 'batch-unavailable'}" 
-                                 data-batch-index="${index}" data-row-index="${rowIndex}" data-batch-data='${JSON.stringify(batch)}'>
-                                <div class="batch-info">
-                                    <div class="batch-no-label"><strong>${batch.batch_no}</strong></div>
-                                    <div class="batch-details">
-                                        <span>📅 Exp: ${batch.expiry}</span>
-                                        <span>📦 Stock: ${batch.stock}</span>
-                                        <span>🎁 Free: ${batch.free_qty || 0}</span>
-                                        <span>💰 MRP: ₹${batch.mrp}</span>
-                                    </div>
-                                    <div class="batch-rates">
-                                        <span>A: ₹${batch.rates ? batch.rates.rate_A : 0}</span>
-                                        <span>B: ₹${batch.rates ? batch.rates.rate_B : 0}</span>
-                                        <span>C: ₹${batch.rates ? batch.rates.rate_C : 0}</span>
-                                    </div>
-                                </div>
-                                <div class="batch-status">
-                                    ${batch.is_available ? '<span class="status-available">Available</span>' : '<span class="status-unavailable">Out of Stock</span>'}
-                                </div>
-                            </div>
-                        `).join('')}
+                <div style="padding:12px 16px;flex:1;overflow-y:auto;background:#fff;">
+                    <input type="text" id="batchSearch" placeholder="Search batch..." oninput="filterBatches()" style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:0.9rem;box-sizing:border-box;margin-bottom:10px;">
+                    <div id="batchList" style="border:1px solid #e2e8f0;border-radius:6px;overflow:auto;max-height:320px;">
+                        <table class="batch-selection-table" style="width:100%;border-collapse:collapse;font-size:0.85rem;table-layout:fixed;min-width:700px;">
+                            <colgroup>
+                                <col style="width:18%;">
+                                <col style="width:16%;">
+                                <col style="width:16%;">
+                                <col style="width:16%;">
+                                <col style="width:19%;">
+                                <col style="width:15%;">
+                            </colgroup>
+                            <thead><tr style="background:#f1f5f9;">
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Batch No</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Packing</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Expiry</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">MRP</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Rate A</th>
+                                <th style="padding:8px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Stock</th>
+                            </tr></thead>
+                            <tbody>
+                            ${batches.map(b => `
+                                <tr class="batch-item" onclick="selectBatch('${b.batch_no}', ${rowIndex}, ${JSON.stringify(b).replace(/"/g, '&quot;')})" style="display:table-row;cursor:pointer;background:#fff;transition:background 0.12s;">
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;"><strong>${b.batch_no}</strong></td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">${b.packing || '-'}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">${b.expiry}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">&#8377;${b.mrp}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;color:#2563eb;font-weight:600;">${b.rate_a > 0 ? '&#8377;' + b.rate_a.toFixed(2) : '-'}</td>
+                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;" class="${b.stock <= 10 ? 'text-danger' : 'text-success'}">${b.stock}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <div class="batch-modal-footer">
-                    <div class="batch-shortcuts">
-                        <small>↑↓: Navigate | Enter: Select | Esc: Close</small>
-                    </div>
-                    <button type="button" class="btn btn-secondary" onclick="closeBatchModal()">Cancel</button>
+                <div style="padding:10px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+                    <small style="color:#64748b;">&#8593;&#8595;: Navigate | Enter: Select | Esc: Close</small>
+                    <button onclick="closeBatchModal()" class="btn btn-secondary">Cancel</button>
                 </div>
             </div>
-        </div>
-    `;
-    
-    // Add modal to page
+        </div>`;
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // Initialize batch selection after modal is added with focus on first batch
     setTimeout(() => {
-        initializeBatchSelection();
-        // Focus on batch list for keyboard navigation
+        const searchInput = document.getElementById('batchSearch');
         const batchList = document.getElementById('batchList');
-        if (batchList) {
-            batchList.focus();
-        }
+        let selectedIndex = 0;
+
+        const getVisibleBatches = () => Array.from(
+            batchList.querySelectorAll('.batch-item')
+        ).filter(item => item.style.display !== 'none');
+
+        const updateSelection = (items, index, shouldScroll = true) => {
+            items.forEach((item, itemIndex) => {
+                const isSelected = itemIndex === index;
+                item.dataset.selected = isSelected ? 'true' : 'false';
+                item.style.background = isSelected ? '#dbeafe' : '#fff';
+            });
+
+            if (items[index] && shouldScroll) {
+                items[index].scrollIntoView({block: 'nearest'});
+            }
+        };
+
+        searchInput.focus();
+        updateSelection(getVisibleBatches(), selectedIndex, false);
+        searchInput.addEventListener('input', () => {
+            selectedIndex = 0;
+            updateSelection(getVisibleBatches(), selectedIndex, false);
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            const navigationKeys = ['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', 'Escape'];
+            if (!navigationKeys.includes(e.key)) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const items = getVisibleBatches();
+            if (e.key === 'Escape') {
+                closeBatchModal();
+                return;
+            }
+            if (!items.length) return;
+
+            if (e.key === 'ArrowDown') selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+            else if (e.key === 'ArrowUp') selectedIndex = Math.max(selectedIndex - 1, 0);
+            else if (e.key === 'Home') selectedIndex = 0;
+            else if (e.key === 'End') selectedIndex = items.length - 1;
+            else if (e.key === 'Enter') {
+                items[selectedIndex]?.click();
+                return;
+            }
+
+            updateSelection(items, selectedIndex);
+        });
     }, 100);
 }
 
-// Separate function to handle batch selection initialization
-function initializeBatchSelection() {
-    const modal = document.getElementById('batchSelectionModal');
-    const searchInput = document.getElementById('batchSearch');
-    const batchList = document.getElementById('batchList');
-    
-    if (!modal || !searchInput || !batchList) {
-        console.error('Batch modal elements not found');
-        return;
-    }
-    
-    // Focus on batch list instead of search input for immediate keyboard navigation
-    batchList.focus();
-    
-    // Global keydown handler for the entire modal
-    function handleModalKeydown(e) {
-        e.stopPropagation(); // Prevent event bubbling
-        
-        const visibleItems = batchList.querySelectorAll('.batch-item:not([style*="display: none"])');
-        let selectedIndex = Array.from(visibleItems).findIndex(item => item.classList.contains('batch-selected'));
-        
-        switch(e.key) {
-            case 'ArrowDown':
-                e.preventDefault();
-                if (visibleItems.length > 0) {
-                    // Remove current selection
-                    visibleItems.forEach(item => item.classList.remove('batch-selected'));
-                    
-                    // Move to next item or wrap to first
-                    selectedIndex = selectedIndex < visibleItems.length - 1 ? selectedIndex + 1 : 0;
-                    visibleItems[selectedIndex].classList.add('batch-selected');
-                    visibleItems[selectedIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-                }
-                break;
-                
-            case 'ArrowUp':
-                e.preventDefault();
-                if (visibleItems.length > 0) {
-                    // Remove current selection
-                    visibleItems.forEach(item => item.classList.remove('batch-selected'));
-                    
-                    // Move to previous item or wrap to last
-                    selectedIndex = selectedIndex > 0 ? selectedIndex - 1 : visibleItems.length - 1;
-                    visibleItems[selectedIndex].classList.add('batch-selected');
-                    visibleItems[selectedIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-                }
-                break;
-                
-            case 'Enter':
-                e.preventDefault();
-                const selectedItem = batchList.querySelector('.batch-item.batch-selected');
-                if (selectedItem) {
-                    const batchData = JSON.parse(selectedItem.getAttribute('data-batch-data'));
-                    const rowIndex = selectedItem.getAttribute('data-row-index');
-                    selectBatch(batchData.batch_no, rowIndex, batchData);
-                }
-                break;
-                
-            case 'Escape':
-                e.preventDefault();
-                closeBatchModal();
-                break;
-        }
-    }
-    
-    // Attach keydown handler to modal
-    modal.addEventListener('keydown', handleModalKeydown);
-    
-    // Search input handler
-    searchInput.addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const batchItems = batchList.querySelectorAll('.batch-item');
-        
-        // Remove previous selection
-        batchItems.forEach(item => item.classList.remove('batch-selected'));
-        
-        let firstVisible = null;
-        batchItems.forEach(item => {
-            const batchNo = item.querySelector('.batch-no').textContent.toLowerCase();
-            const batchDetails = item.querySelector('.batch-details').textContent.toLowerCase();
-            
-            if (batchNo.includes(searchTerm) || batchDetails.includes(searchTerm)) {
-                item.style.display = 'block';
-                if (!firstVisible) firstVisible = item;
-            } else {
-                item.style.display = 'none';
-            }
-        });
-        
-        // Auto-select first visible item
-        if (firstVisible) {
-            firstVisible.classList.add('batch-selected');
-        }
+function filterBatches() {
+    const term = document.getElementById('batchSearch').value.toLowerCase();
+    const items = document.querySelectorAll('#batchList .batch-item');
+    items.forEach(i => i.style.display = i.textContent.toLowerCase().includes(term) ? '' : 'none');
+    const first = Array.from(items).find(i => i.style.display !== 'none');
+    items.forEach(i => {
+        i.dataset.selected = 'false';
+        i.style.background = '#fff';
     });
-    
-    // Click handlers for batch items
-    const batchItems = batchList.querySelectorAll('.batch-item');
-    batchItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const batchData = JSON.parse(this.getAttribute('data-batch-data'));
-            const rowIndex = this.getAttribute('data-row-index');
-            selectBatch(batchData.batch_no, rowIndex, batchData);
-        });
-    });
-    
-    console.log('✅ Batch selection initialized with', batchItems.length, 'items');
-    console.log('🎯 Modal focus set, keyboard navigation ready');
-    
-    // Test keyboard navigation immediately
-    setTimeout(() => {
-        console.log('🧪 Testing navigation - Current selected:', batchList.querySelector('.batch-selected')?.querySelector('.batch-no')?.textContent);
-    }, 100);
+    if (first) {
+        first.dataset.selected = 'true';
+        first.style.background = '#dbeafe';
+    }
 }
 
 function selectBatch(batchNo, rowIndex, batchData) {
@@ -2291,15 +1900,16 @@ function selectBatch(batchNo, rowIndex, batchData) {
         
         // Auto-fill MRP
         row.querySelector('.mrp').value = batchData.mrp;
-        
-        // Set rate based on customer type
+        // Auto-fill packing
+        const packingField = row.querySelector('.packing');
+        if (packingField) packingField.value = batchData.packing || '';
         let selectedRate = batchData.mrp; // Default fallback
-        if (batchData.rates && selectedCustomerRateType === 'A' && batchData.rates.rate_A > 0) {
-            selectedRate = batchData.rates.rate_A;
-        } else if (batchData.rates && selectedCustomerRateType === 'B' && batchData.rates.rate_B > 0) {
-            selectedRate = batchData.rates.rate_B;
-        } else if (batchData.rates && selectedCustomerRateType === 'C' && batchData.rates.rate_C > 0) {
-            selectedRate = batchData.rates.rate_C;
+        if (selectedCustomerRateType === 'A' && (batchData.rate_a || (batchData.rates && batchData.rates.rate_A)) > 0) {
+            selectedRate = batchData.rate_a || batchData.rates.rate_A;
+        } else if (selectedCustomerRateType === 'B' && (batchData.rate_b || (batchData.rates && batchData.rates.rate_B)) > 0) {
+            selectedRate = batchData.rate_b || batchData.rates.rate_B;
+        } else if (selectedCustomerRateType === 'C' && (batchData.rate_c || (batchData.rates && batchData.rates.rate_C)) > 0) {
+            selectedRate = batchData.rate_c || batchData.rates.rate_C;
         }
         
         row.querySelector('.rate').value = selectedRate;
@@ -2404,11 +2014,8 @@ function hideCustomerRateInfo() {
 function setCurrentDate() {
     const dateField = document.querySelector('[name="sales_invoice_date"]');
     if (dateField && !dateField.value) {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        dateField.value = `${year}-${month}-${day}`;
+        const fyYear = parseInt('{{ current_fy|default:"" }}', 10);
+        if (Number.isInteger(fyYear)) dateField.value = `${fyYear}-04-01`;
         console.log('✓ Invoice date auto-filled:', dateField.value);
     }
 }
@@ -3361,6 +2968,13 @@ function pullSelectedChallans() {
                 const discInput = document.getElementById('salesWholeDiscountInput');
                 if (discInput) { discInput.value = data.whole_discount_amount.toFixed(2); discInput.dispatchEvent(new Event('input')); }
             }
+            if (data.transport_charges) {
+                const transportInput = document.querySelector('input[name*="sales_transport_charges"]');
+                if (transportInput) {
+                    transportInput.value = (parseFloat(transportInput.value) || 0) + parseFloat(data.transport_charges);
+                    transportInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }
             closePullChallanDialog();
         } else {
             alert('Error: ' + data.error);
@@ -3396,15 +3010,9 @@ function fillChallanProducts(products) {
         lastRow.querySelector('.rate').value = product.rate;
         lastRow.querySelector('.quantity').value = product.quantity;
         lastRow.querySelector('.free-qty').value = product.free_qty || 0;
-        // sale_discount in DB is always stored as flat amount (already calculated)
-        // so always set disc-mode to 'flat' regardless of original calculation_mode
-        lastRow.querySelector('.discount').value = product.discount || 0;
-        const radios = lastRow.querySelectorAll('.disc-mode');
-        radios.forEach(r => {
-            r.checked = (r.value === 'flat');
-            const lbl = r.closest('.disc-type-label');
-            if (lbl) lbl.classList.toggle('active', r.value === 'flat');
-        });
+        lastRow.querySelector('.discount').value = product.discount_percentage ?? product.discount ?? 0;
+        const discMode = lastRow.querySelector('.disc-mode');
+        if (discMode) discMode.value = product.calculation_mode || 'percentage';
         lastRow.querySelector('.cgst').value = product.cgst || 2.5;
         lastRow.querySelector('.sgst').value = product.sgst || 2.5;
         
@@ -3419,11 +3027,7 @@ function fillChallanProducts(products) {
     // Calculate grand total
     calculateGrandTotal();
 
-    // Reset whole discount when pulling challan (product-wise mode)
-    const discModeHidden = document.getElementById('salesDiscountModeHidden');
-    if (discModeHidden) discModeHidden.value = 'product_wise';
-    const prodWiseRadio = document.getElementById('salesDiscModeProductWise');
-    if (prodWiseRadio) { prodWiseRadio.checked = true; onSalesDiscountModeChange(); }
+    document.getElementById('salesDiscountModeHidden').value = 'whole';
 }
 
 // Add Shift+Enter handler for pull challan dialog
@@ -3489,6 +3093,43 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Setup enhanced quantity validation
         setupQuantityValidation();
+
+        // Customer selection change handler
+        const customerSelect = document.querySelector('[name="customerid"]');
+        if (customerSelect) {
+            customerSelect.addEventListener('change', function() {
+                const customerId = this.value;
+                if (customerId) fetchCustomerRateInfo(customerId);
+                else hideCustomerRateInfo();
+            });
+        }
+
+        // Transport charges calculation
+        const transportField = document.querySelector('[name="sales_transport_charges"]');
+        if (transportField) {
+            let transportTimeout;
+            transportField.addEventListener('input', function() {
+                clearTimeout(transportTimeout);
+                transportTimeout = setTimeout(calculateGrandTotal, 300);
+            });
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const tag = document.activeElement.tagName.toLowerCase();
+                if (tag === 'textarea' || document.activeElement.type === 'submit') return;
+                if (tag === 'input' || tag === 'select') { e.preventDefault(); return; }
+            }
+            if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); addProductRow(); }
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                if (window.formLocked) { alert('Cannot save! Please fix stock quantity errors first.'); return; }
+                document.getElementById('combinedSalesInvoiceForm').submit();
+            }
+            if (e.key === 'F2') { e.preventDefault(); openQuickProductSearch(); }
+            if (e.altKey && e.key.toLowerCase() === 'p') { e.preventDefault(); focusLastProductRow(); }
+        });
     }, 300);
     
     // Add debug button (remove in production)

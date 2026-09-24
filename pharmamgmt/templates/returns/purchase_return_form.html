@@ -84,7 +84,7 @@
                             <h6 class="ci-section-title">Return Products</h6>
                             <small class="ci-keyboard-shortcuts">F2: Search | Ctrl+Enter: Add | Ctrl+S: Save</small>
                         </div>
-                        <button type="button" class="ci-add-product-btn" onclick="addReturnProductRow()">
+                        <button type="button" class="ci-add-product-btn" onclick="openQuickProductSearch()">
                             <i class="fas fa-plus"></i> Add Product
                         </button>
                     </div>
@@ -434,11 +434,8 @@ function calculateReturnTotal() {
     }
 }
 function setCurrentReturnDate() {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const dateString = `${day}-${month}-${year}`; // DD-MM-YYYY format
+    const fyYear = parseInt('{{ current_fy|default:"" }}', 10);
+    const dateString = Number.isInteger(fyYear) ? `01-04-${fyYear}` : '';
     
     const returnDateInput = document.querySelector('input[name="returninvoice_date"]');
     if (returnDateInput && !returnDateInput.value) {
@@ -864,9 +861,11 @@ function createReturnBatchModal(batches, rowIndex) {
                                     <div class="batch-no"><strong>${batch.batch_no}</strong></div>
                                     <div class="batch-details">
                                         <span>Exp: ${batch.expiry}</span>
+                                        <span>Packing: ${batch.packing || '-'}</span>
                                         <span>Stock: ${batch.stock}</span>
                                         <span style=\"color: #28a745; font-weight: 600;\">Free: ${batch.free_qty || 0}</span>
                                         <span>MRP: ₹${batch.mrp}</span>
+                                        <span style="color:#2563eb;font-weight:600;">Rate A: ₹${batch.rate_a || batch.purchase_rate || batch.mrp}</span>
                                     </div>
                                 </div>
                             </div>

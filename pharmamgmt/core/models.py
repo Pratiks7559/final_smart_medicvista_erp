@@ -112,6 +112,7 @@ class InvoiceMaster(models.Model):
     transport_charges=models.FloatField()
     invoice_total=models.FloatField(null=False, blank=False)
     invoice_paid=models.FloatField(null=False, blank=False, default=0)
+    whole_discount_amount=models.FloatField(default=0.0)
     payment_status=models.CharField(max_length=20, choices=[
         ('pending', 'Pending'),
         ('partial', 'Partially Paid'),

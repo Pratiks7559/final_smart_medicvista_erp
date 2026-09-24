@@ -107,10 +107,14 @@ def add_stock_issue(request):
     
     # Get all products for client-side search
     products = ProductMaster.objects.all().order_by('product_name')
+    selected_year = request.session.get('selected_year', get_current_financial_year())
+    fy_start_date = get_financial_year_dates(selected_year)[0]
     
     context = {
         'issue_types': StockIssueMaster.ISSUE_TYPES,
         'today': timezone.now().date(),
+        'fy_start_date': fy_start_date,
+        'current_fy': selected_year,
         'products': products,
     }
     
@@ -242,6 +246,13 @@ def get_product_batch_info(request):
             if current_stock > 0:
                 # Convert expiry to MM-YYYY format
                 expiry_mmyyyy = convert_expiry_to_mmyyyy(batch['product_expiry'])
+                rate_a = 0
+                try:
+                    rate_a = float(SaleRateMaster.objects.get(
+                        productid=product, product_batch_no=batch_no
+                    ).rate_A or 0)
+                except SaleRateMaster.DoesNotExist:
+                    pass
                 
                 batch_list.append({
                     'batch_no': batch_no,
@@ -249,6 +260,8 @@ def get_product_batch_info(request):
                     'stock': current_stock,
                     'mrp': float(batch['product_MRP'] or 0),
                     'purchase_rate': float(batch['product_actual_rate'] or batch['product_MRP'] or 0),
+                    'packing': product.product_packing or '',
+                    'rate_a': rate_a,
                     'is_available': True
                 })
         

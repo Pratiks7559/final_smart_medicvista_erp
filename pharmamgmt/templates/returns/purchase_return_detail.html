@@ -774,6 +774,8 @@ function openBatchSelectorForEdit(rowIndex) {
                                 <span class="${batch.stock <= 10 ? 'text-danger' : 'text-success'}">Stock: ${batch.stock}</span>
                                 <span style=\"color: #28a745; font-weight: 600;\">Free: ${batch.free_qty || 0}</span>
                                 <span>MRP: ₹${batch.mrp}</span>
+                                <span>Packing: ${batch.packing || '-'}</span>
+                                <span style="color:#2563eb;font-weight:600;">Rate A: ₹${batch.rate_a || batch.purchase_rate || batch.mrp}</span>
                             </div>
                         </div>
                     </div>
@@ -1763,20 +1765,43 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
-    // Ctrl+E for edit
-    if (e.ctrlKey && e.key === 'e') {
-        e.preventDefault();
-        openEditPurchaseReturnModal();
+// Keyboard shortcuts - use capture phase to reliably intercept before other handlers
+window.addEventListener('keydown', function(e) {
+    const editModal = document.getElementById('editPurchaseReturnModal');
+    const quickSearchModal = document.getElementById('quickProductModalEdit');
+    const batchModal = document.getElementById('batchSelectorModalEdit');
+
+    // Prevent shortcut from firing while quick search or batch selection is active
+    if (quickSearchModal && quickSearchModal.parentNode) {
+        return;
     }
-    
+    if (batchModal && batchModal.style.display === 'flex') {
+        return;
+    }
+
+    // Ctrl+E for edit (works from anywhere on the page)
+    if (e.ctrlKey && (e.key === 'e' || e.key === 'E')) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        if (typeof openEditPurchaseReturnModal === 'function') {
+            openEditPurchaseReturnModal();
+        }
+        return false;
+    }
+
     // Ctrl+P for print
-    if (e.ctrlKey && e.key === 'p') {
+    if (e.ctrlKey && (e.key === 'p' || e.key === 'P')) {
+        if (editModal && editModal.style.display === 'flex') {
+            return;
+        }
         e.preventDefault();
+        e.stopPropagation();
         window.open('{% url "print_gst_purchase_return_invoice" return_id=return_invoice.returninvoiceid %}', '_blank');
+        return false;
     }
-});
+}, true);
 
 // Apply round-off on page load - 10.50 → 11, 10.49 → 10 (UI only, DB saves actual)
 window.addEventListener('DOMContentLoaded', function() {

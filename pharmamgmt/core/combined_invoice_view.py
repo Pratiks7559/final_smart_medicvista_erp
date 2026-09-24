@@ -28,6 +28,9 @@ logger.addHandler(file_handler)
 
 @login_required
 def add_invoice_with_products(request):
+    from .year_filter_utils import get_current_financial_year
+    current_fy = request.session.get('selected_year', get_current_financial_year())
+
     if request.method == 'POST':
         try:
             # Debug: Log the POST data
@@ -47,6 +50,7 @@ def add_invoice_with_products(request):
                     'invoice_form': invoice_form,
                     'suppliers': suppliers,
                     'products': products,
+                    'current_fy': current_fy,
                     'title': 'Add Invoice with Products'
                 }
                 return render(request, 'purchases/combined_invoice_form.html', context)
@@ -75,6 +79,7 @@ def add_invoice_with_products(request):
                     'invoice_form': invoice_form,
                     'suppliers': suppliers,
                     'products': products_list,
+                    'current_fy': current_fy,
                     'title': 'Add Invoice with Products'
                 }
                 return render(request, 'purchases/combined_invoice_form.html', context)
@@ -282,18 +287,17 @@ def add_invoice_with_products(request):
                     logger.info(f"Invoice {invoice.invoice_no} created without products - header only")
                     messages.info(request, "📄 Invoice created without products. You can add products later by editing the invoice.")
                 
-                # Whole invoice discount
-                # NOTE: invoice.invoice_total already has the correct value from the frontend
-                # (frontend calculates: productsTotal + transport - wholeDisc and sets invoice_total input)
-                # So we do NOT subtract whole_discount again here — that would cause double deduction.
-                # We only store the whole_discount_amount for reference/display.
+                # Whole invoice discount - always apply if amount > 0 (mode check removed)
                 discount_mode = request.POST.get('discount_mode_value', request.POST.get('discount_mode', 'product_wise'))
                 whole_discount = 0.0
-                if discount_mode == 'whole':
-                    try:
-                        whole_discount = float(request.POST.get('whole_discount_amount', '0') or '0')
-                    except (ValueError, TypeError):
-                        whole_discount = 0.0
+                try:
+                    whole_discount = float(request.POST.get('whole_discount_amount', '0') or '0')
+                except (ValueError, TypeError):
+                    whole_discount = 0.0
+
+                # Save whole_discount_amount on invoice for reference/audit
+                invoice.whole_discount_amount = whole_discount
+                invoice.save()
 
                 # Save round-off info if fields exist
                 roundoff_amount_val = request.POST.get('roundoff_amount', '0')
@@ -418,6 +422,8 @@ def add_invoice_with_products(request):
         'invoice_form': invoice_form,
         'suppliers': suppliers,
         'products': products,
+                'current_fy': current_fy,
+        'current_fy': current_fy,
         'title': 'Add Invoice with Products'
     }
     return render(request, 'purchases/combined_invoice_form.html', context)
@@ -544,6 +550,11 @@ def get_existing_batches(request):
                     'expiry': batch['product_expiry'],
                     'mrp': batch['product_MRP'],
                     'purchase_rate': latest_purchase.product_purchase_rate if latest_purchase else batch['product_purchase_rate'],
+                    'packing': latest_purchase.product_packing if latest_purchase else '',
+                    'rate_a': float(latest_purchase.rate_a) if latest_purchase and latest_purchase.rate_a else 0.0,
+                    'rate_b': float(latest_purchase.rate_b) if latest_purchase and latest_purchase.rate_b else 0.0,
+                    'rate_c': float(latest_purchase.rate_c) if latest_purchase and latest_purchase.rate_c else 0.0,
+                    'free_qty': float(latest_purchase.product_free_qty) if latest_purchase and latest_purchase.product_free_qty else 0.0,
                     'stock': current_stock,
                     'supplier_name': latest_purchase.product_supplierid.supplier_name if latest_purchase else 'N/A',
                     'invoice_no': latest_purchase.product_invoice_no if latest_purchase else 'N/A',
@@ -585,6 +596,11 @@ def get_existing_batches(request):
                     'expiry': batch['product_expiry'],
                     'mrp': batch['product_mrp'],
                     'purchase_rate': latest_challan.product_purchase_rate if latest_challan else batch['product_purchase_rate'],
+                    'packing': latest_challan.product_packing if latest_challan else '',
+                    'rate_a': float(latest_challan.rate_a) if latest_challan and latest_challan.rate_a else 0.0,
+                    'rate_b': float(latest_challan.rate_b) if latest_challan and latest_challan.rate_b else 0.0,
+                    'rate_c': float(latest_challan.rate_c) if latest_challan and latest_challan.rate_c else 0.0,
+                    'free_qty': float(latest_challan.product_free_qty) if latest_challan and latest_challan.product_free_qty else 0.0,
                     'stock': current_stock,
                     'supplier_name': latest_challan.product_suppliername.supplier_name if latest_challan else 'N/A',
                     'invoice_no': 'N/A',
@@ -839,6 +855,10 @@ def get_challan_products(request):
                 except:
                     challan_date_str = ''
             
+            product_subtotal = float(product.product_purchase_rate or 0) * float(product.product_quantity or 0)
+            discount_amount = float(product.product_discount or 0)
+            discount_percentage = (discount_amount / product_subtotal * 100) if product_subtotal else 0.0
+
             products_data.append({
                 'product_id': product.product_id.productid,
                 'product_name': product.product_name or '',
@@ -850,7 +870,9 @@ def get_challan_products(request):
                 'rate': float(product.product_purchase_rate) if product.product_purchase_rate else 0.0,
                 'quantity': float(product.product_quantity) if product.product_quantity else 0.0,
                 'free_qty': float(product.product_free_qty) if product.product_free_qty else 0.0,
-                'discount': float(product.product_discount) if product.product_discount else 0.0,
+                'discount': round(discount_percentage, 4),
+                'discount_percentage': round(discount_percentage, 4),
+                'calculation_mode': 'percentage',
                 'cgst': float(product.cgst) if product.cgst else 2.5,
                 'sgst': float(product.sgst) if product.sgst else 2.5,
                 'rate_a': rate_a,
@@ -862,17 +884,20 @@ def get_challan_products(request):
         
         # Sum whole_discount_amount from all selected challans
         total_whole_discount = 0.0
+        total_transport_charges = 0.0
         try:
             from core.models import Challan1 as _C1
             for _c in _C1.objects.filter(challan_id__in=challan_ids):
                 total_whole_discount += float(_c.whole_discount_amount or 0)
+                total_transport_charges += float(_c.transport_charges or 0)
         except Exception:
             pass
 
         return JsonResponse({
             'success': True,
             'products': products_data,
-            'whole_discount_amount': total_whole_discount
+            'whole_discount_amount': total_whole_discount,
+            'transport_charges': total_transport_charges
         })
 
     except Exception as e:

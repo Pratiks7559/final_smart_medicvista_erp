@@ -6,6 +6,7 @@ waitress==3.0.0
 
 # MySQL Database Driver
 mysqlclient==2.2.8
+PyMySQL==1.1.1
 
 # PDF Generation
 reportlab==4.4.4

@@ -437,13 +437,15 @@ def product_detail(request, pk):
     # Get stock status
     stock_info = get_stock_status(pk)
     
-    # Get purchase history - order by actual invoice date
+    from .year_filter_utils import apply_year_filter
+    # Get purchase history - filtered by FY
     purchases = PurchaseMaster.objects.filter(productid=pk).select_related('product_invoiceid').order_by('-product_invoiceid__invoice_date').values(
         'purchaseid', 'product_invoice_no', 'product_batch_no',
         'product_quantity', 'product_free_qty', 'product_purchase_rate',
         'product_MRP', 'product_expiry',
         'product_invoiceid__invoice_date', 'product_invoiceid__invoiceid'
     )
+    purchases = apply_year_filter(purchases, request, 'product_invoiceid__invoice_date')
 
     # Get sales history - order by actual sales invoice date
     sales = SalesMaster.objects.filter(productid=pk).select_related('sales_invoice_no').order_by('-sales_invoice_no__sales_invoice_date').values(
@@ -451,7 +453,8 @@ def product_detail(request, pk):
         'sale_rate', 'product_MRP', 'product_expiry',
         'sales_invoice_no__sales_invoice_no', 'sales_invoice_no__sales_invoice_date'
     )
-    
+    sales = apply_year_filter(sales, request, 'sales_invoice_no__sales_invoice_date')
+
     # Get rate history
     rates = ProductRateMaster.objects.filter(rate_productid=pk).order_by('-rate_date')
     
@@ -1127,10 +1130,12 @@ def edit_invoice(request, pk):
                             whole_disc_amt = min(whole_disc_val, products_decimal)
                         total_decimal = subtotal_decimal - whole_disc_amt
                     else:
+                        whole_disc_amt = Decimal('0')
                         total_decimal = subtotal_decimal
 
                     # Round to nearest integer (standard invoice rounding)
                     invoice.invoice_total = float(total_decimal.quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+                    invoice.whole_discount_amount = float(whole_disc_amt)
                     
                 except json.JSONDecodeError:
                     pass  # If products_data is invalid, just update basic fields
@@ -2801,7 +2806,11 @@ def add_sales_invoice_with_products(request):
                                 continue
                             
                             # Skip stock validation for challan products
-                            is_challan_product = product_data.get('source_challan_no') is not None
+                            is_challan_product = bool(
+                                product_data.get('source_challan_no') or
+                                product_data.get('challan_no') or
+                                product_data.get('from_challan')
+                            )
                             
                             if not is_challan_product:
                                 # Check stock availability only for non-challan products
@@ -2866,6 +2875,22 @@ def add_sales_invoice_with_products(request):
                                 expiry_formatted = ''
                             
                             # Prepare sale object
+                            source_challan_date = product_data.get('source_challan_date')
+                            if source_challan_date:
+                                parsed_source_date = None
+                                for source_date_format in ('%Y-%m-%d', '%d-%m-%Y', '%d/%m/%Y'):
+                                    try:
+                                        parsed_source_date = datetime.strptime(
+                                            str(source_challan_date).strip(),
+                                            source_date_format
+                                        ).date()
+                                        break
+                                    except ValueError:
+                                        continue
+                                source_challan_date = parsed_source_date
+                            else:
+                                source_challan_date = None
+
                             sale_obj = SalesMaster(
                                 sales_invoice_no=invoice,
                                 customerid=invoice.customerid,
@@ -2887,7 +2912,7 @@ def add_sales_invoice_with_products(request):
                                 rate_applied=product_data.get('rate_applied', rate_letter),
                                 sale_total_amount=total_amount,
                                 source_challan_no=product_data.get('source_challan_no'),
-                                source_challan_date=product_data.get('source_challan_date')
+                                source_challan_date=source_challan_date
                             )
                             
                             sales_to_create.append(sale_obj)
@@ -2904,6 +2929,53 @@ def add_sales_invoice_with_products(request):
                                 _cache_suppressed.active = False
                             sales_created_count = len(sales_to_create)
                             print(f"Successfully created {sales_created_count} sales records")
+
+                            # Keep Inventory 2 in sync. bulk_create bypasses post_save
+                            # signals, so create the corresponding negative sale movements here.
+                            from .models import InventoryTransaction
+                            for sale_obj in sales_to_create:
+                                sale_db = SalesMaster.objects.get(
+                                    sales_invoice_no=invoice,
+                                    productid=sale_obj.productid,
+                                    product_batch_no=sale_obj.product_batch_no,
+                                    product_expiry=sale_obj.product_expiry,
+                                    sale_quantity=sale_obj.sale_quantity,
+                                )
+                                transaction_qs = InventoryTransaction.objects.filter(
+                                    product=sale_obj.productid,
+                                    batch_no=sale_obj.product_batch_no,
+                                    transaction_type='CUSTOMER_CHALLAN',
+                                    reference_number=sale_obj.source_challan_no,
+                                ) if sale_obj.source_challan_no else InventoryTransaction.objects.none()
+
+                                transaction_row = transaction_qs.first()
+                                sale_remark = f'Sale to {invoice.customerid.customer_name}'
+                                if sale_obj.source_challan_no:
+                                    sale_remark += f' (from challan {sale_obj.source_challan_no})'
+                                transaction_values = {
+                                    'transaction_type': 'SALE',
+                                    'reference_type': 'INVOICE',
+                                    'reference_id': sale_db.id,
+                                    'reference_number': invoice.sales_invoice_no,
+                                    'transaction_date': sale_db.sale_entry_date,
+                                    'quantity': -float(sale_obj.sale_quantity),
+                                    'free_quantity': -float(sale_obj.sale_free_qty or 0),
+                                    'rate': float(sale_obj.sale_rate),
+                                    'mrp': float(sale_obj.product_MRP),
+                                    'total_value': float(sale_obj.sale_rate * sale_obj.sale_quantity),
+                                    'remarks': sale_remark,
+                                }
+                                if transaction_row:
+                                    for field, value in transaction_values.items():
+                                        setattr(transaction_row, field, value)
+                                    transaction_row.save()
+                                else:
+                                    InventoryTransaction.objects.create(
+                                        product=sale_obj.productid,
+                                        batch_no=sale_obj.product_batch_no,
+                                        expiry_date=sale_obj.product_expiry,
+                                        **transaction_values,
+                                    )
 
                             # Update cache ONCE per unique (product, batch) — not N times
                             seen_batches = set()
@@ -2941,23 +3013,28 @@ def add_sales_invoice_with_products(request):
                     messages.info(request, "📄 Sales Invoice created without products. You can add products later by editing the invoice.")
                 
 
-                # Apply whole invoice discount to invoice total
-                disc_mode_val = request.POST.get('discount_mode_value', 'product_wise')
-                if disc_mode_val == 'whole':
-                    from decimal import Decimal, ROUND_HALF_UP
-                    whole_disc_val = Decimal(str(request.POST.get('whole_discount_amount', 0) or 0))
-                    whole_disc_type = request.POST.get('whole_discount_type', 'flat')
-                    if whole_disc_val > 0:
-                        products_sum = SalesMaster.objects.filter(sales_invoice_no=invoice).aggregate(t=Sum('sale_total_amount'))['t'] or 0
-                        products_sum = Decimal(str(products_sum))
-                        transport_dec = Decimal(str(invoice.sales_transport_charges or 0))
-                        if whole_disc_type == 'percentage':
-                            disc_amt = (products_sum * whole_disc_val / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                        else:
-                            disc_amt = min(whole_disc_val, products_sum)
-                        raw_total = products_sum + transport_dec - disc_amt
-                        invoice.whole_discount_amount = float(disc_amt)
-                        invoice.save()
+                # Apply a submitted whole discount after all product rows exist.
+                # The amount is the source of truth because older forms can submit
+                # the mode field as product_wise even when a whole discount is set.
+                from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
+                try:
+                    whole_disc_val = Decimal(str(request.POST.get(
+                        'whole_discount_value',
+                        request.POST.get('whole_discount_amount', 0)
+                    ) or 0))
+                except (InvalidOperation, TypeError, ValueError):
+                    whole_disc_val = Decimal('0')
+                whole_disc_type = request.POST.get('whole_discount_type', 'flat')
+                if whole_disc_val > 0:
+                    products_sum = SalesMaster.objects.filter(sales_invoice_no=invoice).aggregate(t=Sum('sale_total_amount'))['t'] or 0
+                    products_sum = Decimal(str(products_sum))
+                    if whole_disc_type == 'percentage':
+                        disc_amt = (products_sum * whole_disc_val / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    else:
+                        disc_amt = whole_disc_val
+                    disc_amt = max(Decimal('0'), min(disc_amt, products_sum))
+                    invoice.whole_discount_amount = float(disc_amt)
+                    invoice.save(update_fields=['whole_discount_amount'])
 
                 # Success message based on whether products were added
                 if sales_created_count > 0:
@@ -3318,6 +3395,8 @@ def add_purchase_return(request):
     from datetime import datetime
     import json
     from django.db import transaction
+    from .year_filter_utils import get_current_financial_year
+    current_fy = request.session.get('selected_year', get_current_financial_year())
     
     # Generate unique preview return ID
     today = datetime.now().date()
@@ -3347,6 +3426,7 @@ def add_purchase_return(request):
                                 'preview_id': preview_id,
                                 'suppliers': SupplierMaster.objects.all().order_by('supplier_name'),
                                 'products': ProductMaster.objects.all().order_by('product_name'),
+                                'current_fy': current_fy,
                                 'title': 'Add Purchase Return with Products'
                             }
                             return render(request, 'returns/purchase_return_form.html', context)
@@ -3496,6 +3576,7 @@ def add_purchase_return(request):
         'preview_id': preview_id,
         'suppliers': suppliers,
         'products': products,
+        'current_fy': current_fy,
         'title': 'Add Purchase Return with Products'
     }
     return render(request, 'returns/purchase_return_form.html', context)
@@ -3898,6 +3979,8 @@ def add_sales_return(request):
     from datetime import datetime
     import json
     from django.db import transaction
+    from .year_filter_utils import get_current_financial_year
+    current_fy = request.session.get('selected_year', get_current_financial_year())
     
     def convert_date_format(date_str):
         """Convert DDMM format to YYYY-MM-DD format"""
@@ -3963,6 +4046,7 @@ def add_sales_return(request):
                             'preview_id': preview_id,
                             'customers': CustomerMaster.objects.all().order_by('customer_name'),
                             'products': ProductMaster.objects.all().order_by('product_name'),
+                            'current_fy': current_fy,
                             'title': 'Add Sales Return with Products'
                         }
                         return render(request, 'returns/sales_return_form.html', context)
@@ -4115,6 +4199,7 @@ def add_sales_return(request):
         'preview_id': preview_id,
         'customers': customers,
         'products': products,
+        'current_fy': current_fy,
         'title': 'Add Sales Return with Products'
     }
     return render(request, 'returns/sales_return_form.html', context)
@@ -6489,7 +6574,8 @@ def get_product_batch_selector(request):
             'product_expiry', 
             'product_MRP',
             'product_actual_rate',
-            'product_free_qty'
+            'product_free_qty',
+            'product_packing'
         ).distinct()
         
         challan_batches = SupplierChallanMaster.objects.filter(
@@ -6498,7 +6584,8 @@ def get_product_batch_selector(request):
             'product_batch_no',
             'product_expiry', 
             'product_mrp',
-            'product_purchase_rate'
+            'product_purchase_rate',
+            'product_packing'
         ).distinct()
         
         # Combine batches from both sources
@@ -6510,7 +6597,8 @@ def get_product_batch_selector(request):
                 'product_expiry': batch['product_expiry'],
                 'product_MRP': batch['product_MRP'],
                 'product_actual_rate': batch['product_actual_rate'],
-                'product_free_qty': batch.get('product_free_qty', 0)
+                'product_free_qty': batch.get('product_free_qty', 0),
+                'product_packing': batch.get('product_packing', '')
             }
         
         for batch in challan_batches:
@@ -6521,7 +6609,8 @@ def get_product_batch_selector(request):
                     'product_expiry': batch['product_expiry'],
                     'product_MRP': batch['product_mrp'],
                     'product_actual_rate': batch['product_purchase_rate'],
-                    'product_free_qty': 0
+                    'product_free_qty': 0,
+                    'product_packing': batch.get('product_packing', '')
                 }
         
         batches = list(all_batches.values())
@@ -6586,10 +6675,12 @@ def get_product_batch_selector(request):
                     'stock': current_stock,
                     'mrp': float(batch['product_MRP'] or 0),
                     'purchase_rate': float(batch['product_actual_rate'] or batch['product_MRP'] or 0),
-                    'free_qty': batch_free_qty,
+                    'packing': batch.get('product_packing') or product.product_packing or '',
+                    'free_qty': current_free_qty,
                     'rate_a': rates['rate_A'],
                     'rate_b': rates['rate_B'],
                     'rate_c': rates['rate_C'],
+                    'rates': rates,
                     'is_available': True
                 })
         
@@ -9378,6 +9469,7 @@ def get_product_batch_selector(request):
     
     try:
         from .models import SupplierChallanMaster
+        product = ProductMaster.objects.get(productid=product_id)
         batch_dict = {}
 
         # Parse sales invoice date for filtering
@@ -9392,7 +9484,7 @@ def get_product_batch_selector(request):
         purchase_qs = PurchaseMaster.objects.filter(productid=product_id)
         if filter_date:
             purchase_qs = purchase_qs.filter(product_invoiceid__invoice_date__lte=filter_date)
-        purchase_batches = purchase_qs.values('product_batch_no', 'product_expiry', 'product_MRP', 'product_free_qty').distinct()
+        purchase_batches = purchase_qs.values('product_batch_no', 'product_expiry', 'product_MRP', 'product_free_qty', 'product_packing').distinct()
         
         for batch in purchase_batches:
             batch_no = batch['product_batch_no']
@@ -9410,6 +9502,7 @@ def get_product_batch_selector(request):
                 'batch_no': batch_no,
                 'expiry': expiry_display,
                 'mrp': float(batch['product_MRP'] or 0),
+                'packing': batch.get('product_packing') or product.product_packing or '',
                 'stock': batch_quantity,
                 'free_qty': batch_free_qty,
                 'is_available': is_available,
@@ -9420,7 +9513,7 @@ def get_product_batch_selector(request):
         challan_qs = SupplierChallanMaster.objects.filter(product_id=product_id)
         if filter_date:
             challan_qs = challan_qs.filter(product_challan_id__challan_date__lte=filter_date)
-        challan_batches = challan_qs.values('product_batch_no', 'product_expiry', 'product_mrp').distinct()
+        challan_batches = challan_qs.values('product_batch_no', 'product_expiry', 'product_mrp', 'product_packing').distinct()
         
         for batch in challan_batches:
             batch_no = batch['product_batch_no']
@@ -9441,6 +9534,7 @@ def get_product_batch_selector(request):
                 'batch_no': batch_no,
                 'expiry': expiry_display,
                 'mrp': float(batch['product_mrp'] or 0),
+                'packing': batch.get('product_packing') or product.product_packing or '',
                 'stock': batch_quantity,
                 'free_qty': batch_free_qty,
                 'is_available': is_available,

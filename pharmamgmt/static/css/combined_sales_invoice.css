@@ -479,6 +479,43 @@
 .batch-rates span{white-space:nowrap}
 .batch-item.batch-selected .batch-rates{color:rgba(255,255,255,.9)!important}
 .batch-status{flex-shrink:0;margin-left:.75rem}
+.batch-selection-table{
+    width:100%;
+    min-width:700px;
+    table-layout:fixed;
+    border-collapse:collapse;
+}
+.batch-selection-table .batch-item{
+    display:table-row!important;
+    padding:0!important;
+    border-left:0!important;
+}
+.batch-selection-table .batch-item:hover{
+    display:table-row!important;
+    padding:0!important;
+    border-left:0!important;
+    transform:none!important;
+}
+.batch-selection-table .batch-item[data-selected="true"],
+.batch-selection-table .batch-item[data-selected="true"]:hover{
+    background:#dbeafe!important;
+    outline:2px solid #2563eb;
+    outline-offset:-2px;
+}
+.batch-selection-table .batch-item[data-selected="true"] td,
+.batch-selection-table .batch-item[data-selected="true"]:hover td{
+    background:#dbeafe!important;
+}
+.batch-selection-table th,
+.batch-selection-table td{
+    box-sizing:border-box;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    vertical-align:middle;
+}
+.batch-selection-table th{text-align:left}
+.batch-selection-table th:nth-child(n+4),
+.batch-selection-table td:nth-child(n+4){text-align:right}
 .batch-status .status-available{
     background:#ecfdf5;color:#059669;
     padding:.25rem .65rem;border-radius:50px;font-size:.7rem;font-weight:700;

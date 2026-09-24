@@ -504,27 +504,52 @@ def delete_inventory_transaction_for_customer_challan(sender, instance, **kwargs
 # ============================================
 @receiver(post_save, sender=StockIssueDetail)
 def create_inventory_transaction_for_stock_issue(sender, instance, created, **kwargs):
-    """Create InventoryTransaction when Stock Issue is saved"""
-    if created:  # Only on new issue
-        try:
-            InventoryTransaction.objects.create(
-                product=instance.product,
-                batch_no=instance.batch_no,
-                expiry_date=instance.expiry_date,
-                transaction_type='STOCK_ISSUE',
-                quantity=-Decimal(str(instance.quantity_issued)),  # Negative for OUT
-                free_quantity=Decimal('0'),
-                transaction_date=instance.issue.issue_date,
-                reference_type='ISSUE',
-                reference_id=instance.detail_id,
-                reference_number=instance.issue.issue_no,
-                rate=Decimal(str(instance.unit_rate)),
-                mrp=Decimal('0'),
-                total_value=Decimal(str(instance.total_amount)),
-                remarks=f'{instance.issue.get_issue_type_display()} - {instance.remarks or ""}'
-            )
-        except Exception as e:
-            print(f"Error creating inventory transaction for stock issue: {e}")
+    """Create InventoryTransaction when Stock Issue is saved.
+
+    This must be idempotent because a single StockIssueDetail save can sometimes
+    trigger the signal more than once in reload/debug scenarios, which created
+    duplicate negative inventory entries like -5 for the same batch.
+    """
+    if not created:
+        return
+
+    try:
+        exists = InventoryTransaction.objects.filter(
+            product=instance.product,
+            batch_no=instance.batch_no,
+            transaction_type='STOCK_ISSUE',
+            reference_type='ISSUE',
+            reference_id=instance.detail_id,
+        ).exists()
+
+        if exists:
+            return
+
+        batch_mrp = InventoryTransaction.objects.filter(
+            product=instance.product,
+            batch_no=instance.batch_no,
+            expiry_date=instance.expiry_date,
+            mrp__gt=0,
+        ).order_by('-created_at', '-transaction_id').values_list('mrp', flat=True).first() or Decimal('0')
+
+        InventoryTransaction.objects.create(
+            product=instance.product,
+            batch_no=instance.batch_no,
+            expiry_date=instance.expiry_date,
+            transaction_type='STOCK_ISSUE',
+            quantity=-Decimal(str(instance.quantity_issued)),  # Negative for OUT
+            free_quantity=Decimal('0'),
+            transaction_date=instance.issue.issue_date,
+            reference_type='ISSUE',
+            reference_id=instance.detail_id,
+            reference_number=instance.issue.issue_no,
+            rate=Decimal(str(instance.unit_rate)),
+            mrp=batch_mrp,
+            total_value=Decimal(str(instance.total_amount)),
+            remarks=f'{instance.issue.get_issue_type_display()} - {instance.remarks or ""}'
+        )
+    except Exception as e:
+        print(f"Error creating inventory transaction for stock issue: {e}")
 
 
 @receiver(post_delete, sender=StockIssueDetail)
