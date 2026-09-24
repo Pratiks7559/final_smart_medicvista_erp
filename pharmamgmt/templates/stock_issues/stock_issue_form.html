@@ -212,9 +212,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function showBatchModal(product) {
     console.log('📦 Fetching batches for product:', product.id, product.name);
-    console.log('🔗 API URL:', `/stock-issues/api/product-batch-info/?product_id=${product.id}`);
+    const issueDate = document.getElementById('issue_date')?.value || '';
+    const dateParam = issueDate ? `&issue_date=${encodeURIComponent(issueDate)}` : '';
+    console.log('🔗 API URL:', `/stock-issues/api/product-batch-info/?product_id=${product.id}${dateParam}`);
     
-    fetch(`/stock-issues/api/product-batch-info/?product_id=${product.id}`)
+    fetch(`/stock-issues/api/product-batch-info/?product_id=${product.id}${dateParam}`)
         .then(response => {
             console.log('📡 API Response status:', response.status);
             return response.json();

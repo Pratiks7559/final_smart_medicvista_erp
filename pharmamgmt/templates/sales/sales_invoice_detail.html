@@ -1702,7 +1702,10 @@ function closeEditQuickSearch() {
 
 // Batch selection for edit modal
 function showEditBatchSelectionDialog(productId, rowIndex) {
-    fetch(`/api/existing-batches/?product_id=${productId}`)
+    const invoiceDate = document.getElementById('edit_sales_invoice_date')?.value || '';
+    const dateParam = invoiceDate ? `&invoice_date=${encodeURIComponent(invoiceDate)}` : '';
+
+    fetch(`/api/existing-batches/?product_id=${productId}${dateParam}`)
         .then(response => response.json())
         .then(data => {
             if (data.success && data.batches.length > 0) {

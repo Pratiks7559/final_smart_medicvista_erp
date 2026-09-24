@@ -691,7 +691,10 @@ function closeQuickSearch() {
 }
 
 function showBatchSelectionDialog(productId, rowIndex) {
-    fetch(`/api/existing-batches/?product_id=${productId}`)
+    const challanDate = document.getElementById('challan_date')?.value || '';
+    const dateParam = challanDate ? `&invoice_date=${encodeURIComponent(challanDate)}` : '';
+
+    fetch(`/api/existing-batches/?product_id=${productId}${dateParam}`)
         .then(response => response.json())
         .then(data => {
             if (data.success && data.batches.length > 0) {

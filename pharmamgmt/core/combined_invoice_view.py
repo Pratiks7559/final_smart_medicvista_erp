@@ -495,6 +495,14 @@ def get_existing_batches(request):
         product_id = request.GET.get('product_id')
         if not product_id:
             return JsonResponse({'success': False, 'error': 'Product ID required'})
+
+        invoice_date = request.GET.get('invoice_date')
+        cutoff_date = None
+        if invoice_date:
+            try:
+                cutoff_date = datetime.strptime(invoice_date, '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid invoice date'})
         
         from .stock_manager import StockManager
         from .models import ReturnPurchaseMaster, ReturnSalesMaster, SupplierChallanMaster
@@ -502,7 +510,12 @@ def get_existing_batches(request):
         batches_dict = {}
         
         # 1. Get batches from PurchaseMaster
-        purchase_batches = PurchaseMaster.objects.filter(productid=product_id).values(
+        purchase_queryset = PurchaseMaster.objects.filter(productid=product_id)
+        if cutoff_date:
+            purchase_queryset = purchase_queryset.filter(
+                product_invoiceid__invoice_date__lte=cutoff_date
+            )
+        purchase_batches = purchase_queryset.values(
             'product_batch_no', 'product_expiry', 'product_MRP', 'product_purchase_rate'
         ).distinct()
         
@@ -527,9 +540,16 @@ def get_existing_batches(request):
                 current_stock = total_purchased - total_sold - purchase_returns + sales_returns
             
             if current_stock >= 0:
-                latest_purchase = PurchaseMaster.objects.filter(
+                latest_purchase_queryset = PurchaseMaster.objects.filter(
                     productid=product_id, product_batch_no=batch_no
-                ).select_related('product_invoiceid', 'product_supplierid').order_by('-purchase_entry_date').first()
+                )
+                if cutoff_date:
+                    latest_purchase_queryset = latest_purchase_queryset.filter(
+                        product_invoiceid__invoice_date__lte=cutoff_date
+                    )
+                latest_purchase = latest_purchase_queryset.select_related(
+                    'product_invoiceid', 'product_supplierid'
+                ).order_by('-purchase_entry_date').first()
                 
                 supplier_challan = None
                 if latest_purchase:
@@ -562,7 +582,12 @@ def get_existing_batches(request):
                 }
         
         # 2. Get batches from SupplierChallanMaster
-        challan_batches = SupplierChallanMaster.objects.filter(product_id=product_id).values(
+        challan_queryset = SupplierChallanMaster.objects.filter(product_id=product_id)
+        if cutoff_date:
+            challan_queryset = challan_queryset.filter(
+                product_challan_id__challan_date__lte=cutoff_date
+            )
+        challan_batches = challan_queryset.values(
             'product_batch_no', 'product_expiry', 'product_mrp', 'product_purchase_rate'
         ).distinct()
         
@@ -587,9 +612,16 @@ def get_existing_batches(request):
                 current_stock = total_challan - total_sold + sales_returns
             
             if current_stock >= 0:
-                latest_challan = SupplierChallanMaster.objects.filter(
+                latest_challan_queryset = SupplierChallanMaster.objects.filter(
                     product_id=product_id, product_batch_no=batch_no
-                ).select_related('product_challan_id', 'product_suppliername').order_by('-challan_entry_date').first()
+                )
+                if cutoff_date:
+                    latest_challan_queryset = latest_challan_queryset.filter(
+                        product_challan_id__challan_date__lte=cutoff_date
+                    )
+                latest_challan = latest_challan_queryset.select_related(
+                    'product_challan_id', 'product_suppliername'
+                ).order_by('-challan_entry_date').first()
                 
                 batches_dict[batch_no] = {
                     'batch_no': batch_no,

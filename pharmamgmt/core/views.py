@@ -9462,7 +9462,8 @@ def get_batch_details(request):
 def get_product_batch_selector(request):
     """API endpoint for Alt+W batch selection dialog - fetches from both Purchase and Challan"""
     product_id = request.GET.get('product_id')
-    sales_invoice_date = request.GET.get('sales_invoice_date')  # YYYY-MM-DD format
+    sales_invoice_date = request.GET.get('sales_invoice_date') or request.GET.get('invoice_date')
+    # Both sales/return forms use this endpoint; accept their shared date parameter.
     
     if not product_id:
         return JsonResponse({'error': 'Product ID is required'}, status=400)
@@ -9478,7 +9479,7 @@ def get_product_batch_selector(request):
             try:
                 filter_date = datetime.strptime(sales_invoice_date, '%Y-%m-%d').date()
             except ValueError:
-                pass
+                return JsonResponse({'error': 'Invalid invoice date'}, status=400)
         
         # 1. Get batches from PurchaseMaster (only where invoice_date <= sales_invoice_date)
         purchase_qs = PurchaseMaster.objects.filter(productid=product_id)

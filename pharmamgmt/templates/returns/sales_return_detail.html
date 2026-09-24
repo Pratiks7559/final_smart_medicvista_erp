@@ -1454,7 +1454,10 @@ function showBatchSelectionForEdit(rowIndex) {
         return;
     }
     
-    fetch(`/api/product-batch-selector/?product_id=${productId}`)
+    const returnDate = document.getElementById('editReturnDate')?.value || '';
+    const dateParam = returnDate ? `&invoice_date=${encodeURIComponent(returnDate)}` : '';
+
+    fetch(`/api/product-batch-selector/?product_id=${productId}${dateParam}`)
         .then(response => response.json())
         .then(data => {
             console.log('Batch API Response:', data);

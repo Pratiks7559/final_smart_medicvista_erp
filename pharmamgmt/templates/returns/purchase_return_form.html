@@ -824,7 +824,14 @@ function closeQuickSearch() {
 }
 
 function showReturnBatchSelector(productId, rowIndex) {
-    fetch(`/api/product-batch-selector/?product_id=${productId}`)
+    const returnDate = document.getElementById('returninvoice_date')?.value || '';
+    const dateParts = returnDate.split('-');
+    const invoiceDate = dateParts.length === 3
+        ? `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`
+        : '';
+    const dateParam = invoiceDate ? `&invoice_date=${encodeURIComponent(invoiceDate)}` : '';
+
+    fetch(`/api/product-batch-selector/?product_id=${productId}${dateParam}`)
         .then(response => response.json())
         .then(data => {
             if (data.success && data.batches.length > 0) {

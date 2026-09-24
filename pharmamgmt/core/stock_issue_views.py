@@ -11,6 +11,7 @@ from .models import (
 )
 from .year_filter_utils import apply_year_filter, get_current_financial_year, get_financial_year_dates
 import json
+from datetime import datetime
 
 @login_required
 def stock_issue_list(request):
@@ -154,6 +155,7 @@ def delete_stock_issue(request, pk):
 def get_product_batch_info(request):
     """API endpoint to get product batch information for stock issue - uses same logic as sales form"""
     product_id = request.GET.get('product_id')
+    issue_date = request.GET.get('issue_date')
     
     if not product_id:
         return JsonResponse({'error': 'Product ID required'}, status=400)
@@ -164,19 +166,32 @@ def get_product_batch_info(request):
         
         product = ProductMaster.objects.get(productid=product_id)
         
-        # Get all unique batches from both purchases and supplier challans (same as sales form)
-        purchase_batches = PurchaseMaster.objects.filter(
-            productid=product
-        ).values(
+        filter_date = None
+        if issue_date:
+            try:
+                filter_date = datetime.strptime(issue_date, '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({'error': 'Invalid issue date'}, status=400)
+
+        # Only show batches received on or before the stock issue date.
+        purchase_queryset = PurchaseMaster.objects.filter(productid=product)
+        if filter_date:
+            purchase_queryset = purchase_queryset.filter(
+                product_invoiceid__invoice_date__lte=filter_date
+            )
+        purchase_batches = purchase_queryset.values(
             'product_batch_no',
             'product_expiry', 
             'product_MRP',
             'product_actual_rate'
         ).distinct()
         
-        challan_batches = SupplierChallanMaster.objects.filter(
-            product_id=product
-        ).values(
+        challan_queryset = SupplierChallanMaster.objects.filter(product_id=product)
+        if filter_date:
+            challan_queryset = challan_queryset.filter(
+                product_challan_id__challan_date__lte=filter_date
+            )
+        challan_batches = challan_queryset.values(
             'product_batch_no',
             'product_expiry', 
             'product_mrp',

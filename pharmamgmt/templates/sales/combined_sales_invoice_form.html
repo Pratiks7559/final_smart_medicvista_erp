@@ -1751,7 +1751,10 @@ function forceShowProductTable() {
 }
 
 function showBatchSelectionDialog(productId, rowIndex) {
-    fetch(`/api/existing-batches/?product_id=${productId}`)
+    const invoiceDate = document.getElementById('sales_invoice_date')?.value || '';
+    const dateParam = invoiceDate ? `&invoice_date=${encodeURIComponent(invoiceDate)}` : '';
+
+    fetch(`/api/existing-batches/?product_id=${productId}${dateParam}`)
         .then(r => r.json())
         .then(data => {
             if (data.success && data.batches.length > 0) {

@@ -1068,3 +1068,11 @@ ValueError: Invalid expiry format
 2026-09-24 12:06:05,293 - core.combined_invoice_view - INFO - Product ASITUSS-A SYP 100ML: Base=359.04, CGST=8.98, SGST=8.98, Total=377.0
 2026-09-24 12:06:05,359 - core.combined_invoice_view - INFO - PURCHASE CREATED: ASITUSS-A SYP 100ML, Batch: 12, Qty: 34.0, Free Qty: 2.0
 2026-09-24 12:06:05,380 - core.combined_invoice_view - INFO - Invoice 1111 created successfully with 1 products
+2026-09-24 14:02:40,089 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['WWy3qj4ESN4rLqENkhHUTAZXeca8bKe6RN9DWVObgdZbv3UCe4KDF2CO3qhR7Mwi'], 'invoice_no': ['1232'], 'invoice_date': ['2026-04-01'], 'supplierid': ['1'], 'transport_charges': ['0'], 'invoice_total': ['61.05'], 'whole_discount_amount': ['10.77'], 'whole_discount_type': ['flat'], 'discount_mode_value': ['product_wise'], 'disc_type_0': ['percentage'], 'whole_disc_type': ['percentage'], 'products_data': ['[{"productid":"254","batch_no":"23232","expiry":"12-2013","mrp":"12","purchase_rate":"6","quantity":"12","free_qty":"5","scheme":"0","discount":"5","cgst":"2.5","sgst":"2.5","calculation_mode":"percentage","rate_a":"13","rate_b":"0","rate_c":"0","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-09-24 14:02:40,103 - core.combined_invoice_view - INFO - Products data received: [{"productid":"254","batch_no":"23232","expiry":"12-2013","mrp":"12","purchase_rate":"6","quantity":"12","free_qty":"5","scheme":"0","discount":"5","cgst":"2.5","sgst":"2.5","calculation_mode":"percentage","rate_a":"13","rate_b":"0","rate_c":"0","from_challan":false,"challan_no":"","challan_date":""}]
+2026-09-24 14:02:40,104 - core.combined_invoice_view - INFO - Challan flag: false
+2026-09-24 14:02:40,107 - core.combined_invoice_view - INFO - Invoice created with ID: 135035
+2026-09-24 14:02:40,112 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-09-24 14:02:40,113 - core.combined_invoice_view - INFO - Product ASITUSS-A SYP 100ML: Base=68.4, CGST=1.71, SGST=1.71, Total=71.82
+2026-09-24 14:02:40,194 - core.combined_invoice_view - INFO - PURCHASE CREATED: ASITUSS-A SYP 100ML, Batch: 23232, Qty: 12.0, Free Qty: 5.0
+2026-09-24 14:02:40,278 - core.combined_invoice_view - INFO - Invoice 1232 created successfully with 1 products
