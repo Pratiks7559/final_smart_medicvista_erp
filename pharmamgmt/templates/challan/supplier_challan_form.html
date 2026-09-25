@@ -12,6 +12,7 @@
 {% endblock %}
 
 {% block content %}
+{% include 'components/combined_invoice_date_dialog.html' with date_field_id='challan_date' %}
 <div class="ci-light-protect ci-main-container">
     <div class="ci-wrapper-card">
         <div class="ci-page-header">
@@ -27,16 +28,16 @@
                             <div class="ci-form-row">
                                 <div class="ci-form-column">
                                     <div class="ci-field-group">
-                                        <label for="{{ challan_form.challan_no.id_for_label }}" class="ci-field-label">challan No* (Max 20 chars)</label>
-                                        <input type="text" name="challan_no" id="challan_no" class="ci-form-input" maxlength="50" required>
-                                    </div>
-                                </div>
-                                <div class="ci-form-column">
-                                    <div class="ci-field-group">
                                         <label for="challan_date" class="ci-field-label">challan Date*</label>
                                         <input type="date" name="challan_date" id="challan_date" class="ci-form-input" 
                                                value="{{ challan_form.challan_date.value|default:'' }}" 
                                                title="Enter challan date" required>
+                                    </div>
+                                </div>
+                                <div class="ci-form-column">
+                                    <div class="ci-field-group">
+                                        <label for="{{ challan_form.challan_no.id_for_label }}" class="ci-field-label">challan No* (Max 20 chars)</label>
+                                        <input type="text" name="challan_no" id="challan_no" class="ci-form-input" maxlength="50" required>
                                     </div>
                                 </div>
                             </div>

@@ -10,6 +10,7 @@
 {% endblock %}
 
 {% block content %}
+{% include 'components/combined_invoice_date_dialog.html' with date_field_id='invoice_date' %}
 <div class="ci-light-protect ci-main-container">
     <div class="ci-wrapper-card">
         <div class="ci-page-header">
@@ -25,18 +26,18 @@
                             <div class="ci-form-row">
                                 <div class="ci-form-column">
                                     <div class="ci-field-group">
-                                        <label for="{{ invoice_form.invoice_no.id_for_label }}" class="ci-field-label">Invoice No* (Max 20 chars)</label>
-                                        {{ invoice_form.invoice_no }}
+                                                                                <label for="invoice_date" class="ci-field-label">Invoice Date*</label>
+                                                                                <input type="date" name="invoice_date" id="invoice_date" class="ci-form-input" 
+                                                                                             value="{{ invoice_form.invoice_date.value|default:'' }}" 
+                                                                                                 min="{{ current_fy }}-04-01" max="{{ current_fy|add:'1' }}-03-31"
+                                                                                             title="Enter invoice date" required>
+                                                                                         <small id="invoiceDateFyError" style="display:none;color:#b91c1c;font-weight:600;margin-top:4px;">Date must be within the selected financial year.</small>
                                     </div>
                                 </div>
                                 <div class="ci-form-column">
                                     <div class="ci-field-group">
-                                        <label for="invoice_date" class="ci-field-label">Invoice Date*</label>
-                                        <input type="date" name="invoice_date" id="invoice_date" class="ci-form-input" 
-                                               value="{{ invoice_form.invoice_date.value|default:'' }}" 
-                                                 min="{{ current_fy }}-04-01" max="{{ current_fy|add:'1' }}-03-31"
-                                               title="Enter invoice date" required>
-                                             <small id="invoiceDateFyError" style="display:none;color:#b91c1c;font-weight:600;margin-top:4px;">Date must be within the selected financial year.</small>
+                                                                                <label for="{{ invoice_form.invoice_no.id_for_label }}" class="ci-field-label">Invoice No* (Max 20 chars)</label>
+                                                                                {{ invoice_form.invoice_no }}
                                     </div>
                                 </div>
                             </div>

@@ -1,0 +1,158 @@
+<style>
+    #combinedInvoiceDateDialogInput {
+        border: 2px solid #2563eb !important;
+        font-size: 1.3rem;
+        min-height: 54px;
+        letter-spacing: .04em;
+    }
+
+    #combinedInvoiceDateDialogInput::placeholder {
+        color: #94a3b8;
+        opacity: 1;
+    }
+
+    #combinedInvoiceDateDialogInput:focus {
+        border-color: #1d4ed8 !important;
+        outline: 3px solid rgba(37, 99, 235, .22);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, .12);
+    }
+
+    #combinedInvoiceDateDialogTitle {
+        font-size: 1.5rem;
+    }
+
+    #combinedInvoiceDateDialogContinue {
+        min-height: 52px;
+        font-size: 1.1rem;
+    }
+</style>
+<div id="combinedInvoiceDateDialog" role="dialog" aria-modal="true" aria-labelledby="combinedInvoiceDateDialogTitle"
+    style="position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);padding:20px;">
+    <div style="width:min(560px,100%);background:#fff;border-radius:12px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+        <h3 id="combinedInvoiceDateDialogTitle" style="margin:0 0 8px;">Enter Date</h3>
+        <p style="margin:0 0 20px;color:#64748b;font-size:1.05rem;">Enter date as DDMMYYYY or DDMMYY.</p>
+        <label for="combinedInvoiceDateDialogInput" style="display:block;font-weight:600;margin-bottom:8px;font-size:1.05rem;">Date</label>
+        <input id="combinedInvoiceDateDialogInput" type="text" inputmode="numeric" maxlength="8"
+             placeholder="DDMMYYYY or DDMMYY" autocomplete="off"
+               style="width:100%;padding:14px 16px;border:2px solid #2563eb;border-radius:8px;">
+        <div id="combinedInvoiceDateDialogError" style="display:none;color:#b91c1c;font-size:1rem;margin-top:10px;"></div>
+        <button type="button" id="combinedInvoiceDateDialogContinue" style="margin-top:20px;width:100%;padding:14px 16px;border:0;border-radius:8px;background:#2563eb;color:#fff;font-weight:600;">Continue</button>
+    </div>
+</div>
+<script>
+(function () {
+    const fieldId = '{{ date_field_id }}';
+    const outputFormat = '{{ date_output_format|default:"html-date" }}';
+
+    function openInvoiceDateDialog() {
+        const dialog = document.getElementById('combinedInvoiceDateDialog');
+        const input = document.getElementById('combinedInvoiceDateDialogInput');
+        const error = document.getElementById('combinedInvoiceDateDialogError');
+        const continueButton = document.getElementById('combinedInvoiceDateDialogContinue');
+        const dateField = document.getElementById(fieldId);
+        if (!dialog || !input || !error || !continueButton || !dateField) return;
+
+        const formContainer = dateField.closest('form')?.parentElement;
+        if (formContainer) {
+            if (getComputedStyle(formContainer).position === 'static') {
+                formContainer.style.position = 'relative';
+            }
+            formContainer.appendChild(dialog);
+        }
+
+        dialog.style.display = 'flex';
+        const focusDialogInput = () => {
+            const activeElement = document.activeElement;
+            if (activeElement === document.body || !activeElement || formContainer?.contains(activeElement)) {
+                input.focus();
+                input.select();
+            }
+        };
+        setTimeout(focusDialogInput, 0);
+        setTimeout(focusDialogInput, 100);
+        setTimeout(focusDialogInput, 600);
+
+        const keepFocusInsideDialog = event => {
+            if (dialog.style.display !== 'none' && !dialog.contains(event.target)) {
+                input.focus();
+                input.select();
+            }
+        };
+        const trapDialogTab = event => {
+            if (dialog.style.display === 'none') return;
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                return;
+            }
+            if (event.key !== 'Tab') return;
+
+            event.preventDefault();
+            if (event.shiftKey && document.activeElement === input) {
+                continueButton.focus();
+            } else if (!event.shiftKey && document.activeElement === continueButton) {
+                input.focus();
+            } else {
+                input.focus();
+            }
+        };
+        document.addEventListener('focusin', keepFocusInsideDialog);
+        document.addEventListener('keydown', trapDialogTab, true);
+
+        const releaseDialogFocus = () => {
+            document.removeEventListener('focusin', keepFocusInsideDialog);
+            document.removeEventListener('keydown', trapDialogTab, true);
+        };
+
+        const submitDate = () => {
+            const digits = input.value.replace(/\D/g, '');
+            let day;
+            let month;
+            let year;
+            if (digits.length === 8) {
+                day = Number(digits.slice(0, 2));
+                month = Number(digits.slice(2, 4));
+                year = Number(digits.slice(4, 8));
+            } else if (digits.length === 6) {
+                day = Number(digits.slice(0, 2));
+                month = Number(digits.slice(2, 4));
+                year = 2000 + Number(digits.slice(4, 6));
+            } else {
+                error.textContent = 'Use DDMMYYYY or DDMMYY format.';
+                error.style.display = 'block';
+                input.focus();
+                return;
+            }
+
+            const parsed = new Date(year, month - 1, day);
+            if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+                error.textContent = 'Please enter a valid calendar date.';
+                error.style.display = 'block';
+                input.focus();
+                return;
+            }
+
+            const dayText = String(day).padStart(2, '0');
+            const monthText = String(month).padStart(2, '0');
+            const yearText = String(year);
+            dateField.value = outputFormat === 'text'
+                ? `${dayText}-${monthText}-${yearText}`
+                : `${yearText}-${monthText}-${dayText}`;
+            dateField.dispatchEvent(new Event('change', { bubbles: true }));
+            error.style.display = 'none';
+            releaseDialogFocus();
+            dialog.style.display = 'none';
+            dateField.focus();
+        };
+
+        continueButton.onclick = submitDate;
+        input.onkeydown = event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submitDate();
+            }
+        };
+    }
+
+    document.addEventListener('DOMContentLoaded', openInvoiceDateDialog, { once: true });
+})();
+</script>

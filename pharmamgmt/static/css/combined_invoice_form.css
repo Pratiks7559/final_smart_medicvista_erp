@@ -5,6 +5,12 @@
 .ci-main-container{padding:.75rem;background:var(--bg);min-height:100vh;font-family:'Segoe UI',system-ui,sans-serif}
 .ci-wrapper-card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh-md);overflow:hidden;border:1px solid var(--border)}
 
+/* Keep the purchase-return editor spacious and aligned with the available content width. */
+.purchase-return-page{width:100%;padding:1rem 1.25rem}
+.purchase-return-page .ci-wrapper-card{width:100%;max-width:none}
+.purchase-return-page .ci-content-body{padding:1.25rem 1.5rem}
+.purchase-return-page .ci-invoice-details-section > .ci-form-row:first-of-type{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
+
 /* HEADER */
 .ci-page-header{background:linear-gradient(135deg,#4f46e5,#7c3aed 50%,#db2777);padding:.75rem 1.25rem;display:flex;align-items:center;justify-content:space-between}
 .ci-main-title{margin:0;font-size:1rem;font-weight:800;color:#fff!important;letter-spacing:-.2px}

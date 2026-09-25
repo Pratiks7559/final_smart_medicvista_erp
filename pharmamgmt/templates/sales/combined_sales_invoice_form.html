@@ -6,6 +6,7 @@
 {% endblock %}
 
 {% block content %}
+{% include 'components/combined_invoice_date_dialog.html' with date_field_id='sales_invoice_date' %}
 <div class="combined-invoice-container">
     <div class="invoice-wrapper">
         <div class="invoice-card">
