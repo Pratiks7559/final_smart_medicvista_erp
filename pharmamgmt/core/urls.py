@@ -76,6 +76,7 @@ urlpatterns = [
     
     # Dashboard
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('dashboard/product-history/details/', views.product_history_detail, name='product_history_detail'),
     path('dashboard/product-history/excel/', views.export_product_history_excel, name='export_product_history_excel'),
     
     # Pharmacy details

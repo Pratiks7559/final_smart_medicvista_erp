@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - {{ product.product_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .history-page { max-width: 1500px; margin: 0 auto; padding: 24px; color: #263746; }
+    .history-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+    .history-header h1 { margin: 0 0 6px; font-size: 1.55rem; color: #17212b; }
+    .history-product-meta { color: #61717d; }
+    .history-scope-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid #dce4e8; border-radius: 8px; background: #fff; }
+    .history-scope-label { color: #52636e; font-size: 0.9rem; font-weight: 600; }
+    .history-scope-tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid #dce4e8; border-radius: 7px; background: #f1f5f6; }
+    .history-scope-tab { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 7px 12px; border-radius: 5px; color: #344653; text-decoration: none; font-size: 0.88rem; font-weight: 600; }
+    .history-scope-tab:hover { color: #0f766e; text-decoration: none; }
+    .history-scope-tab.is-active { color: #fff; background: #0f766e; }
+    .history-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .history-button { display: inline-flex; align-items: center; gap: 7px; padding: 9px 13px; border: 1px solid #cbd5dc; border-radius: 6px; color: #263746; background: #fff; text-decoration: none; font-weight: 600; }
+    .history-button:hover { color: #0f766e; border-color: #0f766e; text-decoration: none; }
+    .history-button-excel { color: #fff; background: #0f766e; border-color: #0f766e; }
+    .history-button-excel:hover { color: #fff; background: #115e59; }
+    .history-year { margin: 18px 0; border: 1px solid #dce4e8; border-radius: 8px; background: #fff; overflow: hidden; }
+    .history-year-title { margin: 0; padding: 13px 16px; color: #fff; background: #145e63; font-size: 1rem; }
+    .history-section { padding: 16px; }
+    .history-section + .history-section { border-top: 1px solid #e2e8ec; }
+    .history-section h3 { margin: 0 0 12px; color: #23313b; font-size: 0.98rem; }
+    .history-table-wrap { overflow-x: auto; }
+    .history-table { width: 100%; border-collapse: collapse; min-width: 900px; font-size: 0.88rem; }
+    .history-table th, .history-table td { padding: 9px 10px; border-bottom: 1px solid #e6ecef; text-align: left; white-space: nowrap; }
+    .history-table td { color: #263746; }
+    .history-table th { color: #33434e; background: #f1f5f6; font-weight: 700; }
+    .history-table tbody tr:hover { background: #f7fbfb; }
+    .history-number { text-align: right !important; }
+    .history-empty { padding: 28px; border: 1px dashed #bac8ce; border-radius: 8px; color: #61717d; text-align: center; background: #fff; }
+    @media (max-width: 700px) {
+        .history-page { padding: 14px; }
+        .history-header { flex-direction: column; }
+        .history-actions { width: 100%; }
+        .history-button { justify-content: center; }
+        .history-scope-bar { align-items: flex-start; flex-direction: column; }
+        .history-scope-tabs { width: 100%; }
+        .history-scope-tab { flex: 1; text-align: center; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="history-page">
+    <header class="history-header">
+        <div>
+            <h1>Product Batch History</h1>
+            <div class="history-product-meta">
+                <strong>{{ product.product_name }}</strong>
+                {% if product.product_company %} · {{ product.product_company }}{% endif %}
+                {% if product.product_packing %} · {{ product.product_packing }}{% endif %}
+                · {% if scope == 'all' %}All Financial Years{% else %}FY {{ selected_fy_label }}{% endif %}
+            </div>
+        </div>
+        <nav class="history-actions" aria-label="Report actions">
+            <a class="history-button" href="{% url 'dashboard' %}"><i class="fas fa-arrow-left"></i> Dashboard</a>
+            <a class="history-button history-button-excel" href="{% url 'export_product_history_excel' %}?product_id={{ product.productid }}&amp;scope={{ scope }}">
+                <i class="fas fa-file-excel"></i> Get Excel Report
+            </a>
+        </nav>
+    </header>
+
+    <div class="history-scope-bar">
+        <span class="history-scope-label">Show batch history</span>
+        <nav class="history-scope-tabs" aria-label="Financial year filter">
+            <a class="history-scope-tab{% if scope == 'fy' %} is-active{% endif %}"
+               href="{% url 'product_history_detail' %}?product_id={{ product.productid }}&amp;scope=fy"
+               {% if scope == 'fy' %}aria-current="page"{% endif %}>Selected FY · {{ selected_fy_label }}</a>
+            <a class="history-scope-tab{% if scope == 'all' %} is-active{% endif %}"
+               href="{% url 'product_history_detail' %}?product_id={{ product.productid }}&amp;scope=all"
+               {% if scope == 'all' %}aria-current="page"{% endif %}>All Financial Years</a>
+        </nav>
+    </div>
+
+    {% for year in financial_years %}
+    <section class="history-year" aria-labelledby="year-{{ forloop.counter }}">
+        <h2 class="history-year-title" id="year-{{ forloop.counter }}">Financial Year {{ year.label }}</h2>
+        <div class="history-section">
+            <h3>Transaction Details</h3>
+            <div class="history-table-wrap">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Invoice Date</th><th>Batch No</th><th>Expiry</th><th>Transaction Type</th><th>Reference No</th>
+                            <th class="history-number">Quantity</th><th class="history-number">Free Quantity</th>
+                            <th class="history-number">Rate</th><th class="history-number">MRP</th><th class="history-number">Total Value</th><th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in year.transactions %}
+                        <tr>
+                            <td>{{ transaction.invoice_date|date:"d-m-Y" }}</td>
+                            <td>{{ transaction.batch_no|default:"-" }}</td>
+                            <td>{{ transaction.expiry_date|default:"-" }}</td>
+                            <td>{{ transaction.get_transaction_type_display }}</td>
+                            <td>{{ transaction.reference_number|default:"-" }}</td>
+                            <td class="history-number">{{ transaction.quantity|default:0|floatformat:2 }}</td>
+                            <td class="history-number">{{ transaction.free_quantity|default:0|floatformat:2 }}</td>
+                            <td class="history-number">{{ transaction.rate|default:0|floatformat:2 }}</td>
+                            <td class="history-number">{{ transaction.mrp|default:0|floatformat:2 }}</td>
+                            <td class="history-number">{{ transaction.total_value|default:0|floatformat:2 }}</td>
+                            <td>{{ transaction.remarks|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="history-section">
+            <h3>Batch Summary</h3>
+            <div class="history-table-wrap">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Batch No</th><th>Expiry</th><th>First Invoice Date</th><th>Last Invoice Date</th>
+                            <th class="history-number">Net Quantity</th><th class="history-number">Net Free Quantity</th><th class="history-number">Movement Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for batch in year.batch_summaries %}
+                        <tr>
+                            <td>{{ batch.batch_no|default:"-" }}</td>
+                            <td>{{ batch.expiry|default:"-" }}</td>
+                            <td>{{ batch.first_date|date:"d-m-Y" }}</td>
+                            <td>{{ batch.last_date|date:"d-m-Y" }}</td>
+                            <td class="history-number">{{ batch.quantity|floatformat:2 }}</td>
+                            <td class="history-number">{{ batch.free_quantity|floatformat:2 }}</td>
+                            <td class="history-number">{{ batch.movement_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+    {% empty %}
+    <div class="history-empty">
+        {% if scope == 'all' %}
+        No batch history found for this product.
+        {% else %}
+        No batch history found for this product in FY {{ selected_fy_label }}.
+        {% endif %}
+    {% endfor %}
+</main>
+{% endblock %}

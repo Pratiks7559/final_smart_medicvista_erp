@@ -83,7 +83,7 @@
 
 
                         <input type="hidden" name="whole_discount_amount" id="wholeDiscountAmountHidden" value="0">
-                        <input type="hidden" name="whole_discount_type" id="wholeDiscountTypeHidden" value="flat">
+                        <input type="hidden" name="whole_discount_type" id="wholeDiscountTypeHidden" value="percentage">
                         <input type="hidden" name="discount_mode_value" id="discountModeHidden" value="product_wise">
 
                         <!-- Products Section -->
@@ -153,8 +153,8 @@
                                             <td style="padding:4px 12px;color:#c62828;">
                                                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                                                     <span>Whole Discount:</span>
-                                                    <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="whole_disc_type" id="wholeDiscFlat" value="flat" checked onchange="recalcWholeDiscount()"> Flat ₹</label>
-                                                    <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="whole_disc_type" id="wholeDiscPercent" value="percentage" onchange="recalcWholeDiscount()"> %</label>
+                                                    <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="whole_disc_type" id="wholeDiscFlat" value="flat" onchange="recalcWholeDiscount()"> Flat ₹</label>
+                                                    <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="whole_disc_type" id="wholeDiscPercent" value="percentage" checked onchange="recalcWholeDiscount()"> %</label>
                                                     <input type="number" id="wholeDiscountAmount" min="0" step="any" placeholder="0" style="padding:4px 8px;border:1.5px solid #ffb300;border-radius:6px;width:110px;font-size:0.9rem;" oninput="recalcWholeDiscount()">
                                                 </div>
                                             </td>
@@ -1211,7 +1211,8 @@ function calculateInvoiceTotal() {
             ? Math.min(productsTotal * wholeDiscVal / 100, productsTotal)
             : Math.min(wholeDiscVal, productsTotal);
     }
-    if (el('wholeDiscountAmountHidden')) el('wholeDiscountAmountHidden').value = wholeDisc.toFixed(2);
+    if (el('wholeDiscountAmountHidden')) el('wholeDiscountAmountHidden').value = wholeDiscType === 'percentage' ? wholeDiscVal.toFixed(2) : wholeDisc.toFixed(2);
+    if (el('wholeDiscountTypeHidden')) el('wholeDiscountTypeHidden').value = wholeDiscType;
     if (el('wholeDiscountDeducted'))     el('wholeDiscountDeducted').textContent = wholeDisc.toFixed(2);
 
     const rawTotal = productsTotal + transportCharges - wholeDisc;

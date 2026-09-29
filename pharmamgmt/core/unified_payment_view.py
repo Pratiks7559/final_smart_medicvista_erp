@@ -97,7 +97,7 @@ def add_unified_payment(request):
                                 payment_date=payment_date,
                                 payment_amount=float(apply_adv),
                                 payment_mode=adv.payment_mode,
-                                payment_ref_no=f'ADV-ADJ-{adv.advance_id}'
+                                payment_ref_no=adv.reference_no
                             )
                             AdvanceLedger.objects.create(
                                 party_type='supplier',
@@ -208,7 +208,7 @@ def add_unified_payment(request):
                                 sales_payment_date=payment_date,
                                 sales_payment_amount=float(apply_adv),
                                 sales_payment_mode=adv.receipt_mode,
-                                sales_payment_ref_no=f'ADV-ADJ-{adv.advance_id}'
+                                sales_payment_ref_no=adv.reference_no
                             )
                             AdvanceLedger.objects.create(
                                 party_type='customer',

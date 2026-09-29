@@ -80,7 +80,7 @@
                         </div>
 
                         <input type="hidden" name="whole_discount_amount" id="challanWholeDiscAmountHidden" value="0">
-                        <input type="hidden" name="whole_discount_type" id="challanWholeDiscTypeHidden" value="flat">
+                        <input type="hidden" name="whole_discount_type" id="challanWholeDiscTypeHidden" value="percentage">
                         <input type="hidden" name="discount_mode" id="challanDiscountModeHidden" value="whole">
 
                         <!-- Products Section -->
@@ -140,8 +140,8 @@
                                         <td style="padding:4px 12px; text-align:right; color:#c62828;">
                                             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
                                                 <span>Whole Discount:</span>
-                                                <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="challan_whole_disc_type" value="flat" id="challanWholeDiscFlat" checked onchange="updateChallanWholeDisc()"> Flat ₹</label>
-                                                <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="challan_whole_disc_type" value="percentage" id="challanWholeDiscPct" onchange="updateChallanWholeDisc()"> %</label>
+                                                <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="challan_whole_disc_type" value="flat" id="challanWholeDiscFlat" onchange="updateChallanWholeDisc()"> Flat ₹</label>
+                                                <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="challan_whole_disc_type" value="percentage" id="challanWholeDiscPct" checked onchange="updateChallanWholeDisc()"> %</label>
                                                 <input type="number" id="challanWholeDiscInput" min="0" step="any" placeholder="0" value="0" style="padding:4px 8px;border:1.5px solid #ffb300;border-radius:6px;width:110px;font-size:0.9rem;" oninput="updateChallanWholeDisc()">
                                             </div>
                                         </td>
@@ -594,7 +594,7 @@ function calculatechallanTotal() {
         const rowVal = document.getElementById('challanWholeDiscRowVal');
         if (rowVal) rowVal.textContent = wholeDiscAmt.toFixed(2);
     }
-    document.getElementById('challanWholeDiscAmountHidden').value = wholeDiscAmt.toFixed(2);
+    document.getElementById('challanWholeDiscAmountHidden').value = wholeDiscType === 'percentage' ? wholeDiscVal.toFixed(2) : wholeDiscAmt.toFixed(2);
     document.getElementById('challanWholeDiscTypeHidden').value = wholeDiscType;
 
     const rawTotal = productsTotal + transportCharges - wholeDiscAmt;

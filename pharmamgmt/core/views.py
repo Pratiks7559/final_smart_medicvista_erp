@@ -306,16 +306,7 @@ def dashboard(request):
     }
     return render(request, 'dashboard.html', context)
 
-@login_required
-def export_product_history_excel(request):
-    """Export product batch history grouped by invoice financial year."""
-    product_id = request.GET.get('product_id')
-    if not product_id:
-        return HttpResponse('Product is required.', status=400)
-
-    from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
-    from openpyxl.utils import get_column_letter
+def _get_product_batch_history_data(product_id):
     from .models import CustomerChallanMaster, StockIssueDetail
 
     product = get_object_or_404(ProductMaster, productid=product_id)
@@ -379,6 +370,96 @@ def export_product_history_excel(request):
         fy_start_year = invoice_date.year if invoice_date.month >= 4 else invoice_date.year - 1
         grouped_transactions.setdefault((fy_start_year, fy_label), []).append(transaction)
 
+    batch_summary = {}
+    for (fy_start_year, fy_label), fy_transactions in grouped_transactions.items():
+        for transaction in fy_transactions:
+            summary = batch_summary.setdefault((fy_start_year, fy_label, transaction.batch_no), {
+                'expiry': transaction.expiry_date,
+                'first_date': transaction.invoice_date,
+                'last_date': transaction.invoice_date,
+                'quantity': 0.0,
+                'free_quantity': 0.0,
+                'movement_count': 0,
+            })
+            summary['first_date'] = min(summary['first_date'], transaction.invoice_date)
+            summary['last_date'] = max(summary['last_date'], transaction.invoice_date)
+            summary['quantity'] += float(transaction.quantity or 0)
+            summary['free_quantity'] += float(transaction.free_quantity or 0)
+            summary['movement_count'] += 1
+
+    return product, grouped_transactions, batch_summary
+
+
+@login_required
+def product_history_detail(request):
+    from .year_filter_utils import get_current_financial_year
+
+    product_id = request.GET.get('product_id')
+    if not product_id:
+        return HttpResponse('Product is required.', status=400)
+
+    product, grouped_transactions, batch_summary = _get_product_batch_history_data(product_id)
+    selected_year = int(request.session.get('selected_year', get_current_financial_year()))
+    scope = 'all' if request.GET.get('scope') == 'all' else 'fy'
+    selected_fy_label = f'{selected_year}-{str(selected_year + 1)[-2:]}'
+    financial_years = []
+    for (fy_start_year, fy_label), fy_transactions in sorted(grouped_transactions.items()):
+        if scope == 'fy' and fy_start_year != selected_year:
+            continue
+        financial_years.append({
+            'label': fy_label,
+            'transactions': sorted(fy_transactions, key=lambda item: (item.invoice_date, item.transaction_id)),
+            'batch_summaries': [
+                {
+                    'batch_no': batch_no,
+                    **summary,
+                }
+                for (summary_fy_start, summary_fy_label, batch_no), summary in sorted(batch_summary.items())
+                if summary_fy_start == fy_start_year and summary_fy_label == fy_label
+            ],
+        })
+    return render(request, 'reports/product_batch_history_detail.html', {
+        'title': 'Product Batch History',
+        'product': product,
+        'financial_years': financial_years,
+        'selected_year': selected_year,
+        'selected_fy_label': selected_fy_label,
+        'scope': scope,
+    })
+
+
+@login_required
+def export_product_history_excel(request):
+    """Export product batch history grouped by invoice financial year."""
+    product_id = request.GET.get('product_id')
+    if not product_id:
+        return HttpResponse('Product is required.', status=400)
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    product, grouped_transactions, batch_summary = _get_product_batch_history_data(product_id)
+    if request.GET.get('scope') == 'fy':
+        from .year_filter_utils import get_current_financial_year
+
+        selected_year = int(request.session.get('selected_year', get_current_financial_year()))
+        grouped_transactions = {
+            key: transactions
+            for key, transactions in grouped_transactions.items()
+            if key[0] == selected_year
+        }
+        batch_summary = {
+            key: summary
+            for key, summary in batch_summary.items()
+            if key[0] == selected_year
+        }
+        report_period = f'FY {selected_year}-{str(selected_year + 1)[-2:]}'
+        filename_period = f'FY{selected_year}-{str(selected_year + 1)[-2:]}'
+    else:
+        report_period = 'All Financial Years'
+        filename_period = 'all_years'
+
     wb = Workbook()
     detail_ws = wb.active
     detail_ws.title = 'Transaction Details'
@@ -388,14 +469,13 @@ def export_product_history_excel(request):
     header_font = Font(color='FFFFFF', bold=True)
     title_font = Font(size=14, bold=True, color='1F4E78')
 
-    detail_ws.append([product.product_name, 'All Financial Years'])
+    detail_ws.append([product.product_name, report_period])
     detail_ws['A1'].font = title_font
     detail_ws.append([])
     detail_headers = [
         'Invoice Date', 'Batch No', 'Expiry', 'Transaction Type', 'Reference No',
         'Quantity', 'Free Quantity', 'Rate', 'MRP', 'Total Value', 'Remarks'
     ]
-    batch_summary = {}
     detail_row = 3
     for (fy_start_year, fy_label), fy_transactions in sorted(grouped_transactions.items()):
         fy_transactions = sorted(fy_transactions, key=lambda item: (item.invoice_date, item.transaction_id))
@@ -428,22 +508,9 @@ def export_product_history_excel(request):
                 transaction.remarks or '',
             ])
             detail_row += 1
-            summary = batch_summary.setdefault((fy_start_year, fy_label, transaction.batch_no), {
-                'expiry': transaction.expiry_date,
-                'first_date': transaction.invoice_date,
-                'last_date': transaction.invoice_date,
-                'quantity': 0.0,
-                'free_quantity': 0.0,
-                'movement_count': 0,
-            })
-            summary['first_date'] = min(summary['first_date'], transaction.invoice_date)
-            summary['last_date'] = max(summary['last_date'], transaction.invoice_date)
-            summary['quantity'] += quantity
-            summary['free_quantity'] += free_quantity
-            summary['movement_count'] += 1
         detail_row += 1
 
-    summary_ws.append([product.product_name, 'All Financial Years'])
+    summary_ws.append([product.product_name, report_period])
     summary_ws['A1'].font = title_font
     summary_ws.append([])
     summary_headers = [
@@ -477,7 +544,7 @@ def export_product_history_excel(request):
         ])
         summary_row += 1
     
-    if not transactions:
+    if not grouped_transactions:
         detail_ws.append(['No batch history found'])
         summary_ws.append(['No batch history found'])
 
@@ -491,7 +558,7 @@ def export_product_history_excel(request):
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     response['Content-Disposition'] = (
-        f'attachment; filename="{product.product_name[:30]}_all_years_batch_history.xlsx"'
+        f'attachment; filename="{product.product_name[:30]}_{filename_period}_batch_history.xlsx"'
     )
     wb.save(response)
     return response
@@ -1880,7 +1947,7 @@ def add_invoice_payment(request, invoice_id):
                             payment_date=parsed_date,
                             payment_amount=float(apply_adv),
                             payment_mode=adv.payment_mode,
-                            payment_ref_no=payment_ref_no
+                            payment_ref_no=adv.reference_no
                         )
                         AdvanceLedger.objects.create(
                             party_type='supplier',
@@ -2866,7 +2933,7 @@ def _auto_adjust_customer_advance(invoice):
                 sales_payment_date=today,
                 sales_payment_amount=float(apply_adv),
                 sales_payment_mode=adv.receipt_mode,
-                sales_payment_ref_no=''
+                sales_payment_ref_no=adv.reference_no
             )
             AdvanceLedger.objects.create(
                 party_type='customer', customer=customer,
@@ -3403,7 +3470,7 @@ def add_sales_payment(request, invoice_id):
                             sales_payment_date=parsed_date,
                             sales_payment_amount=float(apply_adv),
                             sales_payment_mode=adv.receipt_mode,
-                            sales_payment_ref_no=payment_ref_no
+                            sales_payment_ref_no=adv.reference_no
                         )
                         AdvanceLedger.objects.create(
                             party_type='customer', customer=customer,

@@ -82,7 +82,7 @@
 
                         <input type="hidden" name="whole_discount_amount" id="salesWholeDiscAmountHidden" value="0">
                         <input type="hidden" name="whole_discount_value" id="salesWholeDiscValueHidden" value="0">
-                        <input type="hidden" name="whole_discount_type" id="salesWholeDiscTypeHidden" value="flat">
+                        <input type="hidden" name="whole_discount_type" id="salesWholeDiscTypeHidden" value="percentage">
                         <input type="hidden" name="discount_mode_value" id="salesDiscountModeHidden" value="product_wise">
 
                         <!-- Products Section -->
@@ -163,8 +163,8 @@
                                                 <td style="color:#c62828;">
                                                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                                                         <span>Whole Discount:</span>
-                                                        <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="sales_whole_disc_type" id="salesWholeDiscFlat" value="flat" checked onchange="updateSalesGrandTotalWithWholeDisc()"> Flat ₹</label>
-                                                        <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="sales_whole_disc_type" id="salesWholeDiscPercent" value="percentage" onchange="updateSalesGrandTotalWithWholeDisc()"> %</label>
+                                                        <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="sales_whole_disc_type" id="salesWholeDiscFlat" value="flat" onchange="updateSalesGrandTotalWithWholeDisc()"> Flat ₹</label>
+                                                        <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="sales_whole_disc_type" id="salesWholeDiscPercent" value="percentage" checked onchange="updateSalesGrandTotalWithWholeDisc()"> %</label>
                                                         <input type="number" id="salesWholeDiscountInput" min="0" step="any" placeholder="0" value="0" style="padding:4px 8px;border:1.5px solid #ffb300;border-radius:6px;width:110px;font-size:0.9rem;" oninput="updateSalesGrandTotalWithWholeDisc()">
                                                     </div>
                                                 </td>

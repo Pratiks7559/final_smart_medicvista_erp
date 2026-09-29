@@ -276,6 +276,9 @@
     align-items: start;
 }
 
+.db-report-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+.db-report-actions button:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
 .db-product-search-wrap { position: relative; }
 .db-product-search {
     width: 100%;
@@ -580,9 +583,14 @@
                 <div id="dashboardSelectedProduct" class="db-selected-product"></div>
                 <div id="dashboardProductReportError" class="db-report-error" role="status"></div>
             </div>
-            <button type="button" id="dashboardProductReportButton" class="db-btn db-btn-primary" disabled>
-                <i class="fas fa-download"></i> Get Excel Report
-            </button>
+            <div class="db-report-actions">
+                <button type="button" id="dashboardProductDetailsButton" class="db-btn db-btn-report" disabled>
+                    <i class="fas fa-eye"></i> See Details
+                </button>
+                <button type="button" id="dashboardProductReportButton" class="db-btn db-btn-primary" disabled>
+                    <i class="fas fa-download"></i> Get Excel Report
+                </button>
+            </div>
         </div>
     </section>
 
@@ -735,6 +743,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const suggestions = document.getElementById('dashboardProductSuggestions');
     const selected = document.getElementById('dashboardSelectedProduct');
     const reportButton = document.getElementById('dashboardProductReportButton');
+    const detailsButton = document.getElementById('dashboardProductDetailsButton');
     const error = document.getElementById('dashboardProductReportError');
     let selectedProductId = '';
     let searchRequest;
@@ -744,6 +753,7 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedProductId = '';
         selected.textContent = '';
         reportButton.disabled = true;
+        detailsButton.disabled = true;
     }
 
     function showSuggestions(items) {
@@ -764,6 +774,7 @@ document.addEventListener('DOMContentLoaded', function () {
         search.value = option.dataset.productName;
         selected.textContent = `Selected: ${option.dataset.productName}`;
         reportButton.disabled = false;
+        detailsButton.disabled = false;
         suggestions.hidden = true;
         activeSuggestionIndex = -1;
     }
@@ -825,6 +836,10 @@ document.addEventListener('DOMContentLoaded', function () {
     reportButton.addEventListener('click', function () {
         if (!selectedProductId) return;
         window.location.href = `{% url 'export_product_history_excel' %}?product_id=${encodeURIComponent(selectedProductId)}`;
+    });
+    detailsButton.addEventListener('click', function () {
+        if (!selectedProductId) return;
+        window.location.href = `{% url 'product_history_detail' %}?product_id=${encodeURIComponent(selectedProductId)}`;
     });
 });
 </script>

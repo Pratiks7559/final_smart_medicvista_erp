@@ -477,7 +477,7 @@ def _auto_adjust_advance(invoice):
                 payment_date=today,
                 payment_amount=float(apply_adv),
                 payment_mode=adv.payment_mode,
-                payment_ref_no=''
+                payment_ref_no=adv.reference_no
             )
             AdvanceLedger.objects.create(
                 party_type='supplier',
