@@ -6,7 +6,7 @@
 {% endblock %}
 
 {% block content %}
-{% include 'components/combined_invoice_date_dialog.html' with date_field_id='sales_invoice_date' %}
+{% include 'components/combined_invoice_date_dialog.html' with date_field_id='sales_invoice_date' date_min=fy_start date_max=fy_end %}
 <div class="combined-invoice-container">
     <div class="invoice-wrapper">
         <div class="invoice-card">
@@ -26,6 +26,7 @@
                                     <label for="sales_invoice_date" class="field-label">Invoice Date</label>
                                     <input type="date" name="sales_invoice_date" id="sales_invoice_date" class="form-control" 
                                            value="{{ invoice_form.sales_invoice_date.value|default:'' }}" 
+                                         min="{{ fy_start }}" max="{{ fy_end }}"
                                            title="Enter invoice date" required>
                                 </div>
                                 <div class="form-group required">

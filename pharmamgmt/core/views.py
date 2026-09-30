@@ -2954,6 +2954,15 @@ def _auto_adjust_customer_advance(invoice):
 
 @login_required
 def add_sales_invoice_with_products(request):
+    from .year_filter_utils import (
+        get_current_financial_year,
+        get_financial_year_dates,
+        is_date_in_financial_year,
+    )
+
+    current_fy = int(request.session.get('selected_year', get_current_financial_year()))
+    fy_start, fy_end = get_financial_year_dates(current_fy)
+
     def convert_date_format(date_str):
         """Convert DDMM format to YYYY-MM-DD format"""
         from datetime import datetime
@@ -3002,6 +3011,14 @@ def add_sales_invoice_with_products(request):
             if not invoice_form.is_valid():
                 print("Form errors:", invoice_form.errors)
                 messages.error(request, f"Form validation failed: {invoice_form.errors}")
+
+            if invoice_form.is_valid() and not is_date_in_financial_year(
+                invoice_form.cleaned_data.get('sales_invoice_date'), current_fy
+            ):
+                invoice_form.add_error(
+                    'sales_invoice_date',
+                    f'Invoice date must be within FY {current_fy}-{str(current_fy + 1)[2:]}.'
+                )
                 
             if invoice_form.is_valid():
                 # Create sales invoice
@@ -3376,9 +3393,6 @@ def add_sales_invoice_with_products(request):
     customers = CustomerMaster.objects.select_related().order_by('customer_name')
     products = ProductMaster.objects.only('productid', 'product_name', 'product_company').order_by('product_name')
     
-    from .year_filter_utils import get_current_financial_year
-    current_fy = request.session.get('selected_year', get_current_financial_year())
-
     context = {
         'invoice_form': invoice_form,
         'customers': customers,
@@ -3386,6 +3400,11 @@ def add_sales_invoice_with_products(request):
         'preview_invoice_no': 'Will be generated based on series selection',
         'invoice_series': InvoiceSeries.objects.filter(is_active=True).order_by('series_name'),
         'current_fy': current_fy,
+        'fy_start': fy_start.isoformat(),
+        'fy_end': fy_end.isoformat(),
+        'fy_start_label': fy_start.strftime('%d-%m-%Y'),
+        'fy_end_label': fy_end.strftime('%d-%m-%Y'),
+        'fy_label': f'FY {current_fy}-{str(current_fy + 1)[2:]}',
         'title': 'Add Sales Invoice with Products'
     }
     return render(request, 'sales/combined_sales_invoice_form.html', context)
@@ -3656,8 +3675,13 @@ def add_purchase_return(request):
     from datetime import datetime
     import json
     from django.db import transaction
-    from .year_filter_utils import get_current_financial_year
-    current_fy = request.session.get('selected_year', get_current_financial_year())
+    from .year_filter_utils import (
+        get_current_financial_year,
+        get_financial_year_dates,
+        is_date_in_financial_year,
+    )
+    current_fy = int(request.session.get('selected_year', get_current_financial_year()))
+    fy_start, fy_end = get_financial_year_dates(current_fy)
     
     # Generate unique preview return ID
     today = datetime.now().date()
@@ -3674,6 +3698,15 @@ def add_purchase_return(request):
             with transaction.atomic():
                 form = PurchaseReturnInvoiceForm(request.POST)
                 if form.is_valid():
+                    if not is_date_in_financial_year(
+                        form.cleaned_data.get('returninvoice_date'), current_fy
+                    ):
+                        form.add_error(
+                            'returninvoice_date',
+                            f'Return date must be within FY {current_fy}-{str(current_fy + 1)[2:]}.'
+                        )
+
+                if form.is_valid():
                     # Create return invoice
                     return_invoice = form.save(commit=False)
                     
@@ -3688,6 +3721,11 @@ def add_purchase_return(request):
                                 'suppliers': SupplierMaster.objects.all().order_by('supplier_name'),
                                 'products': ProductMaster.objects.all().order_by('product_name'),
                                 'current_fy': current_fy,
+                                'fy_start': fy_start.isoformat(),
+                                'fy_end': fy_end.isoformat(),
+                                'fy_start_label': fy_start.strftime('%d-%m-%Y'),
+                                'fy_end_label': fy_end.strftime('%d-%m-%Y'),
+                                'fy_label': f'FY {current_fy}-{str(current_fy + 1)[2:]}',
                                 'title': 'Add Purchase Return with Products'
                             }
                             return render(request, 'returns/purchase_return_form.html', context)
@@ -3838,6 +3876,11 @@ def add_purchase_return(request):
         'suppliers': suppliers,
         'products': products,
         'current_fy': current_fy,
+        'fy_start': fy_start.isoformat(),
+        'fy_end': fy_end.isoformat(),
+        'fy_start_label': fy_start.strftime('%d-%m-%Y'),
+        'fy_end_label': fy_end.strftime('%d-%m-%Y'),
+        'fy_label': f'FY {current_fy}-{str(current_fy + 1)[2:]}',
         'title': 'Add Purchase Return with Products'
     }
     return render(request, 'returns/purchase_return_form.html', context)

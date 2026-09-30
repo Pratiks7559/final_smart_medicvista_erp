@@ -116,6 +116,7 @@
                                     <th>Expiry</th>
                                     <th>MRP</th>
                                     <th>Purchase Rate</th>
+                                    <th>Net Demand This FY</th>
                                     <th>Available Stock</th>
                                     <th>Free Qty</th>
                                     <th>Rate A</th>
@@ -130,6 +131,7 @@
                                     <td>{{ batch.expiry_date }}</td>
                                     <td>₹{{ batch.mrp|floatformat:2 }}</td>
                                     <td>₹{{ batch.purchase_rate|floatformat:2 }}</td>
+                                    <td>{{ batch.net_demand_in_fy|floatformat:2 }}</td>
                                     <td><strong>{{ batch.available_stock|floatformat:2 }}</strong></td>
                                     <td style="color: #888;">{{ batch.free_qty|floatformat:2 }}</td>
                                     <td>₹{{ batch.rate_a|floatformat:2 }}</td>

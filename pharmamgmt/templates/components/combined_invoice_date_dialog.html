@@ -30,7 +30,12 @@
     style="position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);padding:20px;">
     <div style="width:min(560px,100%);background:#fff;border-radius:12px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
         <h3 id="combinedInvoiceDateDialogTitle" style="margin:0 0 8px;">Enter Date</h3>
-        <p style="margin:0 0 20px;color:#64748b;font-size:1.05rem;">Enter date as DDMMYYYY or DDMMYY.</p>
+        <p style="margin:0 0 20px;color:#64748b;font-size:1.05rem;">
+            Enter date as DDMMYYYY or DDMMYY.
+            {% if date_min and date_max %}
+            <br><strong>{{ fy_label }} allowed dates: {{ fy_start_label }} to {{ fy_end_label }}</strong>
+            {% endif %}
+        </p>
         <label for="combinedInvoiceDateDialogInput" style="display:block;font-weight:600;margin-bottom:8px;font-size:1.05rem;">Date</label>
         <input id="combinedInvoiceDateDialogInput" type="text" inputmode="numeric" maxlength="8"
              placeholder="DDMMYYYY or DDMMYY" autocomplete="off"
@@ -43,6 +48,11 @@
 (function () {
     const fieldId = '{{ date_field_id }}';
     const outputFormat = '{{ date_output_format|default:"html-date" }}';
+    const dateMin = '{{ date_min|default:"" }}';
+    const dateMax = '{{ date_max|default:"" }}';
+    const fyLabel = '{{ fy_label|default:"selected financial year" }}';
+    const dateMinLabel = '{{ fy_start_label|default:"" }}';
+    const dateMaxLabel = '{{ fy_end_label|default:"" }}';
 
     function openInvoiceDateDialog() {
         const dialog = document.getElementById('combinedInvoiceDateDialog');
@@ -126,6 +136,14 @@
             const parsed = new Date(year, month - 1, day);
             if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
                 error.textContent = 'Please enter a valid calendar date.';
+                error.style.display = 'block';
+                input.focus();
+                return;
+            }
+
+            const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            if ((dateMin && isoDate < dateMin) || (dateMax && isoDate > dateMax)) {
+                error.textContent = `${fyLabel} dates must be from ${dateMinLabel} to ${dateMaxLabel}.`;
                 error.style.display = 'block';
                 input.focus();
                 return;

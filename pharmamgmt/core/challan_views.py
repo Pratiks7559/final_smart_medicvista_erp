@@ -46,14 +46,33 @@ def add_supplier_challan(request):
     from django.db import transaction
     import json
     from decimal import Decimal
-    from core.year_filter_utils import get_current_financial_year
-    current_fy = request.session.get('selected_year', get_current_financial_year())
+    from datetime import datetime
+    from core.year_filter_utils import (
+        get_current_financial_year,
+        get_financial_year_dates,
+        is_date_in_financial_year,
+    )
+    current_fy = int(request.session.get('selected_year', get_current_financial_year()))
+    fy_start, fy_end = get_financial_year_dates(current_fy)
     
     if request.method == 'POST':
+        challan_date = request.POST.get('challan_date', '').strip()
+        try:
+            parsed_challan_date = datetime.strptime(challan_date, '%Y-%m-%d').date()
+        except ValueError:
+            messages.error(request, 'Enter a valid challan date.')
+            return redirect('add_supplier_challan')
+
+        if not is_date_in_financial_year(parsed_challan_date, current_fy):
+            messages.error(
+                request,
+                f'Challan date must be within FY {current_fy}-{str(current_fy + 1)[2:]}.',
+            )
+            return redirect('add_supplier_challan')
+
         try:
             with transaction.atomic():
                 challan_no = request.POST.get('challan_no')
-                challan_date = request.POST.get('challan_date')
                 supplier_id = request.POST.get('supplierid')
                 transport_charges = Decimal(request.POST.get('transport_charges', 0))
                 challan_total = Decimal(request.POST.get('challan_total', 0))
@@ -186,6 +205,11 @@ def add_supplier_challan(request):
         'suppliers': suppliers,
         'products': products,
         'current_fy': current_fy,
+        'fy_start': fy_start.isoformat(),
+        'fy_end': fy_end.isoformat(),
+        'fy_start_label': fy_start.strftime('%d-%m-%Y'),
+        'fy_end_label': fy_end.strftime('%d-%m-%Y'),
+        'fy_label': f'FY {current_fy}-{str(current_fy + 1)[2:]}',
         'title': 'Add Supplier Challan with Products'
     }
     return render(request, 'challan/supplier_challan_form.html', context)

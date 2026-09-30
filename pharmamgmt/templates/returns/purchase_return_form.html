@@ -6,13 +6,13 @@
 {% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" type="text/css" href="{% static 'css/purchase_return_form.css' %}">
 <link rel="stylesheet" href="{% static 'css/combined_invoice_form.css' %}">
 <link rel="stylesheet" href="{% static 'css/ci_unique_styles.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'css/purchase_return_form.css' %}">
 {% endblock %}
 
 {% block content %}
-{% include 'components/combined_invoice_date_dialog.html' with date_field_id='returninvoice_date' date_output_format='text' %}
+{% include 'components/combined_invoice_date_dialog.html' with date_field_id='returninvoice_date' date_output_format='text' date_min=fy_start date_max=fy_end %}
 <div class="ci-main-container purchase-return-page">
     <div class="ci-wrapper-card">
         <div class="ci-page-header">
@@ -36,6 +36,7 @@
                                 <input type="text" name="returninvoice_date" id="returninvoice_date" 
                                        class="form-control date-input-ddmmyyyy" 
                                        value="{{ form.returninvoice_date.value|default:'' }}" 
+                                        data-fy-start="{{ fy_start }}" data-fy-end="{{ fy_end }}"
                                        placeholder="DD-MM-YYYY" maxlength="10"
                                        title="Enter return date in DD-MM-YYYY format" required>
                                 {% if form.returninvoice_date.errors %}
@@ -851,7 +852,7 @@ function createReturnBatchModal(batches, rowIndex) {
     if (existingModal) existingModal.remove();
     
     const modalHTML = `
-        <div id="batchSelectionModal" class="batch-modal-overlay">
+        <div id="batchSelectionModal" class="batch-modal-overlay purchase-return-batch-overlay">
             <div class="batch-modal-content">
                 <div class="batch-modal-header">
                     <h3>Select Batch</h3>
@@ -1295,6 +1296,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     const daysInMonth = new Date(year, month, 0).getDate();
                     if (day > daysInMonth) {
                         alert('Please enter a valid return date in DD-MM-YYYY format.');
+                        returnDateInput.focus();
+                        return false;
+                    }
+
+                    const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                    const fyStart = returnDateInput.dataset.fyStart;
+                    const fyEnd = returnDateInput.dataset.fyEnd;
+                    if (isoDate < fyStart || isoDate > fyEnd) {
+                        alert('Return date must be within the selected financial year.');
                         returnDateInput.focus();
                         return false;
                     }

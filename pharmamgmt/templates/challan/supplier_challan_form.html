@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block content %}
-{% include 'components/combined_invoice_date_dialog.html' with date_field_id='challan_date' %}
+{% include 'components/combined_invoice_date_dialog.html' with date_field_id='challan_date' date_min=fy_start date_max=fy_end %}
 <div class="ci-light-protect ci-main-container">
     <div class="ci-wrapper-card">
         <div class="ci-page-header">
@@ -31,6 +31,7 @@
                                         <label for="challan_date" class="ci-field-label">challan Date*</label>
                                         <input type="date" name="challan_date" id="challan_date" class="ci-form-input" 
                                                value="{{ challan_form.challan_date.value|default:'' }}" 
+                                                 min="{{ fy_start }}" max="{{ fy_end }}"
                                                title="Enter challan date" required>
                                     </div>
                                 </div>
@@ -676,6 +677,11 @@ function validatechallanForm() {
     const challanDate = document.querySelector('input[name*="challan_date"]')?.value?.trim();
     if (!challanDate) {
         errors.push('challan date is required');
+    } else {
+        const challanDateInput = document.querySelector('input[name="challan_date"]');
+        if (challanDateInput && (challanDate < challanDateInput.min || challanDate > challanDateInput.max)) {
+            errors.push('{{ fy_label }} challan date must be between {{ fy_start_label }} and {{ fy_end_label }}');
+        }
     }
     
     // Check supplier
