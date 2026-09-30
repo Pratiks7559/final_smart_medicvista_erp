@@ -12,14 +12,14 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Master Global CSS (Load First) -->
     <link rel="stylesheet" href="{% static 'css/global.css' %}">
-    
-    <!-- Google Fonts - Inter -->
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Page specific CSS -->
@@ -39,25 +39,78 @@
         -webkit-text-fill-color: #1f2937 !important;
     }
     </style>
-</head>
+    </head>
 <body class="body-gradient">
-    <!-- Loading Screen -->
-    <div class="loading-screen" id="loadingScreen">
-        <div class="loader-container">
-            <div class="loader-logo-wrapper">
-                <div class="medical-icon">
-                    <i class="fas fa-heartbeat"></i>
+    <div id="mv-loader" role="status" aria-live="polite" aria-label="MedicVista loading">
+        <div class="mv-panel l"></div>
+        <div class="mv-panel r"></div>
+
+        <div class="mv-plus" aria-hidden="true">
+            <span style="--x:6; --s:34px; --t:14s; --dl:-2s">+</span>
+            <span style="--x:18; --s:22px; --t:11s; --dl:-7s">+</span>
+            <span style="--x:33; --s:46px; --t:17s; --dl:-4s">+</span>
+            <span style="--x:52; --s:26px; --t:12s; --dl:-9s">+</span>
+            <span style="--x:67; --s:40px; --t:15s; --dl:-1s">+</span>
+            <span style="--x:80; --s:24px; --t:10s; --dl:-6s">+</span>
+            <span style="--x:92; --s:36px; --t:16s; --dl:-11s">+</span>
+        </div>
+
+        <div class="mv-content">
+            <svg class="mv-vial" viewBox="0 0 160 230" aria-hidden="true">
+                <defs>
+                    <clipPath id="mv-clip"><rect x="32" y="56" width="96" height="152" rx="12"/></clipPath>
+                    <linearGradient id="mv-liq" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc266"/><stop offset="1" stop-color="#ff9f1c"/></linearGradient>
+                    <linearGradient id="mv-pillA" x1="0" x2="1"><stop offset=".5" stop-color="#ff9f1c"/><stop offset=".5" stop-color="#eef2f7"/></linearGradient>
+                    <linearGradient id="mv-pillB" x1="0" x2="1"><stop offset=".5" stop-color="#e5173f"/><stop offset=".5" stop-color="#eef2f7"/></linearGradient>
+                    <pattern id="mv-bars" width="7" height="8" patternUnits="userSpaceOnUse"><rect width="2" height="8" fill="#0b0f1f"/><rect x="4" width="1" height="8" fill="#0b0f1f"/></pattern>
+                </defs>
+
+                <g transform="translate(66,-8)"><g class="pill" style="--d:0s"><rect x="-10" y="-5" width="20" height="10" rx="5" fill="url(#mv-pillA)" stroke="#0b0f1f" stroke-width="2"/></g></g>
+                <g transform="translate(88,-8)"><g class="pill" style="--d:.9s"><rect x="-10" y="-5" width="20" height="10" rx="5" fill="url(#mv-pillB)" stroke="#0b0f1f" stroke-width="2"/></g></g>
+                <g transform="translate(78,-8)"><g class="pill" style="--d:1.7s"><rect x="-10" y="-5" width="20" height="10" rx="5" fill="url(#mv-pillA)" stroke="#0b0f1f" stroke-width="2"/></g></g>
+
+                <rect x="46" y="38" width="68" height="18" fill="rgba(255,159,28,.25)" stroke="#0b0f1f" stroke-width="4"/>
+                <rect x="28" y="52" width="104" height="160" rx="16" fill="rgba(255,159,28,.14)" stroke="#0b0f1f" stroke-width="4"/>
+
+                <g clip-path="url(#mv-clip)">
+                    <path id="mv-liquid" fill="url(#mv-liq)" d="M28 214 H132 V214 H28Z"/>
+                    <circle class="bub" cx="50" cy="200" r="3" style="--d:0s"/>
+                    <circle class="bub" cx="72" cy="205" r="2.5" style="--d:.7s"/>
+                    <circle class="bub" cx="96" cy="200" r="3.5" style="--d:1.3s"/>
+                    <circle class="bub" cx="112" cy="206" r="2.5" style="--d:.4s"/>
+                    <circle class="bub" cx="84" cy="204" r="2" style="--d:1.9s"/>
+                </g>
+
+                <rect x="28" y="102" width="104" height="76" fill="#eef2f7" stroke="#0b0f1f" stroke-width="3"/>
+                <text x="40" y="138" font-family="Archivo Black, Impact, sans-serif" font-size="32" fill="#e5173f">Rx</text>
+                <text x="40" y="156" font-family="Archivo Black, Impact, sans-serif" font-size="11" fill="#0b0f1f">MedicVista</text>
+                <rect x="40" y="162" width="80" height="9" fill="url(#mv-bars)"/>
+                <rect x="38" y="62" width="7" height="140" rx="3.5" fill="#fff" opacity=".2"/>
+                <circle class="mv-ring" cx="80" cy="130" r="62" fill="none" stroke="#ff9f1c" stroke-width="4"/>
+                <g class="mv-check" transform="translate(132,198)">
+                    <circle r="17" fill="#0f9d58" stroke="#0b0f1f" stroke-width="3"/>
+                    <path d="M-8 0 L-2 7 L9 -6" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </g>
+                <g class="mv-cap">
+                    <rect x="34" y="6" width="92" height="34" rx="8" fill="#eef2f7" stroke="#0b0f1f" stroke-width="4"/>
+                    <path d="M48 13v20M62 13v20M76 13v20M90 13v20M104 13v20M118 13v20" stroke="#aeb8d6" stroke-width="3" stroke-linecap="round"/>
+                </g>
+            </svg>
+            <div class="mv-word" aria-hidden="true">
+                <div class="mv-outline">
+                    <span style="--i:0">M</span><span style="--i:1">e</span><span style="--i:2">d</span><span style="--i:3">i</span><span style="--i:4">c</span><span style="--i:5">V</span><span style="--i:6">i</span><span style="--i:7">s</span><span style="--i:8">t</span><span style="--i:9">a</span>
                 </div>
-                <div class="loader-ring"></div>
-                <div class="loader-ring-2"></div>
-                <div class="loader-ring-3"></div>
-            </div>
-            
-            <div class="loading-text">MedicVista</div>
-            <div class="loading-subtitle">Loading your pharmacy...</div>
-            <div class="loading-dots">
-                <span></span><span></span><span></span>
-            </div>
+                <div class="mv-fill" id="mv-fill">
+                    <span style="--i:0">M</span><span style="--i:1">e</span><span style="--i:2">d</span><span style="--i:3">i</span><span style="--i:4">c</span><span class="vista" style="--i:5">V</span><span class="vista" style="--i:6">i</span><span class="vista" style="--i:7">s</span><span class="vista" style="--i:8">t</span><span class="vista" style="--i:9">a</span>
+                </div>
+                </div>
+
+            <svg class="mv-ecg" viewBox="0 0 520 34" preserveAspectRatio="none" aria-hidden="true">
+                <path pathLength="1" d="M0 17 H176 l12 0 10 -14 10 28 10 -14 H520"/>
+            </svg>
+
+            <div class="mv-meta"><span id="mv-msg">Opening the vial...</span><span>Rx <b id="mv-pct">0</b>%</span></div>
+            <div class="mv-bar"><i id="mv-bar"></i></div>
         </div>
     </div>
     
@@ -459,208 +512,465 @@
     
     {% block extra_js %}{% endblock %}
     
-    <!-- Loading Screen Styles and Script -->
     <style>
-    .loading-screen {
+    #mv-loader {
+        --mv-cobalt-950: #050822;
+        --mv-cobalt-900: #0a1240;
+        --mv-cobalt-800: #101d66;
+        --mv-amber: #ff9f1c;
+        --mv-amber-soft: #ffc266;
+        --mv-rx-red: #e5173f;
+        --mv-label: #eef2f7;
+        --mv-ink: #0b0f1f;
+        --mv-foil: #aeb8d6;
+        --mv-ease: cubic-bezier(.2,.9,.25,1);
+        --mv-f-display: 'Archivo Black', Impact, sans-serif;
+        --mv-f-mono: 'IBM Plex Mono', ui-monospace, monospace;
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(135deg, #8c9ad8 0%, #b48cdc 100%);
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        inset: 0;
         z-index: 999999;
-        transition: opacity 0.8s ease-out;
-        overflow: hidden;
+        display: grid;
+        place-items: center;
+        -webkit-font-smoothing: antialiased;
     }
-    
-    .loading-screen::before {
+    #mv-loader[hidden] { display: none; }
+
+    .mv-panel {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 50.2%;
+        background-color: var(--mv-cobalt-900);
+        background-image:
+            radial-gradient(circle at 50% 50%, rgba(255,255,255,.07) 0 9px, rgba(0,0,0,.28) 10px 11px, transparent 12px),
+            radial-gradient(ellipse 70% 55% at 20% 0%, rgba(91,124,255,.5), transparent 65%),
+            linear-gradient(160deg, var(--mv-cobalt-800), var(--mv-cobalt-950));
+        background-size: 46px 46px, 100vw 100vh, 100vw 100vh;
+        background-attachment: fixed;
+        transition: transform .9s cubic-bezier(.77,0,.18,1) .25s;
+    }
+    .mv-panel.l { left: 0; }
+    .mv-panel.r { right: 0; }
+    .mv-panel.r::before, .mv-panel.l::before {
         content: '';
         position: absolute;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
-        background-size: 50px 50px;
-        animation: backgroundMove 20s linear infinite;
+        top: 0;
+        bottom: 0;
+        width: 10px;
+        background: repeating-linear-gradient(-45deg, var(--mv-amber) 0 12px, var(--mv-ink) 12px 24px);
     }
-    
-    @keyframes backgroundMove {
-        0% { transform: translate(0, 0); }
-        100% { transform: translate(50px, 50px); }
-    }
-    
-    .loader-container {
+    .mv-panel.l::before { right: 0; }
+    .mv-panel.r::before { left: 0; }
+
+    .mv-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: min(92vw, 760px);
         text-align: center;
-        color: white;
-        position: relative;
-        z-index: 1;
+        transition: opacity .35s ease, transform .5s var(--mv-ease);
     }
-    
-    .loader-logo-wrapper {
-        width: 150px;
-        height: 150px;
-        margin: 0 auto;
+    .mv-capsule {
         position: relative;
+        width: 150px;
+        height: 58px;
+        margin-bottom: 40px;
+        animation: mv-cap-spin 3.4s cubic-bezier(.65,0,.35,1) infinite;
+    }
+    .mv-capsule i {
+        position: absolute;
+        top: 0;
+        height: 100%;
+        width: 50%;
+        border: 3px solid var(--mv-ink);
+        box-shadow: 5px 5px 0 rgba(0,0,0,.35), inset 0 8px 0 rgba(255,255,255,.3);
+    }
+    .mv-capsule .a {
+        left: 0;
+        border-radius: 999px 0 0 999px;
+        background: var(--mv-amber);
+        animation: mv-open-a 3.4s ease-in-out infinite;
+    }
+    .mv-capsule .b {
+        right: 0;
+        border-radius: 0 999px 999px 0;
+        background: var(--mv-label);
+        animation: mv-open-b 3.4s ease-in-out infinite;
+    }
+    .mv-capsule::before, .mv-capsule::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        z-index: 3;
+        background: var(--mv-rx-red);
+        border-radius: 3px;
+        transform: translate(-50%,-50%) scale(0);
+        animation: mv-plus-pop 3.4s ease-in-out infinite;
+    }
+    .mv-capsule::before { width: 8px; height: 30px; }
+    .mv-capsule::after { width: 30px; height: 8px; }
+
+    .mv-word {
+        position: relative;
+        display: inline-block;
+        font-family: var(--mv-f-display);
+        font-size: clamp(2.7rem, 12.5vw, 6.4rem);
+        line-height: 1;
+        letter-spacing: .01em;
+        white-space: nowrap;
+    }
+    .mv-word span {
+        display: inline-block;
+        animation: mv-letter-in .7s var(--mv-ease) both;
+        animation-delay: calc(var(--i) * 70ms + .15s);
+    }
+    .mv-outline { color: transparent; -webkit-text-stroke: 2px rgba(238,242,247,.7); }
+    .mv-fill {
+        position: absolute;
+        inset: 0;
+        color: var(--mv-amber);
+        clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
+    }
+    .mv-fill .vista { color: var(--mv-label); }
+
+    .mv-ecg { width: min(100%, 560px); height: 40px; margin-top: 18px; overflow: visible; }
+    .mv-ecg path {
+        fill: none;
+        stroke: var(--mv-amber);
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-dasharray: 1;
+        stroke-dashoffset: 1;
+        animation: mv-ecg-draw 2.2s linear infinite;
+        filter: drop-shadow(0 0 6px rgba(255,159,28,.7));
+    }
+    .mv-meta {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: space-between;
+        gap: 16px;
+        width: min(100%, 420px);
+        margin-top: 26px;
+        font-family: var(--mv-f-mono);
+        font-size: .8rem;
+        font-weight: 600;
+        color: var(--mv-foil);
     }
-    
-    .medical-icon {
-        font-size: 60px;
-        color: white;
-        animation: iconPulse 2s ease-in-out infinite;
-        z-index: 10;
-        position: relative;
+    .mv-meta b {
+        min-width: 3.4ch;
+        color: var(--mv-amber);
+        font-size: 1.05rem;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
     }
-    
-    @keyframes iconPulse {
-        0%, 100% { 
-            transform: scale(1);
-            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.8));
+    .mv-bar {
+        width: min(100%, 420px);
+        height: 16px;
+        margin-top: 10px;
+        padding: 2px;
+        border: 2px solid var(--mv-foil);
+        border-radius: 999px;
+    }
+    .mv-bar i {
+        display: block;
+        width: 0;
+        height: 100%;
+        border-radius: 999px;
+        background: repeating-linear-gradient(-45deg, var(--mv-amber) 0 10px, var(--mv-ink) 10px 20px);
+        background-size: 28px 28px;
+        animation: mv-tape-run .7s linear infinite;
+    }
+
+    #mv-loader.is-done .mv-content { opacity: 0; transform: scale(1.06); }
+    #mv-loader.is-done .mv-panel.l { transform: translateX(-101%); }
+    #mv-loader.is-done .mv-panel.r { transform: translateX(101%); }
+
+    @media (prefers-reduced-motion: reduce) {
+        #mv-loader *, #mv-loader *::before, #mv-loader *::after {
+            animation: none !important;
+            transition-duration: .01ms !important;
         }
-        50% { 
-            transform: scale(1.1);
-            filter: drop-shadow(0 0 30px rgba(255, 255, 255, 1));
-        }
+        .mv-ecg path { stroke-dashoffset: 0; }
     }
-    
-    .loader-ring {
+
+    @keyframes mv-cap-spin { 0% { transform: rotate(-35deg); } 70%,100% { transform: rotate(325deg); } }
+    @keyframes mv-open-a { 0%,55%,100% { transform: translateX(0); } 72%,88% { transform: translateX(-16px); } }
+    @keyframes mv-open-b { 0%,55%,100% { transform: translateX(0); } 72%,88% { transform: translateX(16px); } }
+    @keyframes mv-plus-pop { 0%,58%,100% { transform: translate(-50%,-50%) scale(0); } 74%,86% { transform: translate(-50%,-50%) scale(1); } }
+    @keyframes mv-letter-in { from { opacity: 0; transform: translateY(46px); } to { opacity: 1; transform: none; } }
+    @keyframes mv-ecg-draw { 0% { stroke-dashoffset: 1; } 70%,100% { stroke-dashoffset: 0; } }
+    @keyframes mv-tape-run { to { background-position: 28px 0; } }
+
+    #mv-loader {
+        --mv-cobalt-400: #5b7cff;
+        --mv-ok: #0f9d58;
+        overflow: hidden;
+        text-rendering: optimizeLegibility;
+    }
+    .mv-panel {
+        background-image:
+            radial-gradient(ellipse 60% 55% at 50% 42%, rgba(91,124,255,.42), transparent 70%),
+            radial-gradient(ellipse 50% 45% at 100% 100%, rgba(229,23,63,.22), transparent 65%),
+            linear-gradient(160deg, var(--mv-cobalt-800), var(--mv-cobalt-950));
+        background-size: 200% 100%;
+        transition: transform .8s cubic-bezier(.77,0,.18,1);
+    }
+    .mv-panel.l { left: 0; background-position: 0 0; }
+    .mv-panel.r { right: 0; background-position: 100% 0; }
+    .mv-panel::before {
+        content: '';
         position: absolute;
-        width: 120px;
-        height: 120px;
-        border: 4px solid transparent;
-        border-top-color: #fff;
-        border-right-color: #fff;
-        border-radius: 50%;
-        animation: ringRotate 1.5s linear infinite;
-    }
-    
-    .loader-ring-2 {
-        position: absolute;
-        width: 140px;
-        height: 140px;
-        border: 3px solid transparent;
-        border-bottom-color: rgba(255, 255, 255, 0.7);
-        border-left-color: rgba(255, 255, 255, 0.7);
-        border-radius: 50%;
-        animation: ringRotate 2s linear infinite reverse;
-    }
-    
-    .loader-ring-3 {
-        position: absolute;
-        width: 160px;
-        height: 160px;
-        border: 2px solid transparent;
-        border-top-color: rgba(255, 255, 255, 0.5);
-        border-radius: 50%;
-        animation: ringRotate 2.5s linear infinite;
-    }
-    
-    @keyframes ringRotate {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .loading-text {
-        margin-top: 40px;
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: white;
-        letter-spacing: 3px;
-        animation: textGlow 2s ease-in-out infinite;
-        text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
-    }
-    
-    @keyframes textGlow {
-        0%, 100% { 
-            opacity: 1;
-            transform: translateY(0);
-        }
-        50% { 
-            opacity: 0.8;
-            transform: translateY(-5px);
-        }
-    }
-    
-    .loading-subtitle {
-        margin-top: 15px;
-        font-size: 1.1rem;
-        color: rgba(255, 255, 255, 0.9);
-        font-weight: 400;
-    }
-    
-    .loading-dots {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        margin-top: 20px;
-    }
-    
-    .loading-dots span {
+        top: 0;
+        bottom: 0;
         width: 10px;
-        height: 10px;
-        background: white;
-        border-radius: 50%;
-        animation: dotBounce 1.4s infinite ease-in-out both;
-    }
-    
-    .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
-    .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
-    
-    @keyframes dotBounce {
-        0%, 80%, 100% { 
-            transform: scale(0);
-            opacity: 0.5;
-        }
-        40% { 
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
-    
-    .loading-screen.fade-out {
         opacity: 0;
+        background: repeating-linear-gradient(-45deg, var(--mv-amber) 0 12px, var(--mv-ink) 12px 24px);
+        transition: opacity .3s;
+    }
+    .mv-panel.l::before { right: 0; }
+    .mv-panel.r::before { left: 0; }
+    #mv-loader.is-done .mv-panel::before { opacity: 1; }
+
+    .mv-plus {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
         pointer-events: none;
+        transition: opacity .3s;
     }
-    
-    @media (max-width: 768px) {
-        .loader-logo-wrapper {
-            width: 120px;
-            height: 120px;
-        }
-        
-        .medical-icon {
-            font-size: 50px;
-        }
-        
-        .loader-ring { width: 100px; height: 100px; }
-        .loader-ring-2 { width: 120px; height: 120px; }
-        .loader-ring-3 { width: 140px; height: 140px; }
-        
-        .loading-text {
-            font-size: 2rem;
-        }
+    .mv-plus span {
+        position: absolute;
+        bottom: -60px;
+        left: calc(var(--x) * 1%);
+        color: rgba(174,184,214,.13);
+        font: 400 var(--s) / 1 var(--mv-f-display);
+        animation: mv2-rise var(--t) linear infinite;
+        animation-delay: var(--dl);
     }
+    .mv-vial {
+        height: clamp(120px, 27vh, 210px);
+        width: auto;
+        aspect-ratio: 160 / 230;
+        overflow: visible;
+        margin-bottom: 22px;
+    }
+    .mv-vial .pill {
+        opacity: 0;
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: mv2-pill-drop 2.6s ease-in infinite;
+        animation-delay: var(--d);
+    }
+    .mv-vial .bub {
+        fill: rgba(255,255,255,.6);
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: mv2-bubble 2.4s ease-in infinite;
+        animation-delay: var(--d);
+    }
+    .mv-cap {
+        transform-box: fill-box;
+        transform-origin: 50% 100%;
+        transform: translate(40px,-28px) rotate(26deg);
+        transition: transform .5s cubic-bezier(.3,1.7,.5,1);
+    }
+    .mv-check {
+        transform-box: fill-box;
+        transform-origin: center;
+        transform: scale(0);
+        transition: transform .45s cubic-bezier(.3,1.9,.5,1) .25s;
+    }
+    .mv-ring { transform-box: fill-box; transform-origin: center; opacity: 0; }
+    #mv-loader.is-sealed .mv-cap { transform: none; }
+    #mv-loader.is-sealed .mv-check { transform: scale(1); }
+    #mv-loader.is-sealed .mv-ring { animation: mv2-ring .8s ease-out .1s both; }
+    #mv-loader.is-sealed .pill { animation: none; }
+
+    .mv-word { font-size: clamp(2.4rem, 11vw, 5.2rem); }
+    .mv-word span {
+        animation-name: mv2-letter-in;
+        animation-timing-function: var(--mv-ease);
+    }
+    .mv-ecg { width: min(100%, 520px); height: 34px; margin-top: 14px; }
+    .mv-ecg path {
+        stroke: var(--mv-amber);
+        stroke-dasharray: 1;
+        stroke-dashoffset: 1;
+        animation: mv2-ecg-draw 2.2s linear infinite;
+        filter: none;
+    }
+    .mv-meta { width: min(100%, 420px); margin-top: 22px; }
+    .mv-meta b { color: var(--mv-amber); }
+    .mv-bar i {
+        background: repeating-linear-gradient(-45deg, var(--mv-amber) 0 10px, var(--mv-ink) 10px 20px);
+    }
+    #mv-loader.is-done .mv-content { opacity: 0; transform: scale(1.06); }
+    #mv-loader.is-done .mv-plus { opacity: 0; }
+    #mv-loader.is-done .mv-panel.l { transform: translateX(-101%); transition-delay: .2s; }
+    #mv-loader.is-done .mv-panel.r { transform: translateX(101%); transition-delay: .2s; }
+
+    @media (max-height: 560px) {
+        .mv-vial { height: 96px; margin-bottom: 10px; }
+        .mv-ecg { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        #mv-loader *, #mv-loader *::before, #mv-loader *::after {
+            animation: none !important;
+            transition-duration: .01ms !important;
+        }
+        .mv-ecg path { stroke-dashoffset: 0; }
+        .mv-cap { transform: none; }
+    }
+
+    @keyframes mv2-rise { from { transform: translateY(0) rotate(0); } to { transform: translateY(-120vh) rotate(120deg); } }
+    @keyframes mv2-pill-drop {
+        0% { transform: translateY(-50px) rotate(0); opacity: 0; }
+        12%,62% { opacity: 1; }
+        80%,100% { transform: translateY(96px) rotate(210deg); opacity: 0; }
+    }
+    @keyframes mv2-bubble { 0% { transform: translateY(0) scale(.6); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-120px) scale(1); opacity: 0; } }
+    @keyframes mv2-ring { from { transform: scale(.6); opacity: .9; } to { transform: scale(1.5); opacity: 0; } }
+    @keyframes mv2-letter-in { from { opacity: 0; transform: translateY(46px); } to { opacity: 1; transform: none; } }
+    @keyframes mv2-ecg-draw { 0% { stroke-dashoffset: 1; } 70%,100% { stroke-dashoffset: 0; } }
     </style>
-    
+
     <script>
-    // Hide loading screen and show main content
-    window.addEventListener('load', function() {
-        setTimeout(function() {
-            const loadingScreen = document.getElementById('loadingScreen');
-            const mainContainer = document.getElementById('mainContainer');
-            
-            loadingScreen.classList.add('fade-out');
+    const MedicLoader = (() => {
+        const config = { minDuration: 1000, maxDuration: 8000, oncePerSession: false };
+        const el = document.getElementById('mv-loader');
+        const fill = document.getElementById('mv-fill');
+        const liquid = document.getElementById('mv-liquid');
+        const pct = document.getElementById('mv-pct');
+        const bar = document.getElementById('mv-bar');
+        const msg = document.getElementById('mv-msg');
+        const mainContainer = document.getElementById('mainContainer');
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const steps = [
+            [0, 'Opening the vial...'],
+            [25, 'Counting tablets...'],
+            [50, 'Syncing prescriptions...'],
+            [75, 'Checking batch numbers...'],
+            [92, 'Sealing and labelling...']
+        ];
+
+        let progress = 0;
+        let target = 0;
+        let waveTime = 0;
+        let startedAt = 0;
+        let pageLoaded = false;
+        let running = false;
+        let finishing = false;
+
+        function paint() {
+            if (progress >= 99.6) {
+                fill.style.clipPath = 'none';
+            } else {
+                const amplitude = 3.2 * (1 - progress / 100) + .6;
+                const baseline = 92 - progress * .84;
+                const points = [];
+                for (let x = 0; x <= 100; x += 4) {
+                    points.push(x + '% ' + (baseline + Math.sin(x / 100 * Math.PI * 4 + waveTime) * amplitude).toFixed(2) + '%');
+                }
+                fill.style.clipPath = 'polygon(' + points.join(',') + ',100% 100%,0 100%)';
+            }
+
+            const liquidLevel = 208 - progress * 1.5;
+            const liquidWave = progress >= 99.6 ? 0 : 3 * (1 - progress / 100) + .8;
+            let liquidPath = 'M28 ' + liquidLevel.toFixed(1);
+            for (let x = 28; x <= 132; x += 4) {
+                const y = liquidLevel + Math.sin(x * .13 + waveTime * 1.2) * liquidWave;
+                liquidPath += ' L' + x + ' ' + y.toFixed(2);
+            }
+            liquid.setAttribute('d', liquidPath + ' L132 214 L28 214Z');
+
+            pct.textContent = Math.round(progress);
+            bar.style.width = progress + '%';
+            for (const [at, text] of steps) {
+                if (progress >= at) msg.textContent = text;
+            }
+        }
+
+        function finish() {
+            if (finishing) return;
+            finishing = true;
+            running = false;
             mainContainer.style.display = 'flex';
-            
-            setTimeout(function() {
-                loadingScreen.style.display = 'none';
-            }, 500);
-        }, 1000);
-    });
+            msg.textContent = 'Ready to dispense';
+            el.classList.add('is-sealed');
+
+            window.setTimeout(() => el.classList.add('is-done'), reduceMotion ? 0 : 350);
+            window.setTimeout(() => {
+                el.hidden = true;
+                document.documentElement.style.overflow = '';
+                try {
+                    if (config.oncePerSession) sessionStorage.setItem('mvLoaderSeen', '1');
+                } catch (error) {}
+                document.dispatchEvent(new Event('medicloader:done'));
+            }, reduceMotion ? 50 : 1250);
+        }
+
+        function tick(now) {
+            if (!running) return;
+            waveTime += .09;
+            const elapsed = now - startedAt;
+            const canFinish = (pageLoaded && elapsed > config.minDuration) || elapsed > config.maxDuration;
+            target = canFinish ? 100 : Math.min(90, target + 1.1 + Math.random() * .6);
+            progress += (target - progress) * .14;
+            if (target === 100 && progress > 99.5) progress = 100;
+            paint();
+            if (progress >= 100) return finish();
+            window.requestAnimationFrame(tick);
+        }
+
+        function revealPage() {
+            pageLoaded = true;
+            mainContainer.style.display = 'flex';
+        }
+
+        function begin() {
+            el.hidden = false;
+            el.classList.remove('is-done', 'is-sealed');
+            document.documentElement.style.overflow = 'hidden';
+            progress = 0;
+            target = 0;
+            running = true;
+            finishing = false;
+            startedAt = performance.now();
+            if (reduceMotion) {
+                progress = 100;
+                paint();
+                finish();
+                return;
+            }
+            window.requestAnimationFrame(tick);
+        }
+
+        if (document.readyState === 'complete') revealPage();
+        else window.addEventListener('load', revealPage, { once: true });
+
+        let alreadySeen = false;
+        try {
+            alreadySeen = config.oncePerSession && sessionStorage.getItem('mvLoaderSeen');
+        } catch (error) {}
+        if (alreadySeen) {
+            el.hidden = true;
+            revealPage();
+        } else {
+            begin();
+        }
+        return {
+            hide() { revealPage(); },
+            replay() {
+                revealPage();
+                running = false;
+                begin();
+            }
+        };
+    })();
     </script>
 </body>
 </html>

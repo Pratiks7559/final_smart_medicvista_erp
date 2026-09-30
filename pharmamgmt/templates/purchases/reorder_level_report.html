@@ -52,6 +52,9 @@
     <!-- Results Info -->
     <div class="results-info">
         <p class="results-count">
+            Financial Year: <span class="results-highlight">{{ fy_label }}</span>
+        </p>
+        <p class="results-count">
             Showing <span class="results-highlight">{{ page_obj.start_index }}</span> - 
             <span class="results-highlight">{{ page_obj.end_index }}</span> of 
             <span class="results-highlight">{{ page_obj.paginator.count }}</span> products
