@@ -16,6 +16,17 @@
         <form method="GET" id="filterForm" class="filter-form">
             <div class="filter-grid">
                 <div class="filter-group">
+                    <label for="financialYear" class="filter-label">Financial Year</label>
+                    <select id="financialYear" name="financial_year" class="filter-input">
+                        {% for year in financial_years %}
+                        <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
+                            FY {{ year }}-{{ year|add:1|stringformat:"02d"|slice:"-2:" }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
                     <label for="productSearch" class="filter-label">Product Search</label>
                     <input type="text" 
                            id="productSearch" 
@@ -153,11 +164,11 @@
             <ul class="pagination-list">
                 {% if page_obj.has_previous %}
                     <li class="pagination-item">
-                        <a href="?page=1{% if product_search %}&product_search={{ product_search }}{% endif %}{% if show_reorder_only %}&show_reorder_only=true{% endif %}" 
+                        <a href="?page=1&financial_year={{ selected_year }}{% if product_search %}&product_search={{ product_search }}{% endif %}{% if show_reorder_only %}&show_reorder_only=true{% endif %}" 
                            class="page-link">First</a>
                     </li>
                     <li class="pagination-item">
-                        <a href="?page={{ page_obj.previous_page_number }}{% if product_search %}&product_search={{ product_search }}{% endif %}{% if show_reorder_only %}&show_reorder_only=true{% endif %}" 
+                        <a href="?page={{ page_obj.previous_page_number }}&financial_year={{ selected_year }}{% if product_search %}&product_search={{ product_search }}{% endif %}{% if show_reorder_only %}&show_reorder_only=true{% endif %}" 
                            class="page-link">Previous</a>
                     </li>
                 {% endif %}
@@ -170,11 +181,11 @@
                 
                 {% if page_obj.has_next %}
                     <li class="pagination-item">
-                        <a href="?page={{ page_obj.next_page_number }}{% if product_search %}&product_search={{ product_search }}{% endif %}{% if show_reorder_only %}&show_reorder_only=true{% endif %}" 
+                        <a href="?page={{ page_obj.next_page_number }}&financial_year={{ selected_year }}{% if product_search %}&product_search={{ product_search }}{% endif %}{% if show_reorder_only %}&show_reorder_only=true{% endif %}" 
                            class="page-link">Next</a>
                     </li>
                     <li class="pagination-item">
-                        <a href="?page={{ page_obj.paginator.num_pages }}{% if product_search %}&product_search={{ product_search }}{% endif %}{% if show_reorder_only %}&show_reorder_only=true{% endif %}" 
+                        <a href="?page={{ page_obj.paginator.num_pages }}&financial_year={{ selected_year }}{% if product_search %}&product_search={{ product_search }}{% endif %}{% if show_reorder_only %}&show_reorder_only=true{% endif %}" 
                            class="page-link">Last</a>
                     </li>
                 {% endif %}

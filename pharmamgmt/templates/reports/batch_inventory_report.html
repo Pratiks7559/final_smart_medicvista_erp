@@ -35,7 +35,7 @@
     <div class="batch-report-card">
         <div class="batch-report-card-header">
             <h6 class="batch-report-card-title">Batch-wise Inventory Report</h6>
-            <small class="batch-report-card-subtitle">Shows all products including those with zero stock</small>
+            <small class="batch-report-card-subtitle">Financial Year: FY {{ fy_label }} · Batch stock is calculated only from transactions in this year.</small>
             <div class="no-print">
                 <form action="{% url 'batch_inventory_report' %}" method="GET" class="batch-search-form" id="batchSearchForm">
                     <div class="batch-search-group" style="position: relative;">

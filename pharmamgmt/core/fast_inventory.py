@@ -4,6 +4,15 @@ from .models import PurchaseMaster, SalesMaster, ReturnPurchaseMaster, ReturnSal
 
 class FastInventory:
     @staticmethod
+    def _filter_date_range(queryset, date_field, start_date=None, end_date=None):
+        filters = {}
+        if start_date:
+            filters[f'{date_field}__gte'] = start_date
+        if end_date:
+            filters[f'{date_field}__lte'] = end_date
+        return queryset.filter(**filters) if filters else queryset
+
+    @staticmethod
     def get_fy_product_ids(fy_start, fy_end):
         """Get product IDs whose purchase invoice date OR challan date falls in given FY"""
         invoice_ids = list(
@@ -27,7 +36,7 @@ class FastInventory:
         return list(purchase_pids | challan_pids)
 
     @staticmethod
-    def get_batch_inventory_data(search_query='', fy_product_ids=None):
+    def get_batch_inventory_data(search_query='', fy_product_ids=None, fy_start=None, fy_end=None):
         """Optimized batch inventory - fetch all data in bulk"""
         products_query = ProductMaster.objects.all().order_by('product_name')
         if search_query:
@@ -46,7 +55,11 @@ class FastInventory:
         
         # Bulk fetch all transactions with expiry
         purchases = defaultdict(lambda: {'qty': 0, 'free_qty': 0, 'mrp': 0, 'expiry': None})
-        for p in PurchaseMaster.objects.filter(productid__in=product_ids).values('productid', 'product_batch_no', 'product_quantity', 'product_free_qty', 'product_MRP', 'product_expiry'):
+        purchase_qs = FastInventory._filter_date_range(
+            PurchaseMaster.objects.filter(productid__in=product_ids),
+            'product_invoiceid__invoice_date', fy_start, fy_end,
+        )
+        for p in purchase_qs.values('productid', 'product_batch_no', 'product_quantity', 'product_free_qty', 'product_MRP', 'product_expiry'):
             key = (p['productid'], p['product_batch_no'])
             purchases[key]['qty'] += p['product_quantity']
             purchases[key]['free_qty'] += p['product_free_qty'] or 0
@@ -55,7 +68,11 @@ class FastInventory:
             if not purchases[key]['expiry']:
                 purchases[key]['expiry'] = p['product_expiry']
         
-        for c in SupplierChallanMaster.objects.filter(product_id__in=product_ids).values('product_id', 'product_batch_no', 'product_quantity', 'product_free_qty', 'product_mrp', 'product_expiry'):
+        supplier_challan_qs = FastInventory._filter_date_range(
+            SupplierChallanMaster.objects.filter(product_id__in=product_ids),
+            'product_challan_id__challan_date', fy_start, fy_end,
+        )
+        for c in supplier_challan_qs.values('product_id', 'product_batch_no', 'product_quantity', 'product_free_qty', 'product_mrp', 'product_expiry'):
             key = (c['product_id'], c['product_batch_no'])
             purchases[key]['qty'] += c['product_quantity']
             purchases[key]['free_qty'] += c['product_free_qty'] or 0
@@ -66,31 +83,51 @@ class FastInventory:
         
         sales = defaultdict(int)
         sales_free = defaultdict(int)
-        for s in SalesMaster.objects.filter(productid__in=product_ids).values('productid', 'product_batch_no').annotate(total=Sum('sale_quantity'), total_free=Sum('sale_free_qty')):
+        sales_qs = FastInventory._filter_date_range(
+            SalesMaster.objects.filter(productid__in=product_ids),
+            'sales_invoice_no__sales_invoice_date', fy_start, fy_end,
+        )
+        for s in sales_qs.values('productid', 'product_batch_no').annotate(total=Sum('sale_quantity'), total_free=Sum('sale_free_qty')):
             sales[(s['productid'], s['product_batch_no'])] = s['total']
             sales_free[(s['productid'], s['product_batch_no'])] = s['total_free'] or 0
         
         # Add customer challan sales (both regular and free qty)
-        for cc in CustomerChallanMaster.objects.filter(product_id__in=product_ids).values('product_id', 'product_batch_no').annotate(total=Sum('sale_quantity'), total_free=Sum('sale_free_qty')):
+        customer_challan_qs = FastInventory._filter_date_range(
+            CustomerChallanMaster.objects.filter(product_id__in=product_ids),
+            'customer_challan_id__customer_challan_date', fy_start, fy_end,
+        )
+        for cc in customer_challan_qs.values('product_id', 'product_batch_no').annotate(total=Sum('sale_quantity'), total_free=Sum('sale_free_qty')):
             key = (cc['product_id'], cc['product_batch_no'])
             sales[key] += cc['total']
             sales_free[key] += cc['total_free'] or 0
         
         pr = defaultdict(int)
         pr_free = defaultdict(int)
-        for r in ReturnPurchaseMaster.objects.filter(returnproductid__in=product_ids).values('returnproductid', 'returnproduct_batch_no').annotate(total=Sum('returnproduct_quantity'), total_free=Sum('returnproduct_free_qty')):
+        purchase_return_qs = FastInventory._filter_date_range(
+            ReturnPurchaseMaster.objects.filter(returnproductid__in=product_ids),
+            'returninvoiceid__returninvoice_date', fy_start, fy_end,
+        )
+        for r in purchase_return_qs.values('returnproductid', 'returnproduct_batch_no').annotate(total=Sum('returnproduct_quantity'), total_free=Sum('returnproduct_free_qty')):
             pr[(r['returnproductid'], r['returnproduct_batch_no'])] = r['total']
             pr_free[(r['returnproductid'], r['returnproduct_batch_no'])] = r['total_free'] or 0
         
         sr = defaultdict(int)
         sr_free = defaultdict(int)
-        for r in ReturnSalesMaster.objects.filter(return_productid__in=product_ids).values('return_productid', 'return_product_batch_no').annotate(total=Sum('return_sale_quantity'), total_free=Sum('return_sale_free_qty')):
+        sales_return_qs = FastInventory._filter_date_range(
+            ReturnSalesMaster.objects.filter(return_productid__in=product_ids),
+            'return_sales_invoice_no__return_sales_invoice_date', fy_start, fy_end,
+        )
+        for r in sales_return_qs.values('return_productid', 'return_product_batch_no').annotate(total=Sum('return_sale_quantity'), total_free=Sum('return_sale_free_qty')):
             sr[(r['return_productid'], r['return_product_batch_no'])] = r['total']
             sr_free[(r['return_productid'], r['return_product_batch_no'])] = r['total_free'] or 0
         
         # CRITICAL FIX: Add stock issues to calculation
         stock_issues = defaultdict(int)
-        for si in StockIssueDetail.objects.filter(product__in=product_ids).values('product', 'batch_no').annotate(total=Sum('quantity_issued')):
+        stock_issue_qs = FastInventory._filter_date_range(
+            StockIssueDetail.objects.filter(product__in=product_ids),
+            'issue__issue_date', fy_start, fy_end,
+        )
+        for si in stock_issue_qs.values('product', 'batch_no').annotate(total=Sum('quantity_issued')):
             stock_issues[(si['product'], si['batch_no'])] = si['total']
         
         # Calculate inventory - FIXED to include stock issues
@@ -126,9 +163,11 @@ class FastInventory:
         return inventory
 
     @staticmethod
-    def get_batch_inventory_grouped(search_query='', fy_product_ids=None):
+    def get_batch_inventory_grouped(search_query='', fy_product_ids=None, fy_start=None, fy_end=None):
         """Returns inventory grouped by product for batch-wise report."""
-        flat = FastInventory.get_batch_inventory_data(search_query, fy_product_ids)
+        flat = FastInventory.get_batch_inventory_data(
+            search_query, fy_product_ids, fy_start=fy_start, fy_end=fy_end
+        )
         grouped = defaultdict(lambda: {
             'product_id': None, 'product_name': '', 'product_company': '',
             'product_packing': '', 'batches': [], 'total_stock': 0, 'total_value': 0
@@ -166,17 +205,17 @@ class FastInventory:
             )
 
         # Filter product_ids by invoice_date OR challan_date
-        if start_date and end_date:
+        if start_date or end_date:
             invoice_pids = set(
-                PurchaseMaster.objects.filter(
-                    product_invoiceid__invoice_date__gte=start_date,
-                    product_invoiceid__invoice_date__lte=end_date
+                FastInventory._filter_date_range(
+                    PurchaseMaster.objects.all(),
+                    'product_invoiceid__invoice_date', start_date, end_date,
                 ).values_list('productid_id', flat=True)
             )
             challan_pids = set(
-                SupplierChallanMaster.objects.filter(
-                    product_challan_id__challan_date__gte=start_date,
-                    product_challan_id__challan_date__lte=end_date
+                FastInventory._filter_date_range(
+                    SupplierChallanMaster.objects.all(),
+                    'product_challan_id__challan_date', start_date, end_date,
                 ).values_list('product_id_id', flat=True)
             )
             filtered_pids = invoice_pids | challan_pids
@@ -189,12 +228,10 @@ class FastInventory:
         purchases = defaultdict(lambda: {'qty': 0, 'free_qty': 0, 'rate': 0, 'mrp': 0, 'expiry': None})
 
         # Purchase filter by invoice_date if date range given
-        purchase_qs = PurchaseMaster.objects.filter(productid__in=product_ids)
-        if start_date and end_date:
-            purchase_qs = purchase_qs.filter(
-                product_invoiceid__invoice_date__gte=start_date,
-                product_invoiceid__invoice_date__lte=end_date
-            )
+        purchase_qs = FastInventory._filter_date_range(
+            PurchaseMaster.objects.filter(productid__in=product_ids),
+            'product_invoiceid__invoice_date', start_date, end_date,
+        )
         for p in purchase_qs.values('productid', 'product_batch_no', 'product_quantity', 'product_free_qty', 'product_actual_rate', 'product_MRP', 'product_expiry'):
             key = (p['productid'], p['product_batch_no'])
             purchases[key]['qty'] += p['product_quantity']
@@ -205,12 +242,10 @@ class FastInventory:
                 purchases[key]['expiry'] = p['product_expiry']
 
         # Challan filter by challan_date if date range given
-        challan_qs = SupplierChallanMaster.objects.filter(product_id__in=product_ids)
-        if start_date and end_date:
-            challan_qs = challan_qs.filter(
-                product_challan_id__challan_date__gte=start_date,
-                product_challan_id__challan_date__lte=end_date
-            )
+        challan_qs = FastInventory._filter_date_range(
+            SupplierChallanMaster.objects.filter(product_id__in=product_ids),
+            'product_challan_id__challan_date', start_date, end_date,
+        )
         for c in challan_qs.values('product_id', 'product_batch_no', 'product_quantity', 'product_free_qty', 'product_purchase_rate', 'product_mrp', 'product_expiry'):
             key = (c['product_id'], c['product_batch_no'])
             purchases[key]['qty'] += c['product_quantity']
@@ -221,31 +256,51 @@ class FastInventory:
                 purchases[key]['expiry'] = c['product_expiry']
         
         sales = defaultdict(int)
-        for s in SalesMaster.objects.filter(productid__in=product_ids).values('productid', 'product_batch_no').annotate(total=Sum('sale_quantity')):
+        sales_qs = FastInventory._filter_date_range(
+            SalesMaster.objects.filter(productid__in=product_ids),
+            'sales_invoice_no__sales_invoice_date', start_date, end_date,
+        )
+        for s in sales_qs.values('productid', 'product_batch_no').annotate(total=Sum('sale_quantity')):
             sales[(s['productid'], s['product_batch_no'])] = s['total']
         
         # Add customer challan sales (both regular and free qty)
         sales_free = defaultdict(int)
-        for cc in CustomerChallanMaster.objects.filter(product_id__in=product_ids).values('product_id', 'product_batch_no').annotate(total=Sum('sale_quantity'), total_free=Sum('sale_free_qty')):
+        customer_challan_qs = FastInventory._filter_date_range(
+            CustomerChallanMaster.objects.filter(product_id__in=product_ids),
+            'customer_challan_id__customer_challan_date', start_date, end_date,
+        )
+        for cc in customer_challan_qs.values('product_id', 'product_batch_no').annotate(total=Sum('sale_quantity'), total_free=Sum('sale_free_qty')):
             key = (cc['product_id'], cc['product_batch_no'])
             sales[key] += cc['total']
             sales_free[key] += cc['total_free'] or 0
         
         pr = defaultdict(int)
         pr_free = defaultdict(int)
-        for r in ReturnPurchaseMaster.objects.filter(returnproductid__in=product_ids).values('returnproductid', 'returnproduct_batch_no').annotate(total=Sum('returnproduct_quantity'), total_free=Sum('returnproduct_free_qty')):
+        purchase_return_qs = FastInventory._filter_date_range(
+            ReturnPurchaseMaster.objects.filter(returnproductid__in=product_ids),
+            'returninvoiceid__returninvoice_date', start_date, end_date,
+        )
+        for r in purchase_return_qs.values('returnproductid', 'returnproduct_batch_no').annotate(total=Sum('returnproduct_quantity'), total_free=Sum('returnproduct_free_qty')):
             pr[(r['returnproductid'], r['returnproduct_batch_no'])] = r['total']
             pr_free[(r['returnproductid'], r['returnproduct_batch_no'])] = r['total_free'] or 0
         
         sr = defaultdict(int)
         sr_free = defaultdict(int)
-        for r in ReturnSalesMaster.objects.filter(return_productid__in=product_ids).values('return_productid', 'return_product_batch_no').annotate(total=Sum('return_sale_quantity'), total_free=Sum('return_sale_free_qty')):
+        sales_return_qs = FastInventory._filter_date_range(
+            ReturnSalesMaster.objects.filter(return_productid__in=product_ids),
+            'return_sales_invoice_no__return_sales_invoice_date', start_date, end_date,
+        )
+        for r in sales_return_qs.values('return_productid', 'return_product_batch_no').annotate(total=Sum('return_sale_quantity'), total_free=Sum('return_sale_free_qty')):
             sr[(r['return_productid'], r['return_product_batch_no'])] = r['total']
             sr_free[(r['return_productid'], r['return_product_batch_no'])] = r['total_free'] or 0
         
         # CRITICAL FIX: Add stock issues to dateexpiry calculation
         stock_issues = defaultdict(int)
-        for si in StockIssueDetail.objects.filter(product__in=product_ids).values('product', 'batch_no').annotate(total=Sum('quantity_issued')):
+        stock_issue_qs = FastInventory._filter_date_range(
+            StockIssueDetail.objects.filter(product__in=product_ids),
+            'issue__issue_date', start_date, end_date,
+        )
+        for si in stock_issue_qs.values('product', 'batch_no').annotate(total=Sum('quantity_issued')):
             stock_issues[(si['product'], si['batch_no'])] = si['total']
         
         # Group by expiry

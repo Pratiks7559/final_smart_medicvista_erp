@@ -246,6 +246,26 @@ class ReorderLevelReportTests(SimpleTestCase):
             51.0,
         )
 
+    def test_reorder_report_keeps_only_batches_purchased_and_sold_in_selected_fy(self):
+        purchase_batches = {
+            101: {('B-SOLD', '08-2026'), ('B-UNSOLD', '08-2026')},
+            202: {('B-NOT-PURCHASED', '08-2026')},
+        }
+        sales_by_batch = {
+            (101, 'B-SOLD', '08-2026'): 5.0,
+            (101, 'B-UNSOLD', '08-2026'): 0.0,
+            (202, 'B-NOT-PURCHASED', '08-2026'): 3.0,
+        }
+
+        qualifying_batches, qualifying_sales = (
+            reorder_level_views._financial_year_purchased_and_sold_batches(
+                purchase_batches, sales_by_batch
+            )
+        )
+
+        self.assertEqual(qualifying_batches, {101: {('B-SOLD', '08-2026')}})
+        self.assertEqual(qualifying_sales, {(101, 'B-SOLD', '08-2026'): 5.0})
+
     def test_reorder_stats_use_fy_average_lead_time_and_free_stock(self):
         batch = MagicMock()
         batch.current_stock = 4
@@ -327,7 +347,7 @@ class ReorderLevelReportTests(SimpleTestCase):
         self.assertEqual((batch.rate_a, batch.rate_b, batch.rate_c), (50, 51, 52))
 
     def test_reorder_report_uses_selected_financial_year_window(self):
-        request = RequestFactory().get('/reports/reorder-level/')
+        request = RequestFactory().get('/reports/reorder-level/', {'financial_year': '2022'})
         request.session = {'selected_year': 2024}
 
         fake_batch = MagicMock()
@@ -368,8 +388,9 @@ class ReorderLevelReportTests(SimpleTestCase):
              patch.object(reorder_level_views, '_product_reorder_stats', return_value=(0, 0, 0, 0)) as mock_stats:
             reorder_level_views.reorder_level_report.__wrapped__(request)
 
-        self.assertEqual(mock_stats.call_args[0][2], date(2024, 4, 1))
-        self.assertEqual(mock_stats.call_args[0][3], date(2025, 3, 31))
+        self.assertEqual(mock_stats.call_args[0][2], date(2022, 4, 1))
+        self.assertEqual(mock_stats.call_args[0][3], date(2023, 3, 31))
+        self.assertEqual(request.session['selected_year'], 2022)
 
 
 class CombinedSalesInvoiceDateTests(SimpleTestCase):

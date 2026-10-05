@@ -60,7 +60,7 @@
     <div class="date-report-card">
         <div class="date-report-card-header">
             <h6 class="date-report-card-title">Date-wise Inventory Report</h6>
-            <small class="date-report-card-subtitle">Shows products grouped by expiry date with current stock</small>
+            <small class="date-report-card-subtitle">Financial Year: FY {{ fy_label }} · Date filters are limited to this year.</small>
             <div class="no-print">
                 <form action="{% url 'dateexpiry_inventory_report' %}" method="GET" class="date-filter-form" id="dateFilterForm">
                     <div class="date-filter-group" style="position: relative;">

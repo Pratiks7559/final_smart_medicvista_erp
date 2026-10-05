@@ -356,7 +356,12 @@ def export_batch_inventory_pdf(request):
         fy_start, fy_end = get_financial_year_dates(selected_year)
         fy_label = f'{selected_year}-{str(selected_year + 1)[2:]}'
         fy_product_ids = FastInventory.get_fy_product_ids(fy_start, fy_end)
-        all_inventory_data = FastInventory.get_batch_inventory_data(search_query, fy_product_ids=fy_product_ids)
+        all_inventory_data = FastInventory.get_batch_inventory_data(
+            search_query,
+            fy_product_ids=fy_product_ids,
+            fy_start=fy_start,
+            fy_end=fy_end,
+        )
         
         # Create PDF buffer
         buffer = io.BytesIO()
@@ -536,7 +541,12 @@ def export_batch_inventory_excel(request):
         fy_start, fy_end = get_financial_year_dates(selected_year)
         fy_label = f'{selected_year}-{str(selected_year + 1)[2:]}'
         fy_product_ids = FastInventory.get_fy_product_ids(fy_start, fy_end)
-        all_inventory_data = FastInventory.get_batch_inventory_data(search_query, fy_product_ids=fy_product_ids)
+        all_inventory_data = FastInventory.get_batch_inventory_data(
+            search_query,
+            fy_product_ids=fy_product_ids,
+            fy_start=fy_start,
+            fy_end=fy_end,
+        )
         
         # Create workbook
         wb = Workbook()
@@ -764,6 +774,8 @@ def export_dateexpiry_inventory_pdf(request):
         search_query = request.GET.get('search', '')
         expiry_from = request.GET.get('expiry_from', '')
         expiry_to = request.GET.get('expiry_to', '')
+        selected_year = request.session.get('selected_year', get_current_financial_year())
+        fy_start, fy_end = get_financial_year_dates(selected_year)
         
         # Get inventory data with date filter
         from datetime import date as date_type
@@ -776,7 +788,14 @@ def export_dateexpiry_inventory_pdf(request):
                 end_date = date_type.fromisoformat(expiry_to)
         except ValueError:
             pass
-        expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(search_query, start_date=start_date, end_date=end_date)
+        start_date = max(start_date, fy_start) if start_date else fy_start
+        end_date = min(end_date, fy_end) if end_date else fy_end
+        if start_date > end_date:
+            expiry_data, total_value = [], 0
+        else:
+            expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(
+                search_query, start_date=start_date, end_date=end_date
+            )
         
         # Create PDF buffer
         buffer = io.BytesIO()
@@ -819,6 +838,7 @@ def export_dateexpiry_inventory_pdf(request):
             story.append(Spacer(1, 0.1*inch))
         
         story.append(Paragraph("Date-wise Inventory Report", title_style))
+        story.append(Paragraph(f"Financial Year: {selected_year}-{str(selected_year + 1)[2:]}", date_style))
         story.append(Paragraph(f"Generated on: {datetime.now().strftime('%d %B %Y at %H:%M')}", date_style))
         
         if expiry_from and expiry_to:
@@ -952,6 +972,8 @@ def export_dateexpiry_inventory_excel(request):
         search_query = request.GET.get('search', '')
         expiry_from = request.GET.get('expiry_from', '')
         expiry_to = request.GET.get('expiry_to', '')
+        selected_year = request.session.get('selected_year', get_current_financial_year())
+        fy_start, fy_end = get_financial_year_dates(selected_year)
         
         # Get inventory data with date filter
         from datetime import date as date_type
@@ -964,7 +986,14 @@ def export_dateexpiry_inventory_excel(request):
                 end_date = date_type.fromisoformat(expiry_to)
         except ValueError:
             pass
-        expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(search_query, start_date=start_date, end_date=end_date)
+        start_date = max(start_date, fy_start) if start_date else fy_start
+        end_date = min(end_date, fy_end) if end_date else fy_end
+        if start_date > end_date:
+            expiry_data, total_value = [], 0
+        else:
+            expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(
+                search_query, start_date=start_date, end_date=end_date
+            )
         
         # Create workbook
         wb = Workbook()
@@ -1037,6 +1066,12 @@ def export_dateexpiry_inventory_excel(request):
         ws.merge_cells(f'A{current_row}:D{current_row}')
         ws[f'A{current_row}'] = "Date-wise Inventory Report"
         ws[f'A{current_row}'].font = title_font
+        ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
+        current_row += 1
+
+        ws.merge_cells(f'A{current_row}:D{current_row}')
+        ws[f'A{current_row}'] = f"Financial Year: {selected_year}-{str(selected_year + 1)[2:]}"
+        ws[f'A{current_row}'].font = info_font
         ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
         current_row += 1
         

@@ -1,481 +1,532 @@
-/* Customer Detail Styles */
+/* ==========================================================================
+   customer_detail.css
+   Place in: static/css/customer_detail.css
+   Same design language as the purchase return + inventory pages
+   ========================================================================== */
+
+/* ---------- Tokens ---------- */
+.customer-detail-container,
+.customer-detail-actions,
+.custom-modal {
+    --cd-bg: #f3f5f8;
+    --cd-surface: #ffffff;
+    --cd-ink: #1b2533;
+    --cd-muted: #64748b;
+    --cd-line: #e2e8f0;
+    --cd-line-strong: #cbd5e1;
+    --cd-accent: #0f6e8c;
+    --cd-accent-dark: #0b566f;
+    --cd-accent-soft: #e6f2f6;
+    --cd-ok: #1b7f4b;
+    --cd-ok-soft: #e6f4ec;
+    --cd-danger: #b42318;
+    --cd-danger-soft: #fdecea;
+    --cd-radius: 10px;
+    --cd-radius-sm: 6px;
+    --cd-shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .08);
+}
+
+.customer-detail-container {
+    background: var(--cd-bg);
+    color: var(--cd-ink);
+    padding: 24px;
+    min-height: 100vh;
+}
+
+.customer-detail-container *,
+.customer-detail-container *::before,
+.customer-detail-container *::after,
+.custom-modal *,
+.custom-modal *::before,
+.custom-modal *::after {
+    box-sizing: border-box;
+}
+
+/* ---------- Page action buttons (top bar) ---------- */
 .customer-detail-actions {
     display: flex;
-    gap: 0.5rem;
     flex-wrap: wrap;
+    gap: 8px;
 }
 
 .customer-detail-edit-btn,
 .customer-detail-delete-btn,
 .customer-detail-back-btn {
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
+    display: inline-flex;
+    align-items: center;
+    height: 38px;
+    padding: 0 16px;
+    font-size: .88rem;
+    font-weight: 600;
+    border-radius: var(--cd-radius-sm);
+    border: 1px solid transparent;
     text-decoration: none;
-    font-weight: 500;
-    transition: all 0.2s;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
 }
 
-.customer-detail-edit-btn {
-    background-color: #059669;
-    color: white;
-}
+.customer-detail-edit-btn   { background: var(--cd-accent); color: #fff; }
+.customer-detail-edit-btn:hover { background: var(--cd-accent-dark); color: #fff; text-decoration: none; }
 
-.customer-detail-edit-btn:hover {
-    background-color: #047857;
-    color: white;
-}
+.customer-detail-delete-btn { background: #fff; color: var(--cd-danger); border-color: var(--cd-line-strong); }
+.customer-detail-delete-btn:hover { background: var(--cd-danger); border-color: var(--cd-danger); color: #fff; text-decoration: none; }
 
-.customer-detail-delete-btn {
-    background-color: #dc2626;
-    color: white;
-}
+.customer-detail-back-btn   { background: #fff; color: var(--cd-ink); border-color: var(--cd-line-strong); }
+.customer-detail-back-btn:hover { background: var(--cd-bg); color: var(--cd-ink); text-decoration: none; }
 
-.customer-detail-delete-btn:hover {
-    background-color: #b91c1c;
-    color: white;
-}
-
-.customer-detail-back-btn {
-    background-color: #6b7280;
-    color: white;
-}
-
-.customer-detail-back-btn:hover {
-    background-color: #4b5563;
-    color: white;
-}
-
-.customer-detail-container {
-    padding: 12px;
-    max-width: 100%;
-    overflow-x: hidden;
-}
-
+/* ---------- Layout ---------- */
 .customer-detail-wrapper {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-}
-
-.customer-detail-info-card,
-.customer-detail-legal-card,
-.customer-detail-bank-card,
-.customer-detail-financial-card,
-.customer-detail-sales-card {
-    background-color: white !important;
-    color: #1e293b !important;
-    border-radius: 0.5rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    overflow: hidden;
-}
-
-.customer-detail-card-header {
-    background-color: #f8fafc !important;
-    color: #1e293b !important;
-    padding: 0.5rem 1rem;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.customer-detail-card-title {
-    margin: 0;
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #1e293b !important;
-}
-
-.customer-detail-card-body {
-    padding: 0.75rem;
-    background-color: white !important;
-    color: #1e293b !important;
-}
-
-.customer-detail-name {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #1e293b !important;
-}
-
-.customer-detail-type {
-    margin: 0 0 1rem 0;
-    color: #64748b !important;
-    font-size: 1rem;
-}
-
-.customer-detail-info-list,
-.customer-detail-legal-list,
-.customer-detail-bank-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.customer-detail-info-item,
-.customer-detail-legal-item,
-.customer-detail-bank-item {
-    padding: 0.4rem 0;
-    border-bottom: 1px solid #f1f5f9;
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-}
-
-.customer-detail-info-item:last-child,
-.customer-detail-legal-item:last-child,
-.customer-detail-bank-item:last-child {
-    border-bottom: none;
-}
-
-.customer-detail-info-label {
-    font-weight: 600;
-    color: #475569 !important;
-    min-width: 120px;
-}
-
-.customer-detail-info-value {
-    color: #1e293b !important;
-    font-weight: 500;
-}
-
-.customer-detail-address {
-    margin-top: 0.25rem;
-    color: #64748b !important;
-    line-height: 1.5;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 20px;
+    align-items: start;
+    margin-bottom: 20px;
 }
 
 .customer-detail-financial-section {
-    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-.customer-detail-financial-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 0.75rem;
-}
-
-.customer-detail-stat-item {
-    text-align: center;
-    padding: 0.5rem;
-    background-color: #f8fafc !important;
-    color: #1e293b !important;
-    border-radius: 0.5rem;
-}
-
-.customer-detail-stat-label {
-    margin: 0 0 0.5rem 0;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #64748b !important;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.customer-detail-stat-value {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #1e293b !important;
-}
-
-.customer-detail-balance {
-    color: #dc2626;
-}
-
+/* ---------- Shared card ---------- */
+.customer-detail-info-card,
+.customer-detail-legal-card,
+.customer-detail-financial-card,
 .customer-detail-sales-card {
-    grid-column: 1 / -1;
+    background: var(--cd-surface);
+    border: 1px solid var(--cd-line);
+    border-radius: var(--cd-radius);
+    box-shadow: var(--cd-shadow);
+    overflow: hidden;
 }
 
 .customer-detail-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--cd-line);
+    background: #f8fafc;
 }
 
+.customer-detail-card-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.customer-detail-card-body { padding: 20px; }
+
+/* small "Edit" button inside the info card header
+   (overrides the inline style, so you can delete that style="" attribute) */
+.customer-detail-edit-btn-modal {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px !important;
+    font-size: .8rem !important;
+    font-weight: 600;
+    color: var(--cd-accent-dark) !important;
+    background: var(--cd-accent-soft) !important;
+    border: 1px solid transparent !important;
+    border-radius: var(--cd-radius-sm) !important;
+    cursor: pointer;
+    transition: background-color .15s ease, border-color .15s ease;
+}
+
+.customer-detail-edit-btn-modal:hover {
+    background: #d4e8ef !important;
+    border-color: var(--cd-accent) !important;
+}
+
+/* ---------- Customer information ---------- */
+.customer-detail-name {
+    margin: 0 0 6px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.customer-detail-type {
+    display: inline-block;
+    margin: 0 0 16px;
+    padding: 3px 12px;
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--cd-accent-dark);
+    background: var(--cd-accent-soft);
+    border-radius: 999px;
+}
+
+.customer-detail-info-list,
+.customer-detail-legal-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.customer-detail-info-item,
+.customer-detail-legal-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 8px;
+    padding: 11px 0;
+    font-size: .92rem;
+    border-bottom: 1px solid var(--cd-line);
+}
+
+.customer-detail-info-item:last-child,
+.customer-detail-legal-item:last-child { border-bottom: 0; }
+
+.customer-detail-info-item i,
+.customer-detail-legal-item i {
+    width: 18px;
+    text-align: center;
+    margin: 0 !important;
+    color: var(--cd-accent);
+}
+
+.customer-detail-info-item strong,
+.customer-detail-legal-item strong,
+.customer-detail-info-label {
+    min-width: 120px;
+    font-weight: 600;
+    color: var(--cd-muted);
+}
+
+.customer-detail-info-label { display: inline-flex; align-items: baseline; gap: 8px; }
+.customer-detail-info-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.customer-detail-address {
+    flex-basis: 100%;
+    padding-left: 26px;
+    line-height: 1.5;
+    white-space: pre-line;
+}
+
+/* ---------- Financial summary ---------- */
+.customer-detail-financial-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.customer-detail-stat-item {
+    padding: 16px 18px;
+    background: #f8fafc;
+    border: 1px solid var(--cd-line);
+    border-left: 4px solid var(--cd-accent);
+    border-radius: var(--cd-radius-sm);
+}
+
+.customer-detail-stat-item:nth-child(2) { border-left-color: var(--cd-ok); }
+.customer-detail-stat-item:nth-child(3) { border-left-color: var(--cd-danger); background: var(--cd-danger-soft); }
+
+.customer-detail-stat-label {
+    margin: 0 0 6px;
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--cd-muted);
+}
+
+.customer-detail-stat-value {
+    margin: 0;
+    font-size: 1.55rem;
+    font-weight: 700;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.01em;
+}
+
+.customer-detail-stat-value.customer-detail-balance { color: var(--cd-danger); }
+
+/* ---------- Sales history ---------- */
 .customer-detail-new-invoice-btn {
-    background-color: #2563eb;
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
+    display: inline-flex;
+    align-items: center;
+    height: 34px;
+    padding: 0 14px;
+    font-size: .84rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--cd-accent);
+    border-radius: var(--cd-radius-sm);
     text-decoration: none;
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: background-color 0.2s;
+    transition: background-color .15s ease;
 }
 
-.customer-detail-new-invoice-btn:hover {
-    background-color: #1d4ed8;
-    color: white;
-}
+.customer-detail-new-invoice-btn:hover { background: var(--cd-accent-dark); color: #fff; text-decoration: none; }
+
+.customer-detail-sales-card .customer-detail-card-body { padding: 0; }
 
 .customer-detail-sales-table-wrapper {
-    overflow-x: auto;
+    overflow: auto;
+    max-height: 60vh;
 }
 
 .customer-detail-sales-table {
     width: 100%;
-    border-collapse: collapse;
-}
-
-.customer-detail-sales-thead {
-    background-color: #f8fafc !important;
-}
-
-.customer-detail-sales-header-row {
-    border-bottom: 2px solid #e2e8f0;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: .9rem;
 }
 
 .customer-detail-sales-th {
-    padding: 0.5rem 0.75rem;
-    text-align: left;
-    font-size: 0.75rem;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding: 12px 16px;
+    font-size: .78rem;
     font-weight: 600;
-    color: #475569 !important;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.customer-detail-sales-tbody {
-    background-color: white !important;
-}
-
-.customer-detail-sales-row {
-    border-bottom: 1px solid #f1f5f9;
-    transition: background-color 0.2s;
-}
-
-.customer-detail-sales-row:hover {
-    background-color: #f8fafc !important;
+    text-align: left;
+    white-space: nowrap;
+    color: var(--cd-muted);
+    background: #f8fafc;
+    border-bottom: 1px solid var(--cd-line-strong);
 }
 
 .customer-detail-sales-td {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.75rem;
-    color: #1e293b !important;
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--cd-line);
+    font-variant-numeric: tabular-nums;
 }
 
-.customer-detail-balance-due {
-    color: #dc2626;
-    font-weight: 600;
+.customer-detail-sales-row { transition: background-color .12s ease; }
+.customer-detail-sales-row:hover { background: var(--cd-accent-soft); }
+.customer-detail-sales-row:last-child .customer-detail-sales-td { border-bottom: 0; }
+
+.customer-detail-sales-th:nth-child(3),
+.customer-detail-sales-th:nth-child(4),
+.customer-detail-sales-th:nth-child(5),
+.customer-detail-sales-row .customer-detail-sales-td:nth-child(3),
+.customer-detail-sales-row .customer-detail-sales-td:nth-child(4),
+.customer-detail-sales-row .customer-detail-sales-td:nth-child(5) {
+    text-align: right;
+    white-space: nowrap;
 }
 
-.customer-detail-balance-paid {
-    color: #059669;
-    font-weight: 600;
-}
+.customer-detail-sales-th:last-child,
+.customer-detail-sales-actions { text-align: center; white-space: nowrap; }
 
-.customer-detail-sales-actions {
-    display: flex;
-    gap: 0.5rem;
-}
+.customer-detail-balance-due  { color: var(--cd-danger); font-weight: 700; }
+.customer-detail-balance-paid { color: var(--cd-ok);     font-weight: 600; }
 
 .customer-detail-sales-btn {
-    padding: 0.375rem;
-    border-radius: 0.25rem;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 2px;
+    font-size: .82rem;
+    color: var(--cd-muted);
+    background: #fff;
+    border: 1px solid var(--cd-line-strong);
+    border-radius: var(--cd-radius-sm);
     text-decoration: none;
-    transition: all 0.2s;
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease;
 }
 
-.customer-detail-sales-btn-view {
-    color: #2563eb;
-    background-color: #eff6ff;
-}
-
-.customer-detail-sales-btn-view:hover {
-    color: #1d4ed8;
-    background-color: #dbeafe;
-}
-
-.customer-detail-sales-btn-payment {
-    color: #059669;
-    background-color: #ecfdf5;
-}
-
-.customer-detail-sales-btn-payment:hover {
-    color: #047857;
-    background-color: #d1fae5;
-}
+.customer-detail-sales-btn-view:hover    { background: var(--cd-accent); border-color: var(--cd-accent); color: #fff; }
+.customer-detail-sales-btn-payment       { color: var(--cd-ok); }
+.customer-detail-sales-btn-payment:hover { background: var(--cd-ok); border-color: var(--cd-ok); color: #fff; }
 
 .customer-detail-sales-empty {
-    padding: 1rem;
-    text-align: center;
-    color: #64748b;
-    font-style: italic;
+    padding: 48px 16px !important;
+    text-align: center !important;
+    color: var(--cd-muted);
+    border-bottom: 0 !important;
 }
 
-/* Mobile First Responsive Design */
-@media (max-width: 320px) {
-    .customer-detail-container {
-        padding: 4px;
-    }
-    
-    .customer-detail-card-body {
-        padding: 6px;
-    }
-    
-    .customer-detail-name {
-        font-size: 1.2rem;
-    }
-    
-    .customer-detail-type {
-        font-size: 0.85rem;
-    }
-    
-    .customer-detail-info-label {
-        font-size: 0.7rem;
-        min-width: auto;
-    }
-    
-    .customer-detail-info-value {
-        font-size: 0.75rem;
-    }
-    
-    .customer-detail-sales-th,
-    .customer-detail-sales-td {
-        padding: 4px 6px;
-        font-size: 0.65rem;
-    }
-    
-    .customer-detail-edit-btn,
-    .customer-detail-delete-btn,
-    .customer-detail-back-btn {
-        padding: 6px 12px;
-        font-size: 0.7rem;
-    }
+/* ---------- Edit modal ---------- */
+.custom-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
 }
 
-@media (max-width: 480px) {
-    .customer-detail-container {
-        padding: 6px;
-    }
-    
-    .customer-detail-wrapper {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-    
-    .customer-detail-actions {
-        flex-direction: column;
-        gap: 6px;
-    }
-    
-    .customer-detail-card-body {
-        padding: 8px;
-    }
-    
-    .customer-detail-info-item,
-    .customer-detail-legal-item,
-    .customer-detail-bank-item {
-        flex-direction: column;
-        gap: 2px;
-        padding: 6px 0;
-    }
-    
-    .customer-detail-financial-stats {
-        grid-template-columns: 1fr;
-        gap: 8px;
-    }
-    
-    .customer-detail-stat-item {
-        padding: 8px;
-    }
-    
-    .customer-detail-stat-value {
-        font-size: 1.1rem;
-    }
-    
-    .customer-detail-card-header {
-        flex-direction: column;
-        gap: 8px;
-        align-items: flex-start;
-        padding: 8px 12px;
-    }
-    
-    .customer-detail-sales-actions {
-        flex-direction: column;
-        gap: 4px;
-    }
-    
-    .customer-detail-sales-btn {
-        padding: 4px 8px;
-        font-size: 0.7rem;
-    }
+.custom-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, .55);
+    backdrop-filter: blur(2px);
 }
 
-@media (max-width: 576px) {
-    .customer-detail-container {
-        padding: 8px;
-    }
-    
-    .customer-detail-sales-th,
-    .customer-detail-sales-td {
-        padding: 6px 8px;
-        font-size: 0.7rem;
-    }
-    
-    .customer-detail-new-invoice-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-    }
+.custom-modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 92%;
+    max-width: 820px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, .25);
+    animation: cd-modal-in .18s ease-out;
 }
 
-@media (min-width: 577px) and (max-width: 768px) {
-    .customer-detail-container {
-        padding: 10px;
-    }
-    
-    .customer-detail-wrapper {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-    
-    .customer-detail-financial-stats {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-    }
-    
-    .customer-detail-actions {
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
+@keyframes cd-modal-in {
+    from { opacity: 0; transform: translate(-50%, -48%) scale(.98); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
 }
 
-@media (min-width: 769px) and (max-width: 1024px) {
-    .customer-detail-wrapper {
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
-    
-    .customer-detail-financial-stats {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 12px;
-    }
+.custom-modal #editCustomerForm {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
 }
 
-@media (min-width: 1025px) {
-    .customer-detail-wrapper {
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-    }
-    
-    .customer-detail-financial-stats {
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 15px;
-    }
+.custom-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--cd-line);
 }
 
-/* Touch-friendly improvements */
-@media (hover: none) and (pointer: coarse) {
-    .customer-detail-edit-btn,
-    .customer-detail-delete-btn,
-    .customer-detail-back-btn,
-    .customer-detail-sales-btn {
-        min-height: 44px;
-        min-width: 44px;
-    }
-    
-    .customer-detail-new-invoice-btn {
-        min-height: 44px;
-        padding: 8px 16px;
-    }
+.custom-modal-header h5 { margin: 0; font-size: 1.02rem; font-weight: 700; }
+
+.custom-close-btn {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--cd-muted);
+    background: none;
+    border: 0;
+    border-radius: var(--cd-radius-sm);
+    cursor: pointer;
+}
+
+.custom-close-btn:hover { background: var(--cd-line); color: var(--cd-ink); }
+
+.custom-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.custom-modal .form-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.custom-modal .form-group { display: flex; flex-direction: column; }
+.custom-modal .form-group.full-width { grid-column: span 2; }
+
+.custom-modal .form-group label {
+    margin-bottom: 5px;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--cd-muted);
+}
+
+.custom-modal .form-group input,
+.custom-modal .form-group select,
+.custom-modal .form-group textarea {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: .9rem;
+    color: var(--cd-ink);
+    background: #fff;
+    border: 1px solid var(--cd-line-strong);
+    border-radius: var(--cd-radius-sm);
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.custom-modal .form-group textarea { resize: vertical; min-height: 64px; }
+
+.custom-modal .form-group input:focus,
+.custom-modal .form-group select:focus,
+.custom-modal .form-group textarea:focus {
+    border-color: var(--cd-accent);
+    box-shadow: 0 0 0 3px rgba(15, 110, 140, .18);
+}
+
+.custom-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 20px;
+    background: #f8fafc;
+    border-top: 1px solid var(--cd-line);
+}
+
+.custom-modal .btn-cancel,
+.custom-modal .btn-update {
+    padding: 9px 20px;
+    font-size: .9rem;
+    font-weight: 600;
+    border: 0;
+    border-radius: var(--cd-radius-sm);
+    cursor: pointer;
+    transition: background-color .15s ease;
+}
+
+.custom-modal .btn-cancel { background: var(--cd-line); color: var(--cd-ink); }
+.custom-modal .btn-cancel:hover { background: var(--cd-line-strong); }
+.custom-modal .btn-update { background: var(--cd-accent); color: #fff; }
+.custom-modal .btn-update:hover { background: var(--cd-accent-dark); }
+
+/* ---------- Focus (accessibility) ---------- */
+.customer-detail-container a:focus-visible,
+.customer-detail-container button:focus-visible,
+.customer-detail-actions a:focus-visible,
+.custom-modal button:focus-visible {
+    outline: 2px solid var(--cd-accent);
+    outline-offset: 2px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1000px) {
+    .customer-detail-wrapper { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+    .customer-detail-container { padding: 14px 10px; }
+    .customer-detail-financial-stats { grid-template-columns: 1fr; }
+    .customer-detail-stat-value { font-size: 1.35rem; }
+    .customer-detail-info-item strong,
+    .customer-detail-info-label { min-width: 0; }
+
+    .custom-modal .form-row { grid-template-columns: 1fr; }
+    .custom-modal .form-group.full-width { grid-column: auto; }
+    .custom-modal-content { width: 96%; max-height: 95vh; }
+}
+
+/* ---------- Print ---------- */
+@media print {
+    .customer-detail-actions,
+    .customer-detail-edit-btn-modal,
+    .customer-detail-new-invoice-btn,
+    .customer-detail-sales-actions,
+    .customer-detail-sales-th:last-child,
+    .custom-modal { display: none !important; }
+
+    .customer-detail-container { background: #fff; padding: 0; }
+    .customer-detail-sales-table-wrapper { max-height: none; overflow: visible; }
+    .customer-detail-info-card,
+    .customer-detail-legal-card,
+    .customer-detail-financial-card,
+    .customer-detail-sales-card { box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
 }

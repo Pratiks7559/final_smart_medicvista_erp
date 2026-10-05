@@ -32,6 +32,32 @@ LEAD_TIME_DAYS = 30   # reorder level = stock needed to cover 1 month lead time
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def _get_report_financial_year(request):
+    current_year = get_current_financial_year()
+    financial_years = list(reversed(range(2011, max(current_year, 2025) + 2)))
+
+    try:
+        selected_year = int(request.session.get('selected_year', current_year))
+    except (TypeError, ValueError):
+        selected_year = current_year
+
+    requested_year = request.GET.get('financial_year')
+    if requested_year:
+        try:
+            requested_year = int(requested_year)
+        except (TypeError, ValueError):
+            requested_year = None
+
+        if requested_year in financial_years:
+            selected_year = requested_year
+            request.session['selected_year'] = selected_year
+
+    if selected_year not in financial_years:
+        selected_year = current_year
+
+    return selected_year, financial_years
+
+
 def _product_reorder_stats(product, batches, sales_qty, fy_start, fy_end):
     """
     Correct reorder calculations for the selected financial year.
@@ -124,6 +150,28 @@ def _financial_year_product_sales(sales_by_batch):
     for (product_id, batch_no, expiry_date), quantity in sales_by_batch.items():
         sales_by_product[product_id] += quantity
     return sales_by_product
+
+
+def _financial_year_purchased_and_sold_batches(purchase_batches, sales_by_batch):
+    sold_batches_by_product = defaultdict(set)
+    for (product_id, batch_no, expiry_date), quantity in sales_by_batch.items():
+        if quantity > 0:
+            sold_batches_by_product[product_id].add((batch_no, expiry_date))
+
+    qualifying_batches = {}
+    for product_id, batches in purchase_batches.items():
+        matching_batches = batches & sold_batches_by_product.get(product_id, set())
+        if matching_batches:
+            qualifying_batches[product_id] = matching_batches
+
+    qualifying_sales = {
+        key: quantity
+        for key, quantity in sales_by_batch.items()
+        if quantity > 0
+        and key[0] in qualifying_batches
+        and (key[1], key[2]) in qualifying_batches[key[0]]
+    }
+    return qualifying_batches, qualifying_sales
 
 
 def _financial_year_purchase_batches(product_ids, fy_start, fy_end):
@@ -223,7 +271,7 @@ def reorder_level_report(request):
     product_search    = request.GET.get('product_search', '')
     show_reorder_only = request.GET.get('show_reorder_only') == 'true'
     page_number       = request.GET.get('page', 1)
-    selected_year = request.session.get('selected_year', get_current_financial_year())
+    selected_year, financial_years = _get_report_financial_year(request)
     fy_start, fy_end = get_financial_year_dates(selected_year)
     fy_label = f"FY {selected_year}-{str(selected_year + 1)[2:]}"
 
@@ -238,12 +286,15 @@ def reorder_level_report(request):
     product_ids = list(products_query.values_list('productid', flat=True))
 
     purchase_batch_map = _financial_year_purchase_batches(product_ids, fy_start, fy_end)
+    sales_by_batch = _financial_year_batch_sales(product_ids, fy_start, fy_end)
+    purchase_batch_map, sales_by_batch = _financial_year_purchased_and_sold_batches(
+        purchase_batch_map, sales_by_batch
+    )
 
     product_batches_map = _financial_year_batch_inventory(
         product_ids, purchase_batch_map, fy_start, fy_end
     )
 
-    sales_by_batch = _financial_year_batch_sales(product_ids, fy_start, fy_end)
     sales_by_product = _financial_year_product_sales(sales_by_batch)
 
     reorder_data   = []
@@ -304,6 +355,7 @@ def reorder_level_report(request):
         'total_products':   len(reorder_data),
         'lead_time_days':   LEAD_TIME_DAYS,
         'selected_year':    selected_year,
+        'financial_years':  financial_years,
         'fy_label':         fy_label,
     }
     return render(request, 'purchases/reorder_level_report.html', context)
@@ -316,7 +368,7 @@ def export_reorder_level_excel(request):
     product_search    = request.GET.get('product_search', '')
     show_reorder_only = request.GET.get('show_reorder_only') == 'true'
 
-    selected_year = request.session.get('selected_year', get_current_financial_year())
+    selected_year, _ = _get_report_financial_year(request)
     fy_start, fy_end = get_financial_year_dates(selected_year)
     fy_label = f"FY {selected_year}-{str(selected_year + 1)[2:]}"
 
@@ -331,12 +383,15 @@ def export_reorder_level_excel(request):
 
     product_ids = list(products_query.values_list('productid', flat=True))
     purchase_batch_map = _financial_year_purchase_batches(product_ids, fy_start, fy_end)
+    sales_by_batch = _financial_year_batch_sales(product_ids, fy_start, fy_end)
+    purchase_batch_map, sales_by_batch = _financial_year_purchased_and_sold_batches(
+        purchase_batch_map, sales_by_batch
+    )
 
     product_batches_map = _financial_year_batch_inventory(
         product_ids, purchase_batch_map, fy_start, fy_end
     )
 
-    sales_by_batch = _financial_year_batch_sales(product_ids, fy_start, fy_end)
     sales_by_product = _financial_year_product_sales(sales_by_batch)
 
     for product in products_query:

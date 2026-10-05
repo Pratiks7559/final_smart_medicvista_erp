@@ -6279,7 +6279,12 @@ def batch_inventory_report(request):
     fy_product_ids = FastInventory.get_fy_product_ids(fy_start, fy_end)
 
     # Get grouped data: each item = one product with its batches list
-    all_grouped = FastInventory.get_batch_inventory_grouped(search_query, fy_product_ids=fy_product_ids)
+    all_grouped = FastInventory.get_batch_inventory_grouped(
+        search_query,
+        fy_product_ids=fy_product_ids,
+        fy_start=fy_start,
+        fy_end=fy_end,
+    )
 
     # Pagination on products (not batches)
     paginator = Paginator(all_grouped, 50)
@@ -6294,6 +6299,8 @@ def batch_inventory_report(request):
         'products_page': products_page,
         'page_total_value': page_total_value,
         'search_query': search_query,
+        'selected_year': selected_year,
+        'fy_label': f'{selected_year}-{str(selected_year + 1)[2:]}',
         'title': 'Batch-wise Inventory Report'
     }
     return render(request, 'reports/batch_inventory_report.html', context)
@@ -6303,12 +6310,15 @@ def batch_inventory_report(request):
 @login_required
 def dateexpiry_inventory_report(request):
     from .fast_inventory import FastInventory
+    from .year_filter_utils import get_financial_year_dates, get_current_financial_year
     
     search_query = request.GET.get('search', '')
     expiry_from = request.GET.get('expiry_from', '')
     expiry_to = request.GET.get('expiry_to', '')
     
     from datetime import date as date_type
+    selected_year = request.session.get('selected_year', get_current_financial_year())
+    fy_start, fy_end = get_financial_year_dates(selected_year)
     start_date = None
     end_date = None
     try:
@@ -6318,7 +6328,15 @@ def dateexpiry_inventory_report(request):
             end_date = date_type.fromisoformat(expiry_to)
     except ValueError:
         pass
-    expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(search_query, start_date=start_date, end_date=end_date)
+
+    start_date = max(start_date, fy_start) if start_date else fy_start
+    end_date = min(end_date, fy_end) if end_date else fy_end
+    if start_date > end_date:
+        expiry_data, total_value = [], 0
+    else:
+        expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(
+            search_query, start_date=start_date, end_date=end_date
+        )
     
     # Pagination - 50 entries per page
     paginator = Paginator(expiry_data, 50)
@@ -6337,6 +6355,8 @@ def dateexpiry_inventory_report(request):
         'search_query': search_query,
         'expiry_from': expiry_from,
         'expiry_to': expiry_to,
+        'selected_year': selected_year,
+        'fy_label': f'{selected_year}-{str(selected_year + 1)[2:]}',
         'pharmacy': pharmacy,
         'title': 'Date-wise Inventory Report'
     }

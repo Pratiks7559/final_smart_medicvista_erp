@@ -14,12 +14,12 @@
         <h1 class="inventory-title">{{ title }}</h1>
         <div class="inventory-actions">
             {% if user.user_type == 'admin' %}
-            <button id="syncOldDataBtn" class="export-btn" style="background:#f59e0b; margin-right:10px;" title="Sync old purchase/sales data to inventory transactions">
+            <button id="syncOldDataBtn" class="export-btn sync-old-data-btn" title="Sync old purchase/sales data to inventory transactions">
                 <i class="fas fa-sync-alt"></i> Sync Old Data
             </button>
             {% endif %}
             <div class="export-buttons no-print">
-                <a href="{% url 'inventory_list' %}" class="export-btn" style="background:#6366f1;">
+                <a href="{% url 'inventory_list' %}" class="export-btn classic-view-btn">
                     <i class="fas fa-list"></i> Classic View
                 </a>
                 <a href="/export/inventory2/pdf/{% if search_query %}?search={{ search_query }}{% endif %}{% if stock_filter and stock_filter != 'all' %}{% if search_query %}&{% else %}?{% endif %}stock_filter={{ stock_filter }}{% endif %}" class="export-btn export-pdf">
@@ -98,20 +98,20 @@
 
     <div class="inventory-table-section">
         <div class="table-header">
-            <h6 class="table-title">All Products Inventory (Real-time) &nbsp;<span style="background:#6366f1;color:white;padding:2px 10px;border-radius:12px;font-size:12px;">FY {{ fy_label }}</span></h6>
+            <h6 class="table-title">All Products Inventory (Real-time) &nbsp;<span class="inventory-fy-badge">FY {{ fy_label }}</span></h6>
             <div class="search-section no-print">
                 <form action="{% url 'inventory_list2' %}" method="GET" class="search-form" id="searchForm">
-                    <div class="search-input-group" style="position: relative;">
+                    <div class="search-input-group">
                         <input type="text" name="search" id="searchInput" value="{{ search_query }}"
                                placeholder="Search products..." class="search-input" autocomplete="off">
-                        <div id="searchSuggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; max-height: 300px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                        <div id="searchSuggestions" class="search-suggestions"></div>
                     </div>
                     <!-- Date Range Filter -->
-                    <div style="display:flex; gap:6px; align-items:center; margin-left:8px;">
-                        <label style="font-size:12px; color:#555; white-space:nowrap;">From:</label>
-                        <input type="date" name="start_date" value="{{ start_date }}" class="search-input" style="width:140px; padding:6px 8px;">
-                        <label style="font-size:12px; color:#555; white-space:nowrap;">To:</label>
-                        <input type="date" name="end_date" value="{{ end_date }}" class="search-input" style="width:140px; padding:6px 8px;">
+                    <div class="date-range-filter">
+                        <label class="date-range-label">From:</label>
+                        <input type="date" name="start_date" value="{{ start_date }}" class="search-input date-filter-input">
+                        <label class="date-range-label">To:</label>
+                        <input type="date" name="end_date" value="{{ end_date }}" class="search-input date-filter-input">
                     </div>
                     <div class="search-buttons">
                         <button type="submit" class="search-btn">
@@ -120,8 +120,8 @@
                         <a href="{% url 'inventory_list2' %}" class="reset-btn">Reset</a>
                     </div>
                     <!-- Stock filter -->
-                    <div style="margin-left:10px;">
-                        <select name="stock_filter" class="search-input" style="width:auto; padding:8px 12px;" onchange="this.form.submit()">
+                    <div class="stock-filter-wrap">
+                        <select name="stock_filter" class="search-input stock-filter-select" onchange="this.form.submit()">
                             <option value="all" {% if stock_filter == 'all' %}selected{% endif %}>All Products</option>
                             <option value="in_stock" {% if stock_filter == 'in_stock' %}selected{% endif %}>In Stock</option>
                             <option value="low_stock" {% if stock_filter == 'low_stock' %}selected{% endif %}>Low Stock</option>
@@ -163,11 +163,11 @@
                             <td class="td-category">{{ item.product.product_category|default:"N/A" }}</td>
                             <td class="td-batch">
                                 {% if item.batches_info %}
-                                    <div class="batches-container" style="max-height:120px; overflow-y:auto; min-width:150px;">
+                                    <div class="batches-container">
                                         {% for batch in item.batches_info %}
-                                            <div class="batch-item" style="margin-bottom:5px; padding:3px 6px; background:#f8f9fa; border-radius:3px; font-size:12px; border-left:3px solid #007bff;">
+                                            <div class="batch-item">
                                                 <strong>{{ batch.batch_no }}</strong>
-                                                <span class="{% if batch.stock <= 0 %}text-danger{% elif batch.stock <= 10 %}text-warning{% else %}text-success{% endif %}" style="margin-left:8px;">
+                                                <span class="batch-stock {% if batch.stock <= 0 %}text-danger{% elif batch.stock <= 10 %}text-warning{% else %}text-success{% endif %}">
                                                     ({{ batch.stock|floatformat:0 }})
                                                 </span>
                                                 {% if batch.expiry %}
@@ -183,9 +183,9 @@
                             </td>
                             <td class="td-expiry">
                                 {% if item.batches_info %}
-                                    <div class="expiry-container" style="max-height:120px; overflow-y:auto;">
+                                    <div class="expiry-container">
                                         {% for batch in item.batches_info %}
-                                            <div style="margin-bottom:3px; font-size:12px;">
+                                            <div class="expiry-entry">
                                                 {% if batch.expiry %}
                                                     {{ batch.expiry|expiry_mmyyyy }}
                                                 {% else %}
@@ -200,9 +200,9 @@
                             </td>
                             <td class="td-rates">
                                 {% if item.batches_info %}
-                                    <div class="rates-container" style="max-height:120px; overflow-y:auto;">
+                                    <div class="rates-container">
                                         {% for batch in item.batches_info %}
-                                            <div style="margin-bottom:3px; font-size:12px; padding:2px 4px; background:#f8f9fa; border-radius:3px;">
+                                            <div class="rate-entry">
                                                 <strong>{{ batch.batch_no }}</strong><br>
                                                 {% if batch.rates.rate_A > 0 or batch.rates.rate_B > 0 or batch.rates.rate_C > 0 %}
                                                     <small class="text-primary">
@@ -238,7 +238,7 @@
                                     <a href="{% url 'update_product' item.product.productid %}" class="action-btn edit-btn" title="Edit Product">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="{% url 'inventory_transaction_history' item.product.productid %}" class="action-btn" title="Transaction History" style="background:#6366f1; color:white; padding:4px 8px; border-radius:4px; font-size:11px;">
+                                    <a href="{% url 'inventory_transaction_history' item.product.productid %}" class="action-btn transaction-history-btn" title="Transaction History">
                                         <i class="fas fa-history"></i>
                                     </a>
                                 </div>
@@ -257,20 +257,19 @@
             </div>
 
             {% if has_more %}
-            <div class="load-more-container no-print" style="text-align:center; margin:30px 0; padding:20px;">
+            <div class="load-more-container no-print">
                 <button id="loadMoreBtn" class="load-more-btn"
                         data-next-offset="{{ next_offset }}"
                         data-search="{{ search_query }}"
-                        data-stock-filter="{{ stock_filter }}"
-                        style="background:#007bff; color:white; border:none; padding:12px 30px; border-radius:5px; font-size:16px; cursor:pointer;">
+                        data-stock-filter="{{ stock_filter }}">
                     <i class="fas fa-plus-circle"></i> Load More Products (50)
                 </button>
-                <div class="load-more-info" style="margin-top:10px; color:#666; font-size:14px;">
+                <div class="load-more-info load-more-summary">
                     Showing {{ inventory_data|length }} of {{ total_products }} products
                 </div>
             </div>
             {% else %}
-            <div class="load-more-info" style="text-align:center; margin:20px 0; color:#666; font-size:14px;">
+            <div class="load-more-info load-more-all">
                 All {{ total_products }} products loaded
             </div>
             {% endif %}
@@ -314,7 +313,7 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     btn.html('<i class="fas fa-check"></i> Synced!');
-                    btn.css('background', '#10b981');
+                    btn.addClass('is-synced');
                     alert(response.message + '\n\nPage will reload to show updated data.');
                     setTimeout(() => {
                         location.reload();
@@ -342,7 +341,7 @@ $(document).ready(function() {
         selectedIndex = -1;
         
         if (query.length < 2) {
-            $('#searchSuggestions').hide().empty();
+            $('#searchSuggestions').removeClass('is-visible').empty();
             return;
         }
         
@@ -355,22 +354,22 @@ $(document).ready(function() {
                     if (suggestions.length > 0) {
                         let html = '';
                         suggestions.forEach(function(item, idx) {
-                            html += `<div class="suggestion-item" data-index="${idx}" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;">${item}</div>`;
+                            html += `<div class="suggestion-item" data-index="${idx}">${item}</div>`;
                         });
-                        $('#searchSuggestions').html(html).show();
+                        $('#searchSuggestions').html(html).addClass('is-visible');
                         
                         $('.suggestion-item').on('click', function() {
                             const text = $(this).text().split(' - ')[0];
                             $('#searchInput').val(text);
-                            $('#searchSuggestions').hide();
+                            $('#searchSuggestions').removeClass('is-visible');
                             $('#searchForm').submit();
                         }).on('mouseenter', function() {
-                            $('.suggestion-item').css('background', 'white');
-                            $(this).css('background', '#f0f0f0');
+                            $('.suggestion-item').removeClass('is-hovered');
+                            $(this).addClass('is-hovered');
                             selectedIndex = $(this).data('index');
                         });
                     } else {
-                        $('#searchSuggestions').hide();
+                        $('#searchSuggestions').removeClass('is-visible');
                     }
                 }
             });
@@ -394,24 +393,24 @@ $(document).ready(function() {
             e.preventDefault();
             const text = items.eq(selectedIndex).text().split(' - ')[0];
             $('#searchInput').val(text);
-            $('#searchSuggestions').hide();
+            $('#searchSuggestions').removeClass('is-visible');
             $('#searchForm').submit();
         } else if (e.key === 'Escape') {
-            $('#searchSuggestions').hide();
+            $('#searchSuggestions').removeClass('is-visible');
         }
     });
     
     function updateSelection(items) {
-        items.css('background', 'white');
+        items.removeClass('is-selected');
         if (selectedIndex >= 0) {
-            items.eq(selectedIndex).css('background', '#e3f2fd');
+            items.eq(selectedIndex).addClass('is-selected');
             items.eq(selectedIndex)[0].scrollIntoView({ block: 'nearest' });
         }
     }
     
     $(document).on('click', function(e) {
         if (!$(e.target).closest('.search-input-group').length) {
-            $('#searchSuggestions').hide();
+            $('#searchSuggestions').removeClass('is-visible');
         }
     });
     
@@ -502,7 +501,7 @@ $(document).ready(function() {
                         $('.load-more-info').text('Showing ' + $('#inventoryTableBody tr').length + ' of ' + response.total_count + ' products');
                     } else {
                         btn.closest('.load-more-container').html(
-                            '<div class="load-more-info" style="text-align:center;color:#666;font-size:14px;">All ' + response.total_count + ' products loaded</div>'
+                            '<div class="load-more-info load-more-all">All ' + response.total_count + ' products loaded</div>'
                         );
                     }
                 } else {
