@@ -25,6 +25,19 @@
         min-height: 52px;
         font-size: 1.1rem;
     }
+
+    .combined-date-fy-error {
+        display: block;
+        margin-top: 6px;
+        color: #b91c1c;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .combined-date-fy-invalid {
+        border-color: #b91c1c !important;
+        box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12) !important;
+    }
 </style>
 <div id="combinedInvoiceDateDialog" role="dialog" aria-modal="true" aria-labelledby="combinedInvoiceDateDialogTitle"
     style="position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);padding:20px;">
@@ -32,8 +45,8 @@
         <h3 id="combinedInvoiceDateDialogTitle" style="margin:0 0 8px;">Enter Date</h3>
         <p style="margin:0 0 20px;color:#64748b;font-size:1.05rem;">
             Enter date as DDMMYYYY or DDMMYY.
-            {% if date_min and date_max %}
-            <br><strong>{{ fy_label }} allowed dates: {{ fy_start_label }} to {{ fy_end_label }}</strong>
+            {% if date_min and date_max or current_fy %}
+            <br><strong>{{ fy_label|default:"Selected financial year" }} allowed dates: {{ fy_start_label|default:"01-04-" }}{% if not fy_start_label %}{{ current_fy }}{% endif %} to {{ fy_end_label|default:"31-03-" }}{% if not fy_end_label %}{{ current_fy|add:'1' }}{% endif %}</strong>
             {% endif %}
         </p>
         <label for="combinedInvoiceDateDialogInput" style="display:block;font-weight:600;margin-bottom:8px;font-size:1.05rem;">Date</label>
@@ -48,11 +61,12 @@
 (function () {
     const fieldId = '{{ date_field_id }}';
     const outputFormat = '{{ date_output_format|default:"html-date" }}';
-    const dateMin = '{{ date_min|default:"" }}';
-    const dateMax = '{{ date_max|default:"" }}';
+    const financialYear = Number('{{ current_fy|default:"" }}');
+    const dateMin = '{{ date_min|default:"" }}' || (financialYear ? `${financialYear}-04-01` : '');
+    const dateMax = '{{ date_max|default:"" }}' || (financialYear ? `${financialYear + 1}-03-31` : '');
     const fyLabel = '{{ fy_label|default:"selected financial year" }}';
-    const dateMinLabel = '{{ fy_start_label|default:"" }}';
-    const dateMaxLabel = '{{ fy_end_label|default:"" }}';
+    const dateMinLabel = '{{ fy_start_label|default:"" }}' || (financialYear ? `01-04-${financialYear}` : '');
+    const dateMaxLabel = '{{ fy_end_label|default:"" }}' || (financialYear ? `31-03-${financialYear + 1}` : '');
 
     function openInvoiceDateDialog() {
         const dialog = document.getElementById('combinedInvoiceDateDialog');
@@ -61,6 +75,85 @@
         const continueButton = document.getElementById('combinedInvoiceDateDialogContinue');
         const dateField = document.getElementById(fieldId);
         if (!dialog || !input || !error || !continueButton || !dateField) return;
+
+        if (dateField.type === 'date' && dateMin && dateMax) {
+            dateField.min = dateMin;
+            dateField.max = dateMax;
+        }
+
+        const form = dateField.closest('form');
+        let fyGuardActive = false;
+        let inlineError = dateField.parentElement.querySelector('.combined-date-fy-error');
+        if (!inlineError) {
+            inlineError = document.createElement('small');
+            inlineError.className = 'combined-date-fy-error';
+            inlineError.id = `${fieldId}FinancialYearError`;
+            inlineError.hidden = true;
+            dateField.insertAdjacentElement('afterend', inlineError);
+        }
+
+        const getIsoDate = () => {
+            const value = dateField.value.trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+
+            const match = value.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+            if (!match) return '';
+            const [, day, month, year] = match;
+            const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+            if (parsed.getFullYear() !== Number(year) || parsed.getMonth() !== Number(month) - 1 || parsed.getDate() !== Number(day)) {
+                return '';
+            }
+            return `${year}-${month}-${day}`;
+        };
+
+        const validateDateField = () => {
+            const isoDate = getIsoDate();
+            let message = '';
+            if (!isoDate) {
+                message = 'Enter a valid date.';
+            } else if (!dateMin || !dateMax || isoDate < dateMin || isoDate > dateMax) {
+                message = `${fyLabel} dates must be from ${dateMinLabel} to ${dateMaxLabel}.`;
+            }
+
+            dateField.setCustomValidity(message);
+            dateField.setAttribute('aria-invalid', message ? 'true' : 'false');
+            dateField.classList.toggle('combined-date-fy-invalid', Boolean(message));
+            inlineError.textContent = message;
+            inlineError.hidden = !message;
+            return !message;
+        };
+
+        const blockUntilValidDate = event => {
+            if (!fyGuardActive || validateDateField()) return;
+            if (event) event.preventDefault();
+            dateField.focus({ preventScroll: true });
+        };
+
+        if (!dateField.dataset.fyGuardAttached) {
+            dateField.dataset.fyGuardAttached = 'true';
+            dateField.addEventListener('input', () => {
+                if (fyGuardActive) validateDateField();
+            });
+            dateField.addEventListener('change', () => {
+                if (fyGuardActive) validateDateField();
+            });
+            dateField.addEventListener('blur', () => {
+                if (fyGuardActive && !validateDateField()) {
+                    setTimeout(() => dateField.focus({ preventScroll: true }), 0);
+                }
+            });
+            form?.addEventListener('focusin', event => {
+                if (fyGuardActive && event.target !== dateField) blockUntilValidDate(event);
+            });
+            form?.addEventListener('keydown', event => {
+                if (fyGuardActive && event.key === 'Tab' && !validateDateField()) {
+                    blockUntilValidDate(event);
+                }
+            }, true);
+            form?.addEventListener('submit', event => {
+                if (fyGuardActive && !validateDateField()) blockUntilValidDate(event);
+            }, true);
+        }
 
         const formContainer = dateField.closest('form')?.parentElement;
         if (formContainer) {
@@ -159,6 +252,8 @@
             error.style.display = 'none';
             releaseDialogFocus();
             dialog.style.display = 'none';
+            fyGuardActive = true;
+            validateDateField();
             dateField.focus();
         };
 

@@ -64,10 +64,14 @@
                         window.location.href = '/login/';
                     }, 1000);
                 } else {
+                    alert(data.error || 'Backup could not be created. You have been logged out.');
                     window.location.href = '/login/';
                 }
             })
-            .catch(() => { window.location.href = '/login/'; });
+            .catch(() => {
+                alert('Backup request failed. Please sign in again.');
+                window.location.href = '/login/';
+            });
         }
         
         // Auto-focus on Yes, Backup button

@@ -26,7 +26,6 @@ html {
     scroll-behavior: smooth;
 }
 
-/* Animated Background Pattern */
 body::before {
     content: '';
     position: fixed;
@@ -46,7 +45,6 @@ body::before {
     50% { transform: scale(1.1) rotate(5deg); }
 }
 
-/* ===== Navbar - Cozy Modern Design ===== */
 .navbar {
     position: fixed;
     top: 0;
@@ -276,7 +274,6 @@ body::before {
     display: none;
 }
 
-/* ===== Hero Section - Creative Layout ===== */
 .hero {
     padding: 12rem 2rem 6rem;
     position: relative;
@@ -381,7 +378,6 @@ body::before {
 .slider-arrow-left { left: 2rem; }
 .slider-arrow-right { right: 2rem; }
 
-/* ===== About Section - Card Style ===== */
 .about {
     padding: 8rem 2rem;
     background: white;
@@ -436,8 +432,6 @@ body::before {
     line-height: 1.9;
     margin-bottom: 1.5rem;
 }
-
-/* ===== Products Section - Modern Cards ===== */
 .products {
     padding: 8rem 2rem;
     background: var(--yellow-light);
@@ -578,8 +572,6 @@ body::before {
 
 .product-arrow-left { left: 0; }
 .product-arrow-right { right: 0; }
-
-/* ===== Gallery Section ===== */
 .gallery {
     padding: 8rem 2rem;
     background: white;
@@ -642,7 +634,6 @@ body::before {
     transform: scale(1.1);
 }
 
-/* ===== Processing Section ===== */
 .processing {
     padding: 8rem 2rem;
     background: var(--gray-light);
@@ -698,8 +689,6 @@ body::before {
     color: var(--gray-medium);
     line-height: 1.8;
 }
-
-/* ===== Footer ===== */
 .footer {
     background: var(--gray-dark);
     color: white;
@@ -777,7 +766,6 @@ body::before {
     color: var(--gray-light);
 }
 
-/* ===== Mobile Buttons ===== */
 .whatsapp-btn-mobile,
 .login-btn-mobile {
     display: flex;
@@ -802,7 +790,6 @@ body::before {
     color: white;
 }
 
-/* ===== Responsive Design ===== */
 @media (max-width: 968px) {
     .navbar {
         padding: 0.8rem 1.5rem;
@@ -905,7 +892,6 @@ body::before {
     }
 }
 
-/* ========== SCROLL ANIMATIONS ========== */
 .fade-in {
     opacity: 0;
     transform: translateY(30px);
@@ -939,7 +925,7 @@ body::before {
     transform: translateX(0);
 }
 
-/* ========== FLOATING PARTICLES ========== */
+
 .floating-particles {
     position: fixed;
     top: 0;
@@ -977,7 +963,6 @@ body::before {
     }
 }
 
-/* ========== TYPING ANIMATION ========== */
 .typing-text {
     overflow: hidden;
     border-right: 3px solid var(--yellow-primary);
@@ -995,7 +980,6 @@ body::before {
     50% { border-color: var(--yellow-primary); }
 }
 
-/* ========== PULSE ANIMATION ========== */
 .pulse {
     animation: pulse 2s infinite;
 }
@@ -1005,8 +989,6 @@ body::before {
     50% { transform: scale(1.05); }
     100% { transform: scale(1); }
 }
-
-/* ========== BOUNCE ANIMATION ========== */
 .bounce {
     animation: bounce 2s infinite;
 }
@@ -1017,7 +999,6 @@ body::before {
     60% { transform: translateY(-5px); }
 }
 
-/* ========== ROTATE ANIMATION ========== */
 .rotate {
     animation: rotate 10s linear infinite;
 }
@@ -1027,7 +1008,6 @@ body::before {
     to { transform: rotate(360deg); }
 }
 
-/* ========== SHAKE ANIMATION ========== */
 .shake:hover {
     animation: shake 0.5s;
 }
@@ -1037,8 +1017,6 @@ body::before {
     10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
     20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
-
-/* ========== GLOW ANIMATION ========== */
 .glow {
     animation: glow 2s ease-in-out infinite alternate;
 }
@@ -1048,7 +1026,6 @@ body::before {
     to { box-shadow: 0 0 20px var(--yellow-primary), 0 0 30px var(--yellow-primary); }
 }
 
-/* ========== WAVE ANIMATION ========== */
 .wave {
     position: relative;
     overflow: hidden;
@@ -1069,15 +1046,12 @@ body::before {
     0% { left: -100%; }
     100% { left: 100%; }
 }
-
-/* ========== COUNTER ANIMATION ========== */
 .counter {
     font-size: 3rem;
     font-weight: 900;
     color: var(--yellow-primary);
 }
 
-/* ========== LOADING SPINNER ========== */
 .spinner {
     width: 40px;
     height: 40px;
@@ -1091,7 +1065,6 @@ body::before {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-/* ========== GOLDEN MOVING STRINGS ========== */
 .golden-strings {
     position: fixed;
     top: 0;
@@ -1158,7 +1131,6 @@ body::before {
     }
 }
 
-/* ========== SCROLL REVEAL ANIMATIONS ========== */
 .scroll-reveal {
     opacity: 0;
     transform: translateY(50px);
@@ -1192,7 +1164,7 @@ body::before {
     transform: translateX(0);
 }
 
-/* ========== TYPEWRITER EFFECT ========== */
+
 .typewriter {
     overflow: hidden;
     border-right: 3px solid #fbbf24;
@@ -1211,7 +1183,6 @@ body::before {
     50% { border-color: #fbbf24; }
 }
 
-/* ========== LOGO GLOW ANIMATION ========== */
 .nav-logo {
     animation: logoGlow 3s ease-in-out infinite alternate;
 }
@@ -1225,7 +1196,6 @@ body::before {
     }
 }
 
-/* ========== FLOATING GOLDEN PARTICLES ========== */
 .golden-particles {
     position: fixed;
     top: 0;
@@ -1262,8 +1232,6 @@ body::before {
         opacity: 0;
     }
 }
-
-/* ========== SECTION STAGGER ANIMATION ========== */
 .stagger-item {
     opacity: 0;
     transform: translateY(30px);
@@ -1282,7 +1250,6 @@ body::before {
 .stagger-item:nth-child(5) { transition-delay: 0.5s; }
 .stagger-item:nth-child(6) { transition-delay: 0.6s; }
 
-/* ========== GOLDEN BORDER ANIMATION ========== */
 .golden-border {
     position: relative;
     overflow: hidden;
@@ -1304,7 +1271,6 @@ body::before {
     100% { left: 100%; }
 }
 
-/* ========== PULSE GLOW EFFECT ========== */
 .pulse-glow {
     animation: pulseGlow 2s ease-in-out infinite;
 }
@@ -1318,7 +1284,6 @@ body::before {
     }
 }
 
-/* ========== PHARMACEUTICAL FLOATING ELEMENTS ========== */
 .pharma-elements {
     position: fixed;
     top: 0;
@@ -1353,7 +1318,6 @@ body::before {
     }
 }
 
-/* ========== REALISTIC PHARMACEUTICAL PRODUCTS ========== */
 .pharma-capsule {
     position: absolute;
     width: 30px;
@@ -1422,7 +1386,7 @@ body::before {
     }
 }
 
-/* ========== ENHANCED PRODUCT ANIMATIONS ========== */
+
 .product-box {
     position: relative;
     overflow: hidden;
@@ -1451,7 +1415,6 @@ body::before {
     100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
 }
 
-/* ========== MEDICAL CROSS ANIMATION ========== */
 .medical-cross {
     position: absolute;
     width: 20px;
@@ -1492,8 +1455,6 @@ body::before {
         opacity: 0;
     }
 }
-
-/* ========== DNA HELIX ANIMATION ========== */
 .dna-helix {
     position: absolute;
     width: 30px;
@@ -1532,7 +1493,6 @@ body::before {
     }
 }
 
-/* ========== ENHANCED SCROLL REVEAL ========== */
 .scroll-reveal {
     opacity: 0;
     transform: translateY(60px);
@@ -1565,8 +1525,6 @@ body::before {
     opacity: 1;
     transform: translateX(0);
 }
-
-/* ========== STAGGER ANIMATION FIX ========== */
 .stagger-item {
     opacity: 0;
     transform: translateY(40px);
@@ -1585,7 +1543,6 @@ body::before {
 .stagger-item:nth-child(5).revealed { transition-delay: 0.5s; }
 .stagger-item:nth-child(6).revealed { transition-delay: 0.6s; }
 
-/* ========== PHARMACEUTICAL BACKGROUND PATTERN ========== */
 body::after {
     content: '';
     position: fixed;
@@ -1610,7 +1567,6 @@ body::after {
     }
 }
 
-/* ========== FLIP CARD ANIMATION ========== */
 .flip-card {
     perspective: 1000px;
     height: 350px;
@@ -1691,7 +1647,6 @@ body::after {
     transform: translateY(-3px);
 }
 
-/* ========== HERO FULLWIDTH CENTERED ========== */
 .hero-fullwidth {
     display: flex;
     justify-content: center;
@@ -1795,8 +1750,6 @@ body::after {
     color: var(--gray-medium);
     margin: 0;
 }
-
-/* ========== GALLERY FLIP CARDS ========== */
 .gallery-item.flip-card {
     perspective: 1000px;
     height: 280px;
@@ -1853,8 +1806,6 @@ body::after {
     line-height: 1.6;
     color: white;
 }
-
-/* ========== RESPONSIVE HERO ========== */
 @media (max-width: 968px) {
     .hero-stats {
         grid-template-columns: repeat(2, 1fr);
@@ -1878,8 +1829,6 @@ body::after {
         font-size: 2.5rem;
     }
 }
-
-/* ========== TESTIMONIALS SECTION ========== */
 .testimonials {
     padding: 8rem 2rem;
     background: white;
@@ -1967,7 +1916,6 @@ body::after {
     color: var(--gray-medium);
 }
 
-/* ========== FAQ SECTION ========== */
 .faq {
     padding: 8rem 2rem;
     background: var(--gray-light);
@@ -2038,7 +1986,6 @@ body::after {
     font-size: 1rem;
 }
 
-/* ========== CTA SECTION ========== */
 .cta-section {
     padding: 6rem 2rem;
     background: linear-gradient(135deg, var(--yellow-primary), var(--yellow-dark));
@@ -2135,7 +2082,6 @@ body::after {
     font-size: 1.5rem;
 }
 
-/* ========== SCROLL TO TOP BUTTON ========== */
 .scroll-top {
     position: fixed;
     bottom: 30px;
@@ -2165,7 +2111,6 @@ body::after {
     box-shadow: 0 10px 30px rgba(251, 191, 36, 0.6);
 }
 
-/* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .testimonials-container {
         grid-template-columns: 1fr;
@@ -2184,7 +2129,6 @@ body::after {
     }
 }
 
-/* ========== BUY NOW SECTION ========== */
 .buynow-section {
     padding: 8rem 2rem;
     background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
@@ -2332,7 +2276,6 @@ body::after {
     color: var(--yellow-primary);
 }
 
-/* ========== RESPONSIVE BUY NOW ========== */
 @media (max-width: 768px) {
     .buynow-content {
         padding: 3rem 2rem;
@@ -2367,8 +2310,6 @@ body::after {
         font-size: 1rem;
     }
 }
-
-/* ========== SCROLL PROGRESS BAR ========== */
 .scroll-progress-bar {
     position: fixed;
     top: 0;
@@ -2379,8 +2320,6 @@ body::after {
     transition: width 0.1s ease;
     box-shadow: 0 2px 10px rgba(251, 191, 36, 0.5);
 }
-
-/* ========== STICKY CTA BUTTON ========== */
 .sticky-cta-btn {
     position: fixed;
     bottom: 100px;
@@ -2411,7 +2350,6 @@ body::after {
     box-shadow: 0 8px 30px rgba(251, 191, 36, 0.7);
 }
 
-/* ========== TRUST BADGES SECTION ========== */
 .trust-badges {
     padding: 4rem 2rem;
     background: var(--yellow-light);
@@ -2458,7 +2396,6 @@ body::after {
     margin: 0;
 }
 
-/* ========== TOOLTIPS ========== */
 [data-tooltip] {
     position: relative;
     cursor: help;
@@ -2500,12 +2437,10 @@ body::after {
     transform: translateX(-50%) scale(1);
 }
 
-/* ========== ANIMATED COUNTER ========== */
 .counter {
     display: inline-block;
 }
 
-/* ========== PARALLAX EFFECT ========== */
 .parallax {
     background-attachment: fixed;
     background-position: center;
@@ -2513,7 +2448,6 @@ body::after {
     background-size: cover;
 }
 
-/* ========== BREADCRUMB ========== */
 .breadcrumb {
     padding: 1rem 2rem;
     background: var(--gray-light);
@@ -2544,7 +2478,6 @@ body::after {
     font-size: 0.7rem;
 }
 
-/* ========== RIPPLE EFFECT ========== */
 .ripple {
     position: relative;
     overflow: hidden;
@@ -2568,7 +2501,6 @@ body::after {
     height: 300px;
 }
 
-/* ========== ENHANCED SCROLL TO TOP ========== */
 .scroll-top {
     position: fixed;
     bottom: 30px;
@@ -2622,7 +2554,6 @@ body::after {
     }
 }
 
-/* ========== RESPONSIVE ADJUSTMENTS ========== */
 @media (max-width: 768px) {
     .sticky-cta-btn {
         bottom: 80px;
@@ -2664,7 +2595,6 @@ body::after {
 }
 
 
-/* ========== PRODUCT BUY NOW BUTTON ========== */
 .product-buy-btn {
     display: inline-block;
     margin-top: 1.5rem;
@@ -2686,7 +2616,6 @@ body::after {
 }
 
 
-/* ========== VISION & MISSION SECTION ========== */
 .vision-mission {
     padding: 6rem 2rem;
     background: white;
@@ -2753,7 +2682,6 @@ body::after {
     font-weight: bold;
 }
 
-/* ========== WHY CHOOSE US SECTION ========== */
 .why-choose {
     padding: 6rem 2rem;
     background: var(--gray-light);
@@ -2793,7 +2721,7 @@ body::after {
     color: var(--gray-dark);
 }
 
-/* ========== CORE VALUES SECTION ========== */
+
 .core-values {
     padding: 6rem 2rem;
     background: white;
@@ -2833,7 +2761,7 @@ body::after {
     font-weight: 600;
 }
 
-/* ========== LEADERSHIP SECTION ========== */
+
 .leadership {
     padding: 4rem 2rem;
     background: linear-gradient(135deg, var(--yellow-primary), var(--yellow-dark));
@@ -2861,7 +2789,6 @@ body::after {
     line-height: 1.8;
 }
 
-/* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .vm-container {
         grid-template-columns: 1fr;
@@ -2871,3 +2798,13 @@ body::after {
         grid-template-columns: 1fr;
     }
 }
+
+
+
+
+
+
+
+
+
+

@@ -58,8 +58,8 @@ def _product_reorder_stats(product, batches, sales_qty, fy_start, fy_end):
     return ReorderStats(avg_monthly_sale, reorder_level, total_available, reorder_needed)
 
 
-def _financial_year_batch_sales(product_ids, purchase_batch_map, fy_start, fy_end):
-    """Return net FY unit demand for exact batches purchased in that FY."""
+def _financial_year_batch_sales(product_ids, fy_start, fy_end):
+    """Return net FY unit demand grouped by product and exact batch."""
     sales_by_batch = defaultdict(float)
     sales_rows = SalesMaster.objects.filter(
         productid__in=product_ids,
@@ -75,10 +75,9 @@ def _financial_year_batch_sales(product_ids, purchase_batch_map, fy_start, fy_en
     for row in sales_rows:
         product_id = row['productid']
         batch_key = (row['product_batch_no'], row['product_expiry'])
-        if batch_key in purchase_batch_map.get(product_id, set()):
-            sales_by_batch[(product_id, *batch_key)] += (
-                float(row['total_sales'] or 0) + float(row['total_free'] or 0)
-            )
+        sales_by_batch[(product_id, *batch_key)] += (
+            float(row['total_sales'] or 0) + float(row['total_free'] or 0)
+        )
 
     challan_rows = CustomerChallanMaster.objects.filter(
         product_id__in=product_ids,
@@ -94,10 +93,9 @@ def _financial_year_batch_sales(product_ids, purchase_batch_map, fy_start, fy_en
     for row in challan_rows:
         product_id = row['product_id']
         batch_key = (row['product_batch_no'], row['product_expiry'])
-        if batch_key in purchase_batch_map.get(product_id, set()):
-            sales_by_batch[(product_id, *batch_key)] += (
-                float(row['total_sales'] or 0) + float(row['total_free'] or 0)
-            )
+        sales_by_batch[(product_id, *batch_key)] += (
+            float(row['total_sales'] or 0) + float(row['total_free'] or 0)
+        )
 
     return_rows = ReturnSalesMaster.objects.filter(
         return_productid__in=product_ids,
@@ -113,13 +111,19 @@ def _financial_year_batch_sales(product_ids, purchase_batch_map, fy_start, fy_en
     for row in return_rows:
         product_id = row['return_productid']
         batch_key = (row['return_product_batch_no'], row['return_product_expiry'])
-        if batch_key in purchase_batch_map.get(product_id, set()):
-            sales_by_batch[(product_id, *batch_key)] -= (
-                float(row['total_returned'] or 0)
-                + float(row['total_free_returned'] or 0)
-            )
+        sales_by_batch[(product_id, *batch_key)] -= (
+            float(row['total_returned'] or 0)
+            + float(row['total_free_returned'] or 0)
+        )
 
     return {key: max(0.0, quantity) for key, quantity in sales_by_batch.items()}
+
+
+def _financial_year_product_sales(sales_by_batch):
+    sales_by_product = defaultdict(float)
+    for (product_id, batch_no, expiry_date), quantity in sales_by_batch.items():
+        sales_by_product[product_id] += quantity
+    return sales_by_product
 
 
 def _financial_year_purchase_batches(product_ids, fy_start, fy_end):
@@ -239,9 +243,8 @@ def reorder_level_report(request):
         product_ids, purchase_batch_map, fy_start, fy_end
     )
 
-    sales_by_batch = _financial_year_batch_sales(
-        product_ids, purchase_batch_map, fy_start, fy_end
-    )
+    sales_by_batch = _financial_year_batch_sales(product_ids, fy_start, fy_end)
+    sales_by_product = _financial_year_product_sales(sales_by_batch)
 
     reorder_data   = []
 
@@ -250,12 +253,7 @@ def reorder_level_report(request):
         if not batches:
             continue
 
-        sales_qty = sum(
-            sales_by_batch.get(
-                (product.productid, batch.batch_no, batch.expiry_date), 0
-            )
-            for batch in batches
-        )
+        sales_qty = sales_by_product.get(product.productid, 0)
         avg_monthly_sale, reorder_level, total_available, reorder_needed = \
             _product_reorder_stats(product, batches, sales_qty, fy_start, fy_end)
 
@@ -338,21 +336,15 @@ def export_reorder_level_excel(request):
         product_ids, purchase_batch_map, fy_start, fy_end
     )
 
-    sales_by_batch = _financial_year_batch_sales(
-        product_ids, purchase_batch_map, fy_start, fy_end
-    )
+    sales_by_batch = _financial_year_batch_sales(product_ids, fy_start, fy_end)
+    sales_by_product = _financial_year_product_sales(sales_by_batch)
 
     for product in products_query:
         batches = product_batches_map.get(product.productid, [])
         if not batches:
             continue
 
-        sales_qty = sum(
-            sales_by_batch.get(
-                (product.productid, batch.batch_no, batch.expiry_date), 0
-            )
-            for batch in batches
-        )
+        sales_qty = sales_by_product.get(product.productid, 0)
         avg_monthly_sale, reorder_level, total_available, reorder_needed = \
             _product_reorder_stats(product, batches, sales_qty, fy_start, fy_end)
 

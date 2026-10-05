@@ -12,9 +12,9 @@
     <!-- Header Section -->
     <div class="supplier-challan-header">
         <h1 class="supplier-challan-title">Supplier Challan List
-            {% if fy_label %}<span style="font-size:0.75rem;font-weight:600;background:#e0f2fe;color:#0369a1;padding:3px 10px;border-radius:20px;margin-left:10px;vertical-align:middle;">{{ fy_label }}</span>{% endif %}
+            {% if fy_label %}<span>{{ fy_label }}</span>{% endif %}
         </h1>
-        <div style="display: flex; gap: 10px;">
+        <div>
 
             <a href="{% url 'add_supplier_challan' %}" class="supplier-challan-add-btn">
                 <i class="fas fa-plus"></i>
@@ -34,7 +34,7 @@
                 autocomplete="off"
             >
             <i class="fas fa-search supplier-challan-search-icon"></i>
-            <div class="search-suggestions" id="searchSuggestions" style="display: none;"></div>
+            <div class="search-suggestions" id="searchSuggestions"></div>
         </div>
         <button class="supplier-challan-filter-btn" onclick="toggleFilterPanel()">
             <i class="fas fa-filter"></i>
@@ -43,7 +43,7 @@
     </div>
     
     <!-- Filter Panel -->
-    <div class="filter-panel" id="filterPanel" style="display: none;">
+    <div class="filter-panel" id="filterPanel">
         <div class="filter-header">
             <h3>Filter Challans</h3>
             <button onclick="toggleFilterPanel()" class="close-filter">&times;</button>
@@ -130,7 +130,7 @@
                                     <i class="fas fa-file-invoice"></i>
                                 </div>
                                 <div class="supplier-challan-empty-text">No supplier challans found</div>
-                                <p style="color: #999; font-size: 14px;">Click "Add New Challan" to create your first supplier challan</p>
+                                <p>Click "Add New Challan" to create your first supplier challan</p>
                             </div>
                         </td>
                     </tr>
@@ -170,233 +170,7 @@
 
 
 
-<style>
-.badge {
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 600;
-}
-.badge-success {
-    background: #10b981;
-    color: white;
-}
-.badge-warning {
-    background: #f59e0b;
-    color: white;
-}
-.badge-danger {
-    background: #ef4444;
-    color: white;
-}
-.action-buttons {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-}
-.btn-action {
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-.btn-view {
-    background: #3b82f6;
-    color: white;
-}
-.btn-view:hover {
-    background: #2563eb;
-    transform: translateY(-2px);
-}
-.btn-delete {
-    background: #ef4444;
-    color: white;
-}
-.btn-delete:hover {
-    background: #dc2626;
-    transform: translateY(-2px);
-}
 
-.supplier-challan-search-wrapper {
-    position: relative;
-}
-
-.search-suggestions {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    max-height: 300px;
-    overflow-y: auto;
-    z-index: 1000;
-    margin-top: 4px;
-}
-
-.suggestion-item {
-    padding: 12px 16px;
-    cursor: pointer;
-    border-bottom: 1px solid #f3f4f6;
-    transition: background 0.2s;
-}
-
-.suggestion-item:hover {
-    background: #f9fafb;
-}
-
-.suggestion-item:last-child {
-    border-bottom: none;
-}
-
-.suggestion-challan {
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 4px;
-}
-
-.suggestion-supplier {
-    font-size: 13px;
-    color: #6b7280;
-}
-
-.filter-panel {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.filter-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.filter-header h3 {
-    margin: 0;
-    font-size: 18px;
-    color: #1f2937;
-}
-
-.close-filter {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    color: #6b7280;
-}
-
-.filter-body {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 20px;
-}
-
-.filter-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
-    color: #374151;
-    font-size: 14px;
-}
-
-.filter-input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 14px;
-}
-
-.filter-footer {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-}
-
-.btn-apply-filter, .btn-reset-filter {
-    padding: 8px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s;
-}
-
-.btn-apply-filter {
-    background: #3b82f6;
-    color: white;
-}
-
-.btn-apply-filter:hover {
-    background: #2563eb;
-}
-
-.btn-reset-filter {
-    background: #e5e7eb;
-    color: #374151;
-}
-
-.btn-reset-filter:hover {
-    background: #d1d5db;
-}
-
-.pagination-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 20px;
-    padding: 15px 20px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.pagination-info {
-    color: #6b7280;
-    font-size: 14px;
-}
-
-.pagination {
-    display: flex;
-    gap: 8px;
-}
-
-.page-link {
-    padding: 8px 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    color: #374151;
-    text-decoration: none;
-    transition: all 0.2s;
-    font-size: 14px;
-}
-
-.page-link:hover {
-    background: #f3f4f6;
-    border-color: #d1d5db;
-}
-
-.page-link.active {
-    background: #3b82f6;
-    color: white;
-    border-color: #3b82f6;
-}
-
-
-</style>
 
 <script>
     let searchTimeout;

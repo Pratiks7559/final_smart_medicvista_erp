@@ -80,16 +80,14 @@
     <div class="product-detail-secondary">
         <div class="stock-info-card">
             <div class="stock-info-header">
-                <h5 class="stock-info-title">Stock Information</h5>
+                <h5 class="stock-info-title">Stock Information (FY {{ selected_fy_label }})</h5>
             </div>
             <div class="stock-info-body">
                 <div class="stock-summary-grid">
                     <div class="stock-current-section">
                         <h6 class="stock-current-label">Current Stock</h6>
                         <h3 class="stock-current-value">{{ stock_info.current_stock }}</h3>
-                        {% if stock_info.total_free_qty > 0 %}
-                        <small style="color:#6c757d;">+ {{ stock_info.total_free_qty }} Free = <strong>{{ stock_info.current_stock_with_free }}</strong> Total</small>
-                        {% endif %}
+                        <small style="color:#6c757d;">+ {{ stock_info.total_free_qty }} Free = <strong>{{ stock_info.current_stock_with_free }}</strong> Total Stock</small>
                     </div>
                     <div class="stock-purchased-section">
                         <h6 class="stock-purchased-label">Total Purchased</h6>
@@ -101,7 +99,7 @@
                     </div>
                 </div>
                 
-                <h6 class="batch-stock-title">Batch-wise Stock</h6>
+                <h6 class="batch-stock-title">Batch-wise Stock as of {{ fy_end|date:"d-m-Y" }}</h6>
                 <div class="batch-stock-table-wrapper">
                     <table class="batch-stock-table">
                         <thead class="batch-stock-thead">

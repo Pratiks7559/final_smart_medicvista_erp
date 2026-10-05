@@ -3,8 +3,139 @@ from unittest.mock import MagicMock, patch
 
 from django.test import RequestFactory, SimpleTestCase
 
+from core import backup_views
+from core import models
 from core import reorder_level_views
+from core import utils
 from core import views
+
+
+class BackupLogoutTests(SimpleTestCase):
+    def test_mysqldump_is_discovered_from_system_path(self):
+        with patch.dict('os.environ', {'MYSQLDUMP_PATH': ''}), \
+             patch.object(backup_views.shutil, 'which', return_value='/usr/bin/mysqldump'):
+            executable = backup_views.get_mysqldump_path()
+
+        self.assertEqual(executable, '/usr/bin/mysqldump')
+
+    def test_mysql_client_is_discovered_from_system_path(self):
+        with patch.dict('os.environ', {'MYSQL_PATH': ''}), \
+             patch.object(backup_views.shutil, 'which', return_value='/usr/bin/mysql'):
+            executable = backup_views.get_mysql_path()
+
+        self.assertEqual(executable, '/usr/bin/mysql')
+
+    def test_mysql_client_does_not_use_windows_path_on_linux(self):
+        with patch.dict('os.environ', {'MYSQL_PATH': ''}), \
+             patch.object(backup_views.os, 'name', 'posix'), \
+             patch.object(backup_views.shutil, 'which', return_value=None), \
+             self.assertRaises(FileNotFoundError):
+            backup_views.get_mysql_path()
+
+    def test_logout_is_performed_when_backup_creation_fails(self):
+        request = RequestFactory().post('/logout/', {'backup': 'yes'})
+        with patch.object(backup_views, 'create_backup_file', side_effect=RuntimeError('dump failed')), \
+               patch.object(views, 'logout') as logout_user, \
+               self.assertLogs('core.views', level='ERROR'):
+            response = views.logout_view(request)
+
+        self.assertEqual(response.status_code, 500)
+        self.assertIn(b'"success": false', response.content)
+        logout_user.assert_called_once_with(request)
+
+
+class ProductDetailStockTests(SimpleTestCase):
+    def test_fy_invoice_fallback_builds_batch_stock_without_ledger_rows(self):
+        transactions = MagicMock()
+        transactions.filter.return_value = transactions
+        transactions.exists.return_value = False
+        purchases = MagicMock()
+        purchases.values.return_value = [{
+            'product_batch_no': 'RAB-1',
+            'product_expiry': '08-2013',
+            'product_quantity': 100,
+            'product_free_qty': 10,
+            'product_MRP': 50,
+            'product_purchase_rate': 40,
+        }]
+        sales = MagicMock()
+        sales.values.return_value = [
+            {
+                'product_batch_no': 'RAB-1',
+                'product_expiry': '08-2013',
+                'sale_quantity': 20,
+                'sale_free_qty': 2,
+                'product_MRP': 50,
+            },
+            {
+                'product_batch_no': 'RAB-1',
+                'product_expiry': '08-2013',
+                'sale_quantity': 30,
+                'sale_free_qty': 3,
+                'product_MRP': 50,
+            },
+        ]
+
+        with patch.object(models.InventoryTransaction.objects, 'filter', return_value=transactions), \
+             patch.object(utils.PurchaseMaster.objects, 'filter', return_value=purchases) as purchase_filter, \
+             patch.object(utils.SalesMaster.objects, 'filter', return_value=sales) as sales_filter:
+            stock_info = utils.get_stock_status(101, date(2012, 4, 1), date(2013, 3, 31))
+
+        purchase_filter.assert_called_once_with(
+            productid=101,
+            product_invoiceid__invoice_date__gte=date(2012, 4, 1),
+            product_invoiceid__invoice_date__lte=date(2013, 3, 31),
+        )
+        sales_filter.assert_called_once_with(
+            productid=101,
+            sales_invoice_no__sales_invoice_date__gte=date(2012, 4, 1),
+            sales_invoice_no__sales_invoice_date__lte=date(2013, 3, 31),
+        )
+        self.assertEqual(stock_info['purchased'], 100)
+        self.assertEqual(stock_info['sold'], 50)
+        self.assertEqual(stock_info['current_stock'], 50)
+        self.assertEqual(stock_info['current_stock_with_free'], 55)
+        self.assertEqual(stock_info['expiry_stock'][0]['batch_no'], 'RAB-1')
+        self.assertEqual(stock_info['expiry_stock'][0]['total_qty'], 55)
+
+    def test_fy_totals_use_period_movements_and_stock_uses_fy_end_balance(self):
+        transactions = MagicMock()
+        transactions.filter.return_value = transactions
+        transactions.aggregate.side_effect = [
+            {
+                'purchased': 100,
+                'sold': -35,
+                'purchase_returns': -5,
+                'sales_returns': 3,
+                'stock_issues': -2,
+            },
+            {'quantity': 71, 'free_quantity': 7},
+        ]
+        batch_rows = MagicMock()
+        batch_rows.order_by.return_value = [
+            {
+                'batch_no': 'B-OLD',
+                'expiry_date': '08-2027',
+                'quantity': 71,
+                'free_qty': 7,
+                'mrp': 50,
+                'rate': 40,
+            },
+        ]
+        transactions.values.return_value.annotate.return_value = batch_rows
+
+        with patch.object(
+            models.InventoryTransaction.objects,
+            'filter',
+            return_value=transactions,
+        ):
+            stock_info = utils.get_stock_status(101, date(2026, 4, 1), date(2027, 3, 31))
+
+        self.assertEqual(stock_info['purchased'], 100)
+        self.assertEqual(stock_info['sold'], 35)
+        self.assertEqual(stock_info['current_stock'], 71)
+        self.assertEqual(stock_info['current_stock_with_free'], 78)
+        self.assertEqual(stock_info['expiry_stock'][0]['total_qty'], 78)
 
 
 class ReorderLevelReportTests(SimpleTestCase):
@@ -30,7 +161,7 @@ class ReorderLevelReportTests(SimpleTestCase):
         )
         self.assertEqual(batches, {101: {('B-OLD', '08-2013')}})
 
-    def test_fy_sales_are_limited_to_exact_purchased_batch(self):
+    def test_fy_sales_include_batches_purchased_in_prior_years(self):
         rows = [
             {
                 'productid': 101,
@@ -87,7 +218,7 @@ class ReorderLevelReportTests(SimpleTestCase):
             return_value=return_queryset,
         ) as returns_filter:
             sales_by_batch = reorder_level_views._financial_year_batch_sales(
-                [101], {101: {('B-FY', '08-2025')}}, date(2024, 4, 1), date(2025, 3, 31)
+                [101], date(2024, 4, 1), date(2025, 3, 31)
             )
 
         sales_filter.assert_called_once_with(
@@ -105,7 +236,15 @@ class ReorderLevelReportTests(SimpleTestCase):
             return_sales_invoice_no__return_sales_invoice_date__gte=date(2024, 4, 1),
             return_sales_invoice_no__return_sales_invoice_date__lte=date(2025, 3, 31),
         )
-        self.assertEqual(sales_by_batch, {(101, 'B-FY', '08-2025'): 9.0})
+        self.assertEqual(sales_by_batch, {
+            (101, 'B-FY', '08-2025'): 9.0,
+            (101, 'B-OTHER', '08-2025'): 30.0,
+            (101, 'B-FY', '08-2026'): 12.0,
+        })
+        self.assertEqual(
+            reorder_level_views._financial_year_product_sales(sales_by_batch)[101],
+            51.0,
+        )
 
     def test_reorder_stats_use_fy_average_lead_time_and_free_stock(self):
         batch = MagicMock()

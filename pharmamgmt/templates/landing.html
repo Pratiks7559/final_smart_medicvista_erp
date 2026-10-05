@@ -557,12 +557,15 @@ Medicvista Pharma Pvt. Ltd. is a fast-growing pharmaceutical company dedicated t
             });
             
             // Newsletter Form
-            document.querySelector('.newsletter-form').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const email = e.target.querySelector('input').value;
-                alert('Thank you for subscribing! Check your email for 20% discount code: ' + email);
-                e.target.reset();
-            });
+            const newsletterForm = document.querySelector('.newsletter-form');
+            if (newsletterForm) {
+                newsletterForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const email = e.target.querySelector('input').value;
+                    alert('Thank you for subscribing! Check your email for 20% discount code: ' + email);
+                    e.target.reset();
+                });
+            }
         });
 
         // Create golden particles function

@@ -1716,3 +1716,513 @@ input[data-stock-error="true"] {
     background-color: #f8d7da !important;
     box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
 }
+
+/* Refined invoice detail theme */
+.sales-invoice-detail-container {
+    --invoice-ink: #18332f;
+    --invoice-muted: #657773;
+    --invoice-line: #dce7e3;
+    --invoice-paper: #ffffff;
+    --invoice-wash: #f1f6f4;
+    --invoice-teal: #167d70;
+    --invoice-teal-dark: #11665c;
+    --invoice-amber: #b56a18;
+    --invoice-shadow: 0 8px 24px rgba(24, 51, 47, 0.07);
+    padding: 22px clamp(12px, 2vw, 28px) 88px;
+    background:
+        radial-gradient(ellipse at 6% 0%, rgba(22, 125, 112, 0.07), transparent 34%),
+        var(--invoice-wash);
+    color: var(--invoice-ink);
+}
+
+.invoice-detail-page-actions {
+    gap: 8px;
+    margin: 0 0 18px;
+}
+
+.invoice-detail-page-actions > a,
+.invoice-detail-page-actions > button {
+    min-height: 40px;
+    padding: 9px 14px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-size: 0.84rem;
+    font-weight: 650;
+    box-shadow: 0 2px 5px rgba(24, 51, 47, 0.08);
+    transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.invoice-detail-page-actions > a:hover,
+.invoice-detail-page-actions > button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 12px rgba(24, 51, 47, 0.14);
+}
+
+.invoice-detail-page-actions .edit-invoice-action-btn {
+    background: #b56a18;
+    color: #fff;
+}
+
+.invoice-detail-page-actions .print-receipt-action-btn {
+    background: #167d70;
+    color: #fff;
+}
+
+.invoice-detail-page-actions .add-payment-action-btn {
+    background: #e9b44c;
+    color: #33250e;
+}
+
+.invoice-detail-page-actions .delete-invoice-action-btn {
+    background: #a83f3b;
+    color: #fff;
+}
+
+.invoice-detail-page-actions .back-to-invoices-action-btn {
+    background: #344c48;
+    color: #fff;
+}
+
+.invoice-detail-page-actions > a:focus-visible,
+.invoice-detail-page-actions > button:focus-visible,
+.edit-invoice-header-btn:focus-visible,
+.add-payment-btn:focus-visible,
+.delete-product-btn:focus-visible {
+    outline: 3px solid rgba(22, 125, 112, 0.3);
+    outline-offset: 2px;
+}
+
+.invoice-summary-section {
+    grid-template-columns: minmax(260px, 1.05fr) minmax(240px, 0.9fr) minmax(300px, 1.15fr);
+    align-items: stretch;
+    gap: 14px;
+    margin-bottom: 22px;
+}
+
+.invoice-info-card,
+.payment-status-card,
+.payment-history-card,
+.products-card,
+.challan-products-card {
+    border: 1px solid var(--invoice-line);
+    border-radius: 7px;
+    box-shadow: var(--invoice-shadow);
+}
+
+.invoice-info-header,
+.payment-status-header,
+.payment-history-header,
+.products-header,
+.challan-products-header {
+    min-height: 56px;
+    padding: 13px 17px;
+}
+
+.invoice-info-header {
+    background: linear-gradient(110deg, #176f64, #218d7c);
+}
+
+.payment-status-header {
+    background: #203d38;
+}
+
+.payment-history-header {
+    background: #f5ead8;
+    color: #583c1a;
+    border-bottom: 1px solid #ead9bc;
+}
+
+.payment-history-title {
+    color: #583c1a;
+}
+
+.products-header,
+.challan-products-header {
+    background: linear-gradient(110deg, #203d38, #31554e);
+}
+
+.invoice-info-title,
+.payment-status-title,
+.payment-history-title,
+.products-title,
+.challan-products-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.invoice-info-body,
+.payment-status-body {
+    padding: 17px;
+}
+
+.invoice-basic-details {
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.invoice-number-display,
+.invoice-date-display {
+    padding: 12px 9px;
+    border: 1px solid #e6eeeb;
+    border-radius: 5px;
+    background: #f7faf9;
+    text-align: left;
+}
+
+.invoice-number-label,
+.invoice-date-label,
+.customer-info-label,
+.invoice-total-label,
+.total-paid-label,
+.balance-due-label {
+    color: var(--invoice-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.invoice-number-value,
+.invoice-date-value {
+    color: var(--invoice-ink);
+    font-size: 1.03rem;
+    overflow-wrap: anywhere;
+}
+
+.customer-info-display {
+    margin-bottom: 14px;
+    text-align: left;
+}
+
+.customer-info-value {
+    font-size: 1rem;
+}
+
+.customer-detail-link,
+.product-detail-link,
+.challan-product-detail-link {
+    color: var(--invoice-teal-dark);
+}
+
+.customer-detail-link:hover,
+.product-detail-link:hover,
+.challan-product-detail-link:hover {
+    color: #0d5149;
+}
+
+.invoice-total-section {
+    padding: 12px 13px 0;
+    border: 1px solid #d2e8e1;
+    border-radius: 5px;
+    background: #eff8f4;
+}
+
+.invoice-total-display {
+    text-align: left;
+}
+
+.invoice-total-value {
+    color: var(--invoice-teal-dark);
+    font-size: 1.55rem;
+}
+
+.payment-progress-wrapper {
+    height: 12px;
+    margin: 3px 0 17px;
+    border-radius: 99px;
+    background: #e5eeeb;
+}
+
+.payment-progress-bar {
+    min-width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #198575, #43a989);
+}
+
+.payment-progress-text {
+    font-size: 0.68rem;
+}
+
+.payment-amounts-section {
+    gap: 9px;
+}
+
+.total-paid-display,
+.balance-due-display {
+    padding: 12px 10px;
+    border-radius: 5px;
+    text-align: left;
+}
+
+.total-paid-display {
+    border: 1px solid #cbe5d6;
+    background: #eff8f2;
+}
+
+.balance-due-display {
+    border: 1px solid #efd7d0;
+    background: #fff5f1;
+}
+
+.total-paid-value,
+.balance-due-value {
+    color: var(--invoice-ink);
+    font-size: 1.05rem;
+}
+
+.payment-history-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.payment-history-body {
+    flex: 1;
+}
+
+.add-payment-btn {
+    display: inline-grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    padding: 0;
+    border-radius: 5px;
+    background: #167d70;
+    color: #fff;
+}
+
+.add-payment-btn:hover {
+    background: #11665c;
+}
+
+.payment-history-table,
+.products-table,
+.challan-products-table {
+    color: var(--invoice-ink);
+}
+
+.payment-history-table-header,
+.products-table-header,
+.challan-products-table thead {
+    background: #edf4f1;
+}
+
+.payment-history-header-row th,
+.products-header-row th,
+.challan-products-table th {
+    padding: 11px 10px;
+    border-bottom: 1px solid #d6e3de;
+    color: #465e58;
+    font-size: 0.7rem;
+    font-weight: 750;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.payment-history-table-body .payment-history-row td,
+.products-table-body .product-row td,
+.challan-products-table tbody td {
+    padding: 11px 10px;
+    border-bottom: 1px solid #e8efec;
+    color: #324944 !important;
+    font-size: 0.82rem;
+}
+
+.payment-history-table-body .payment-history-row:nth-child(even),
+.products-table-body .product-row:nth-child(even),
+.challan-products-table tbody tr:nth-child(even) {
+    background: #f8fbfa;
+}
+
+.payment-history-table-body .payment-history-row:hover,
+.products-table-body .product-row:hover,
+.challan-products-table tbody tr:hover {
+    background: #edf7f3;
+}
+
+.payment-amount-cell,
+.rate-cell,
+.quantity-cell,
+.discount-cell,
+.total-cell {
+    font-variant-numeric: tabular-nums;
+}
+
+.payment-amount-cell,
+.total-cell {
+    font-weight: 700;
+}
+
+.products-section,
+.challan-products-section {
+    margin-top: 18px;
+}
+
+.products-table-wrapper,
+.payment-history-table-wrapper,
+.challan-products-body {
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-color: #9db9b0 #edf4f1;
+    scrollbar-width: thin;
+}
+
+.products-table,
+.challan-products-table {
+    min-width: 1040px;
+}
+
+.payment-history-table {
+    min-width: 460px;
+}
+
+.products-header-row th,
+.payment-history-header-row th,
+.challan-products-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.product-name-cell {
+    min-width: 210px;
+}
+
+.product-company-info,
+.challan-product-company-info {
+    color: var(--invoice-muted);
+}
+
+.delete-product-btn {
+    display: inline-grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #f0c8c4;
+    border-radius: 5px;
+    background: #fff3f1;
+    color: #a83f3b;
+}
+
+.delete-product-btn:hover {
+    background: #a83f3b;
+    color: #fff;
+}
+
+.products-table-footer tr td {
+    padding: 9px 10px;
+    color: #425a54;
+    font-size: 0.82rem;
+}
+
+.total-row .total-label-cell,
+.total-row .total-value-cell {
+    border-top-color: #9dc9b8;
+    color: #145d50;
+}
+
+#editSalesInvoiceModal .modal-header {
+    background: linear-gradient(110deg, #176f64, #218d7c);
+}
+
+#editSalesInvoiceForm .form-control:focus,
+#editSalesInvoiceForm .form-select:focus,
+.batch-search input:focus,
+.quick-search-input input:focus {
+    border-color: #218d7c;
+    box-shadow: 0 0 0 3px rgba(33, 141, 124, 0.14);
+}
+
+#addEditProductRow,
+.modal-footer .btn-primary {
+    background: #167d70;
+}
+
+#addEditProductRow:hover,
+.modal-footer .btn-primary:hover {
+    background: #11665c;
+}
+
+@media (max-width: 992px) {
+    .invoice-summary-section {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: stretch;
+    }
+
+    .invoice-info-card {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 640px) {
+    .sales-invoice-detail-container {
+        padding: 12px 10px 82px;
+    }
+
+    .invoice-summary-section {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 11px;
+        margin-bottom: 16px;
+    }
+
+    .invoice-info-card {
+        grid-column: auto;
+    }
+
+    .invoice-info-header,
+    .payment-status-header,
+    .payment-history-header,
+    .products-header,
+    .challan-products-header {
+        min-height: 50px;
+        padding: 11px 13px;
+    }
+
+    .invoice-info-body,
+    .payment-status-body {
+        padding: 13px;
+    }
+
+    .invoice-basic-details {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .invoice-detail-page-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .invoice-detail-page-actions > a,
+    .invoice-detail-page-actions > button {
+        justify-content: center;
+        padding: 9px 8px;
+        font-size: 0.76rem;
+    }
+
+    .payment-amounts-section {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .products-section,
+    .challan-products-section {
+        margin-top: 13px;
+    }
+
+    .products-table,
+    .challan-products-table {
+        min-width: 980px;
+    }
+
+    .payment-history-table {
+        min-width: 420px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .invoice-detail-page-actions > a,
+    .invoice-detail-page-actions > button,
+    .payment-progress-bar {
+        transition: none;
+    }
+}

@@ -14,6 +14,8 @@
 {% block content %}
 <div class="purchase-invoice-detail-container">
     <div class="purchase-invoice-detail-card">
+
+        <!-- Header -->
         <div class="purchase-invoice-detail-header">
             <div class="purchase-invoice-detail-title">
                 <h5 class="purchase-invoice-detail-heading">Invoice Information</h5>
@@ -35,7 +37,10 @@
                 </div>
             </div>
         </div>
+
         <div class="invoice-detail-body">
+
+            <!-- Invoice + supplier info -->
             <div class="invoice-detail-info-grid">
                 <div class="invoice-detail-info-card">
                     <h6><i class="fas fa-file-invoice"></i> Invoice Details</h6>
@@ -47,9 +52,8 @@
                         <span class="invoice-detail-info-label">Date:</span>
                         <span class="invoice-detail-info-value">{{ invoice.invoice_date }}</span>
                     </div>
-
                 </div>
-                
+
                 <div class="invoice-detail-info-card">
                     <h6><i class="fas fa-building"></i> Supplier Information</h6>
                     <div class="invoice-detail-info-item">
@@ -66,19 +70,22 @@
                     </div>
                     <div class="invoice-detail-info-item">
                         <span class="invoice-detail-info-label">Invoice Total:</span>
-                        <span class="invoice-detail-info-value">₹<span id="invoiceTotalDisplay">{{ invoice.invoice_total|floatformat:0 }}</span></span>
-                        <small style="color: #6c757d; font-size: 0.85em;">(Actual: ₹{{ invoice.invoice_total|floatformat:2 }})</small>
+                        <span class="invoice-detail-info-value">
+                            ₹<span id="invoiceTotalDisplay">{{ invoice.invoice_total|floatformat:0 }}</span>
+                            <small class="invoice-detail-actual">(Actual: ₹{{ invoice.invoice_total|floatformat:2 }})</small>
+                        </span>
                     </div>
                 </div>
             </div>
 
+            <!-- Payment summary -->
             <div class="invoice-detail-summary">
                 <h6><i class="fas fa-chart-pie"></i> Payment Summary</h6>
                 <div class="invoice-detail-summary-grid">
                     <div class="invoice-detail-summary-item">
                         <div class="invoice-detail-summary-label">Total Amount</div>
                         <div class="invoice-detail-summary-value">₹{{ invoice.invoice_total|floatformat:0 }}</div>
-                        <small style="color: #6c757d; font-size: 0.8em;">(₹{{ invoice.invoice_total|floatformat:2 }})</small>
+                        <small class="invoice-detail-actual">(₹{{ invoice.invoice_total|floatformat:2 }})</small>
                     </div>
                     <div class="invoice-detail-summary-item">
                         <div class="invoice-detail-summary-label">Amount Paid</div>
@@ -92,7 +99,7 @@
                 <div class="payment-progress-container">
                     <div class="payment-progress-bar">
                         {% if invoice.invoice_total > 0 %}
-                        <div class="payment-progress-fill" style="width: {{ invoice.invoice_paid|divide:invoice.invoice_total|multiply:100 }}%;">
+                        <div class="payment-progress-fill" data-percent="{{ invoice.invoice_paid|divide:invoice.invoice_total|multiply:100 }}">
                             {{ invoice.invoice_paid|divide:invoice.invoice_total|multiply:100|floatformat:1 }}%
                         </div>
                         {% endif %}
@@ -100,6 +107,7 @@
                 </div>
             </div>
 
+            <!-- Payment history -->
             <div class="invoice-detail-products-section">
                 <div class="invoice-detail-products-header">
                     <h6><i class="fas fa-credit-card"></i> Payment History</h6>
@@ -109,43 +117,46 @@
                     </button>
                     {% endif %}
                 </div>
-                <table class="invoice-detail-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Amount</th>
-                            <th>Mode</th>
-                            <th>Reference</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for payment in payments %}
-                        <tr>
-                            <td>{{ payment.payment_date }}</td>
-                            <td>{{ payment.payment_amount|currency }}</td>
-                            <td>{{ payment.payment_mode }}</td>
-                            <td>{{ payment.payment_ref_no }}</td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button type="button" onclick="openEditPaymentDialog({{ payment.payment_id }}, '{{ payment.payment_date }}', {{ payment.payment_amount }}, '{{ payment.payment_mode }}', '{{ payment.payment_ref_no|default:"" }}')" class="invoice-detail-btn invoice-detail-btn-secondary btn-small">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button type="button" onclick="confirmDeletePayment({{ payment.payment_id }}, {{ payment.payment_amount }})" class="invoice-detail-btn invoice-detail-btn-danger btn-small">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="no-data">No payments recorded</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="table-scroll">
+                    <table class="invoice-detail-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Mode</th>
+                                <th>Reference</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payments %}
+                            <tr>
+                                <td>{{ payment.payment_date }}</td>
+                                <td>{{ payment.payment_amount|currency }}</td>
+                                <td>{{ payment.payment_mode }}</td>
+                                <td>{{ payment.payment_ref_no }}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button type="button" onclick="openEditPaymentDialog({{ payment.payment_id }}, '{{ payment.payment_date }}', {{ payment.payment_amount }}, '{{ payment.payment_mode }}', '{{ payment.payment_ref_no|default:"" }}')" class="invoice-detail-btn invoice-detail-btn-secondary btn-small" title="Edit payment">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" onclick="confirmDeletePayment({{ payment.payment_id }}, {{ payment.payment_amount }})" class="invoice-detail-btn invoice-detail-btn-danger btn-small" title="Delete payment">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="no-data">No payments recorded</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
+            <!-- Invoice products -->
             <div class="invoice-detail-products-section">
                 <div class="invoice-detail-products-header">
                     <h6><i class="fas fa-boxes"></i> Invoice Products</h6>
@@ -153,147 +164,144 @@
                         <i class="fas fa-plus"></i> Add New Product
                     </button>
                 </div>
-                <table class="invoice-detail-table">
-                    <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Batch No</th>
-                            <th>Expiry</th>
-                            <th>MRP</th>
-                            <th>Rate</th>
-                            <th>Qty</th>
-                            <th>Free Qty</th>
-                            <th>Discount</th>
-                            <th>CGST %</th>
-                            <th>SGST %</th>
-                            <th>Total</th>
-                            <th>Rate A</th>
-                            <th>Rate B</th>
-                            <th>Rate C</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for purchase in purchases %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'product_detail' pk=purchase.productid.productid %}">
-                                    {{ purchase.product_name }}
-                                </a>
-                                <div class="small text-muted">{{ purchase.product_company }} - {{ purchase.product_packing }}</div>
-                            </td>
-                            <td>{{ purchase.product_batch_no }}</td>
-                            <td>{{ purchase.product_expiry }}</td>
-                            <td>{{ purchase.product_MRP|currency }}</td>
-                            <td>{{ purchase.product_purchase_rate|currency }}</td>
-                            <td>{{ purchase.product_quantity }}</td>
-                            <td>{{ purchase.product_free_qty|default:0 }}</td>
-                            <td>
-                                {% if purchase.purchase_calculation_mode == 'flat' %}
-                                    {{ purchase.product_discount_got|currency }}
-                                {% else %}
-                                    {{ purchase.product_discount_got }}%
-                                {% endif %}
-                            </td>
-                            <td>{{ purchase.CGST }}%</td>
-                            <td>{{ purchase.SGST }}%</td>
-                            <td>{{ purchase.total_amount|currency }}</td>
-                            <td>{{ purchase.rate_a|default:0|currency }}</td>
-                            <td>{{ purchase.rate_b|default:0|currency }}</td>
-                            <td>{{ purchase.rate_c|default:0|currency }}</td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button type="button" onclick="confirmDeletePurchase({{ purchase.purchaseid }}, '{{ purchase.product_name|escapejs }}')" class="invoice-detail-btn invoice-detail-btn-danger btn-small">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="14" class="no-data">No products added to this invoice</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot class="table-footer">
-                        <tr>
-                            <td colspan="10" style="text-align:right;font-weight:600;">Subtotal (before discount):</td>
-                            <td style="font-weight:600;">
-                                ₹<span id="detailSubtotal">{{ purchases|subtotal_amount }}</span>
-                            </td>
-                            <td colspan="3"></td>
-                        </tr>
-                        <tr style="color:#e74c3c;">
-                            <td colspan="10" style="text-align:right;font-weight:600;">Total Discount (₹):</td>
-                            <td style="font-weight:600;color:#e74c3c;">- ₹<span id="detailDiscount">{{ purchases|total_discount }}</span></td>
-                            <td colspan="3"></td>
-                        </tr>
-                        <tr>
-                            <td colspan="10" style="text-align:right;font-weight:600;">Taxable Amount:</td>
-                            <td style="font-weight:600;">₹<span id="detailTaxable">{{ purchases|taxable_amount }}</span></td>
-                            <td colspan="3"></td>
-                        </tr>
-                        <tr>
-                            <td colspan="10" style="text-align:right;font-weight:600;">Total GST (CGST + SGST):</td>
-                            <td style="font-weight:600;">₹<span id="detailGST">{{ purchases|total_gst }}</span></td>
-                            <td colspan="3"></td>
-                        </tr>
-                        <tr style="border-top:1px solid #dee2e6;">
-                            <td colspan="10" style="text-align:right;font-weight:600;"><strong>Sum of Products:</strong></td>
-                            <td style="font-weight:600;">{{ purchases_total|currency }}</td>
-                            <td colspan="3"></td>
-                        </tr>
-                        <tr>
-                            <td colspan="10" style="text-align:right;font-weight:600;"><strong>Transport Charges:</strong></td>
-                            <td style="font-weight:600;">{{ invoice.transport_charges|currency }}</td>
-                            <td colspan="3"></td>
-                        </tr>
-                        {% with products_plus_transport=purchases_total|add:invoice.transport_charges %}
-                        {% if invoice.invoice_total < products_plus_transport %}
-                        <tr style="color:#c62828;">
-                            <td colspan="10" style="text-align:right;font-weight:600;"><strong>Whole Invoice Discount:</strong></td>
-                            <td style="font-weight:600;color:#c62828;">- ₹<span id="wholeDiscDetailDisplay">0.00</span></td>
-                            <td colspan="3"></td>
-                        </tr>
-                        {% endif %}
-                        {% endwith %}
-                        <tr class="grand-total-row">
-                            <td colspan="10" style="text-align:right;font-weight:700;color:#2c3e50;"><strong>Invoice Total:</strong></td>
-                            <td style="font-weight:700;color:#2c3e50;">₹{{ invoice.invoice_total|floatformat:0 }}</td>
-                            <td colspan="3"></td>
-                        </tr>
-                        <tr>
-                            <td colspan="10" style="text-align:right;color:#6c757d;font-size:0.9em;">Actual Amount:</td>
-                            <td style="color:#6c757d;font-size:0.9em;">₹{{ invoice.invoice_total|floatformat:2 }}</td>
-                            <td colspan="3"></td>
-                        </tr>
-                        {% if has_pending_entries %}
-                        <tr class="pending-entries-row">
-                            <td colspan="10">
-                                <strong>Pending Entries:</strong>
-                                <div style="font-size:0.8rem;color:#e74c3c;">
-                                    {% if invoice_pending > 0 %}
-                                    There are missing product entries worth {{ invoice_pending|currency }}
+                <div class="table-scroll">
+                    <table class="invoice-detail-table invoice-products-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Batch No</th>
+                                <th>Expiry</th>
+                                <th>MRP</th>
+                                <th>Rate</th>
+                                <th>Qty</th>
+                                <th>Free Qty</th>
+                                <th>Discount</th>
+                                <th>CGST %</th>
+                                <th>SGST %</th>
+                                <th>Total</th>
+                                <th>Rate A</th>
+                                <th>Rate B</th>
+                                <th>Rate C</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for purchase in purchases %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'product_detail' pk=purchase.productid.productid %}" class="invoice-product-link">
+                                        {{ purchase.product_name }}
+                                    </a>
+                                    <div class="invoice-product-meta">{{ purchase.product_company }} - {{ purchase.product_packing }}</div>
+                                </td>
+                                <td>{{ purchase.product_batch_no }}</td>
+                                <td>{{ purchase.product_expiry }}</td>
+                                <td>{{ purchase.product_MRP|currency }}</td>
+                                <td>{{ purchase.product_purchase_rate|currency }}</td>
+                                <td>{{ purchase.product_quantity }}</td>
+                                <td>{{ purchase.product_free_qty|default:0 }}</td>
+                                <td>
+                                    {% if purchase.purchase_calculation_mode == 'flat' %}
+                                        {{ purchase.product_discount_got|currency }}
                                     {% else %}
-                                    Product entries exceed invoice total by {{ invoice_pending|absolute|currency }}
+                                        {{ purchase.product_discount_got }}%
                                     {% endif %}
-                                </div>
-                            </td>
-                            <td style="color:#e74c3c;font-weight:600;">{{ invoice_pending|currency }}</td>
-                            <td colspan="3"></td>
-                        </tr>
-                        {% endif %}
-                    </tfoot>
-                </table>
+                                </td>
+                                <td>{{ purchase.CGST }}%</td>
+                                <td>{{ purchase.SGST }}%</td>
+                                <td class="cell-total">{{ purchase.total_amount|currency }}</td>
+                                <td>{{ purchase.rate_a|default:0|currency }}</td>
+                                <td>{{ purchase.rate_b|default:0|currency }}</td>
+                                <td>{{ purchase.rate_c|default:0|currency }}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button type="button" onclick="confirmDeletePurchase({{ purchase.purchaseid }}, '{{ purchase.product_name|escapejs }}')" class="invoice-detail-btn invoice-detail-btn-danger btn-small" title="Delete product">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="15" class="no-data">No products added to this invoice</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-footer">
+                            <tr>
+                                <td colspan="10" class="tfoot-label">Subtotal (before discount):</td>
+                                <td class="tfoot-value">₹<span id="detailSubtotal">{{ purchases|subtotal_amount }}</span></td>
+                                <td colspan="4"></td>
+                            </tr>
+                            <tr class="tfoot-discount-row">
+                                <td colspan="10" class="tfoot-label">Total Discount (₹):</td>
+                                <td class="tfoot-value">- ₹<span id="detailDiscount">{{ purchases|total_discount }}</span></td>
+                                <td colspan="4"></td>
+                            </tr>
+                            <tr>
+                                <td colspan="10" class="tfoot-label">Taxable Amount:</td>
+                                <td class="tfoot-value">₹<span id="detailTaxable">{{ purchases|taxable_amount }}</span></td>
+                                <td colspan="4"></td>
+                            </tr>
+                            <tr>
+                                <td colspan="10" class="tfoot-label">Total GST (CGST + SGST):</td>
+                                <td class="tfoot-value">₹<span id="detailGST">{{ purchases|total_gst }}</span></td>
+                                <td colspan="4"></td>
+                            </tr>
+                            <tr class="tfoot-divider-row">
+                                <td colspan="10" class="tfoot-label">Sum of Products:</td>
+                                <td class="tfoot-value">{{ purchases_total|currency }}</td>
+                                <td colspan="4"></td>
+                            </tr>
+                            <tr>
+                                <td colspan="10" class="tfoot-label">Transport Charges:</td>
+                                <td class="tfoot-value">{{ invoice.transport_charges|currency }}</td>
+                                <td colspan="4"></td>
+                            </tr>
+                            {% with products_plus_transport=purchases_total|add:invoice.transport_charges %}
+                            {% if invoice.invoice_total < products_plus_transport %}
+                            <tr class="tfoot-discount-row">
+                                <td colspan="10" class="tfoot-label">Whole Invoice Discount:</td>
+                                <td class="tfoot-value">- ₹<span id="wholeDiscDetailDisplay">0.00</span></td>
+                                <td colspan="4"></td>
+                            </tr>
+                            {% endif %}
+                            {% endwith %}
+                            <tr class="grand-total-row">
+                                <td colspan="10" class="tfoot-label">Invoice Total:</td>
+                                <td class="tfoot-value">₹{{ invoice.invoice_total|floatformat:0 }}</td>
+                                <td colspan="4"></td>
+                            </tr>
+                            <tr class="tfoot-muted-row">
+                                <td colspan="10" class="tfoot-label">Actual Amount:</td>
+                                <td class="tfoot-value">₹{{ invoice.invoice_total|floatformat:2 }}</td>
+                                <td colspan="4"></td>
+                            </tr>
+                            {% if has_pending_entries %}
+                            <tr class="pending-entries-row">
+                                <td colspan="10">
+                                    <strong>Pending Entries:</strong>
+                                    <div class="pending-entries-text">
+                                        {% if invoice_pending > 0 %}
+                                        There are missing product entries worth {{ invoice_pending|currency }}
+                                        {% else %}
+                                        Product entries exceed invoice total by {{ invoice_pending|absolute|currency }}
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="tfoot-value">{{ invoice_pending|currency }}</td>
+                                <td colspan="4"></td>
+                            </tr>
+                            {% endif %}
+                        </tfoot>
+                    </table>
+                </div>
             </div>
-            
 
-            
             <div class="invoice-detail-btn-group">
-                <a href="{% url 'print_gst_purchase_invoice' invoice_id=invoice.invoiceid %}" target="_blank" class="invoice-detail-btn invoice-detail-btn-primary">
+                <a href="{% url 'print_gst_purchase_invoice' invoice_id=invoice.invoiceid %}" target="_blank" rel="noopener" class="invoice-detail-btn invoice-detail-btn-primary">
                     <i class="fas fa-print"></i> Print Receipt
                 </a>
-               
                 <a href="{% url 'invoice_list' %}" class="invoice-detail-btn invoice-detail-btn-secondary">
                     <i class="fas fa-arrow-left"></i> Back to Invoices
                 </a>
@@ -303,11 +311,11 @@
 </div>
 
 <!-- Edit Invoice Modal -->
-<div id="editInvoiceModal" class="modal" style="display: none;">
+<div id="editInvoiceModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editInvoiceTitle">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Edit Invoice #{{ invoice.invoice_no }}</h3>
-            <span class="close" onclick="closeEditInvoiceModal()">&times;</span>
+            <h3 id="editInvoiceTitle">Edit Invoice #{{ invoice.invoice_no }}</h3>
+            <span class="close" onclick="closeEditInvoiceModal()" role="button" aria-label="Close">&times;</span>
         </div>
         <div class="modal-body">
             <form id="editInvoiceForm" method="post">
@@ -331,54 +339,54 @@
                             {% endfor %}
                         </select>
                     </div>
-
                     <div class="form-group">
                         <label for="transport_charges">Transport Charges:</label>
                         <input type="number" id="transport_charges" name="transport_charges" value="{{ invoice.transport_charges }}" step="0.01">
                     </div>
                 </div>
-                
-                <h4>Products</h4>
+
+                <h4 class="modal-section-title">Products</h4>
                 <div id="productsContainer">
                     <!-- Existing products will be loaded here -->
                 </div>
-                
+
                 <button type="button" onclick="addNewProduct()" class="btn btn-secondary">
                     <i class="fas fa-plus"></i> Add New Product
                 </button>
-                
-                <div class="invoice-total-display" style="margin-top: 1.5rem; padding: 1rem; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #27ae60;">
-                    <!-- Whole Invoice Discount Section -->
-                    <div style="margin-bottom:1rem;padding:12px;background:#fff8e1;border:1.5px solid #ffb300;border-radius:8px;">
-                        <div style="font-weight:700;color:#5d4037;margin-bottom:8px;"><i class="fas fa-tag"></i> Whole Invoice Discount (Optional)</div>
-                        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
-                            <div style="display:flex;gap:12px;">
-                                <label style="cursor:pointer;font-weight:600;color:#3e2723;"><input type="radio" name="edit_whole_disc_type" id="editWholeDiscFlat" value="flat" checked onchange="updateInvoiceTotal()"> Flat ₹</label>
-                                <label style="cursor:pointer;font-weight:600;color:#3e2723;"><input type="radio" name="edit_whole_disc_type" id="editWholeDiscPercent" value="percentage" onchange="updateInvoiceTotal()"> %</label>
+
+                <div class="invoice-total-display">
+                    <!-- Whole invoice discount -->
+                    <div class="whole-discount-box">
+                        <div class="whole-discount-title"><i class="fas fa-tag"></i> Whole Invoice Discount (Optional)</div>
+                        <div class="whole-discount-controls">
+                            <div class="whole-discount-radios">
+                                <label><input type="radio" name="edit_whole_disc_type" id="editWholeDiscFlat" value="flat" checked onchange="updateInvoiceTotal()"> Flat ₹</label>
+                                <label><input type="radio" name="edit_whole_disc_type" id="editWholeDiscPercent" value="percentage" onchange="updateInvoiceTotal()"> %</label>
                             </div>
-                            <input type="number" id="editWholeDiscountAmount" name="whole_discount_amount" min="0" step="any" placeholder="0" value="0" style="padding:8px 12px;border:2px solid #ffb300;border-radius:8px;width:140px;" oninput="updateInvoiceTotal()">
+                            <input type="number" id="editWholeDiscountAmount" name="whole_discount_amount" class="whole-discount-input" min="0" step="any" placeholder="0" value="0" oninput="updateInvoiceTotal()">
                             <input type="hidden" name="whole_discount_type" id="editWholeDiscountTypeHidden" value="flat">
-                            <span style="font-size:0.88rem;color:#5d4037;">Discount: <strong id="editWholeDiscDisplay" style="color:#c62828;">₹0.00</strong></span>
+                            <span class="whole-discount-label">Discount: <strong id="editWholeDiscDisplay">₹0.00</strong></span>
                         </div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="font-weight: 600; color: #1a1a1a;">Products Total:</span>
-                        <span id="productsTotal" style="font-weight: 600; color: #27ae60;">₹0.00</span>
+
+                    <div class="total-row">
+                        <span class="total-row-label">Products Total:</span>
+                        <span id="productsTotal" class="total-row-value total-row-value--products">₹0.00</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="font-weight: 600; color: #1a1a1a;">Transport Charges:</span>
-                        <span id="transportChargesDisplay" style="font-weight: 600; color: #1565c0;">₹0.00</span>
+                    <div class="total-row">
+                        <span class="total-row-label">Transport Charges:</span>
+                        <span id="transportChargesDisplay" class="total-row-value total-row-value--transport">₹0.00</span>
                     </div>
-                    <div id="editWholeDiscRow" style="display:none;justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="font-weight:600;color:#c62828;">Whole Discount:</span>
-                        <span id="editWholeDiscRowVal" style="font-weight:600;color:#c62828;">₹0.00</span>
+                    <div id="editWholeDiscRow" class="total-row total-row--discount">
+                        <span class="total-row-label">Whole Discount:</span>
+                        <span id="editWholeDiscRowVal" class="total-row-value">₹0.00</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; padding-top: 0.5rem; border-top: 2px solid #27ae60;">
-                        <span style="font-weight: 700; font-size: 1.1rem; color: #1a1a1a;">Invoice Total:</span>
-                        <span id="invoiceTotal" style="font-weight: 700; font-size: 1.1rem; color: #1b5e20;">₹0.00</span>
+                    <div class="total-row total-row--grand">
+                        <span class="total-row-label">Invoice Total:</span>
+                        <span id="invoiceTotal" class="total-row-value">₹0.00</span>
                     </div>
                 </div>
-                
+
                 <div class="modal-footer">
                     <button type="button" onclick="closeEditInvoiceModal()" class="btn btn-secondary">Cancel</button>
                     <button type="submit" class="btn btn-primary">Update Invoice</button>
@@ -387,321 +395,19 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function openEditInvoiceModal() {
-    document.getElementById('editInvoiceModal').style.display = 'block';
-    loadExistingProducts();
-    
-    // Autofill whole discount if it was applied when invoice was saved
-    // Must be set AFTER loadExistingProducts() so updateInvoiceTotal() recalculates with correct discount
-    var productsTotal = {{ purchases_total|default:0 }};
-    var transport = {{ invoice.transport_charges|default:0 }};
-    var invoiceTotal = {{ invoice.invoice_total|default:0 }};
-    var savedWholeDisc = (productsTotal + transport) - invoiceTotal;
-    if (savedWholeDisc > 0.01) {
-        document.getElementById('editWholeDiscountAmount').value = savedWholeDisc.toFixed(2);
-        updateInvoiceTotal(); // recalculate now that discount is filled
-    }
-    
-    // Add event listener for transport charges (guard against duplicate listeners)
-    const transportInput = document.getElementById('transport_charges');
-    if (transportInput && !transportInput.dataset.listenerAdded) {
-        transportInput.addEventListener('input', updateInvoiceTotal);
-        transportInput.dataset.listenerAdded = '1';
-    }
-}
-
-function closeEditInvoiceModal() {
-    document.getElementById('editInvoiceModal').style.display = 'none';
-}
-
-function loadExistingProducts() {
-    const container = document.getElementById('productsContainer');
-    if (!container) return;
-    
-    container.innerHTML = '';
-    
-    {% for purchase in purchases %}
-    addProductRow({
-        productid: {{ purchase.productid.productid }},
-        product_name: '{{ purchase.product_name|escapejs }}',
-        product_batch_no: '{{ purchase.product_batch_no|escapejs }}',
-        product_expiry: formatExpiryToMMYYYY('{{ purchase.product_expiry }}'),
-        product_MRP: {{ purchase.product_MRP }},
-        product_purchase_rate: {{ purchase.product_purchase_rate }},
-        product_quantity: {{ purchase.product_quantity }},
-        product_free_qty: {{ purchase.product_free_qty|default:0 }},
-        product_discount_got: {{ purchase.product_discount_got }},
-        purchase_calculation_mode: '{{ purchase.purchase_calculation_mode }}',
-        CGST: {{ purchase.CGST }},
-        SGST: {{ purchase.SGST }},
-        rate_A: {{ purchase.rate_a|default:0 }},
-        rate_B: {{ purchase.rate_b|default:0 }},
-        rate_C: {{ purchase.rate_c|default:0 }}
-    });
-    {% endfor %}
-    
-    updateInvoiceTotal();
-}
-</script>
-<style>
-.modal {
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-}
-
-.modal-content {
-    background-color: #fefefe;
-    margin: 2% auto;
-    padding: 0;
-    border-radius: 10px;
-    width: 90%;
-    max-width: 1200px;
-    max-height: 90vh;
-    overflow-y: auto;
-}
-
-.modal-header {
-    background: linear-gradient(135deg, #2c3e50, #34495e);
-    color: white;
-    padding: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-radius: 10px 10px 0 0;
-}
-
-.modal-body {
-    padding: 1.5rem;
-}
-
-.close {
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.form-group label {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #2c3e50;
-}
-
-.form-group input, .form-group select {
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    font-size: 0.9rem;
-}
-
-.product-row {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    background: #f8f9fa;
-}
-
-.product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.btn {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: 600;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, #27ae60, #229954);
-    color: white;
-}
-
-.btn-secondary {
-    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-    color: white;
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-    color: white;
-}
-
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 2rem;
-    padding-top: 1rem;
-    border-top: 1px solid #ddd;
-}
-
-/* Quick Search Modal Styles */
-.quick-search-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.quick-search-content {
-    background: white;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 80vh;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    animation: quickSearchFadeIn 0.2s ease-out;
-}
-
-@keyframes quickSearchFadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.9) translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-    }
-}
-
-.quick-search-header {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    color: white;
-    padding: 1rem;
-    text-align: center;
-}
-
-.quick-search-header h4 {
-    margin: 0;
-    font-size: 1.2rem;
-}
-
-.quick-search-header small {
-    opacity: 0.9;
-    font-size: 0.85rem;
-}
-
-.quick-search-input {
-    padding: 1rem;
-    border-bottom: 1px solid #eee;
-}
-
-.quick-search-input input {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    font-size: 1rem;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-.quick-search-input input:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-}
-
-.quick-search-results {
-    max-height: 400px;
-    overflow-y: auto;
-    padding: 0.5rem;
-}
-
-.quick-result-item {
-    padding: 0.75rem;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: 1px solid transparent;
-    margin-bottom: 0.25rem;
-}
-
-.quick-result-item:hover,
-.quick-result-item.selected {
-    background: #f8f9fa;
-    border-color: #007bff;
-    transform: translateX(4px);
-}
-
-.product-name {
-    font-weight: 600;
-    color: #2c3e50;
-    margin-bottom: 0.25rem;
-}
-
-.product-company {
-    font-size: 0.85rem;
-    color: #6c757d;
-}
-
-.quick-hint,
-.no-results {
-    text-align: center;
-    padding: 2rem;
-    color: #6c757d;
-    font-style: italic;
-}
-
-.quick-search-footer {
-    background: #f8f9fa;
-    padding: 0.75rem;
-    text-align: center;
-    border-top: 1px solid #eee;
-}
-
-.quick-search-footer small {
-    color: #6c757d;
-    font-size: 0.8rem;
-}
-</style>
-
-<script>
 let productCounter = 0;
 
-// Global product cache for search
+/* ------------------------------------------------------------------
+   Product cache (used by quick search)
+------------------------------------------------------------------ */
 window.productCache = [];
 
-// Function to refresh product cache when new product is added
-window.refreshProductCache = function(newProduct) {
+window.refreshProductCache = function (newProduct) {
     console.log('Refreshing product cache with new product:', newProduct);
-    
     if (newProduct && newProduct.id) {
         window.productCache.push({
             id: newProduct.id,
@@ -712,8 +418,7 @@ window.refreshProductCache = function(newProduct) {
     }
 };
 
-// Initialize product cache on page load
-window.initializeProductCache = function() {
+window.initializeProductCache = function () {
     window.productCache = [{% for product in products %}{
         id: {{ product.productid }},
         name: '{{ product.product_name|escapejs }}',
@@ -722,113 +427,55 @@ window.initializeProductCache = function() {
     console.log('Product cache initialized with', window.productCache.length, 'products');
 };
 
-// Handle form submission
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize product cache
-    window.initializeProductCache();
-    
-    const editForm = document.getElementById('editInvoiceForm');
-    if (editForm) {
-        editForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            
-            // Collect product data
-            const products = [];
-            const productRows = document.querySelectorAll('.product-row');
-            
-            productRows.forEach(row => {
-                const productSelect = row.querySelector('select[name*="[productid]"]');
-                const batchInput = row.querySelector('input[name*="[batch_no]"]');
-                const expiryInput = row.querySelector('input[name*="[expiry]"]');
-                const mrpInput = row.querySelector('input[name*="[mrp]"]');
-                const rateInput = row.querySelector('input[name*="[purchase_rate]"]');
-                const qtyInput = row.querySelector('input[name*="[quantity]"]');
-                const freeQtyInput = row.querySelector('input[name*="[free_qty]"]');
-                const discountInput = row.querySelector('input[name*="[discount]"]');
-                const calcModeSelect = row.querySelector('select[name*="[calculation_mode]"]');
-                const cgstInput = row.querySelector('input[name*="[cgst]"]');
-                const sgstInput = row.querySelector('input[name*="[sgst]"]');
-                const rateAInput = row.querySelector('input[name*="[rate_a]"]');
-                const rateBInput = row.querySelector('input[name*="[rate_b]"]');
-                const rateCInput = row.querySelector('input[name*="[rate_c]"]');
-                
-                if (productSelect && productSelect.value) {
-                    products.push({
-                        productid: productSelect.value,
-                        batch_no: batchInput ? batchInput.value : '',
-                        expiry: expiryInput ? expiryInput.value : '',
-                        mrp: mrpInput ? parseFloat(mrpInput.value) || 0 : 0,
-                        purchase_rate: rateInput ? parseFloat(rateInput.value) || 0 : 0,
-                        quantity: qtyInput ? parseFloat(qtyInput.value) || 0 : 0,
-                        free_qty: freeQtyInput ? parseFloat(freeQtyInput.value) || 0 : 0,
-                        discount: discountInput ? parseFloat(discountInput.value) || 0 : 0,
-                        calculation_mode: calcModeSelect ? calcModeSelect.value : 'flat',
-                        cgst: cgstInput ? parseFloat(cgstInput.value) || 0 : 0,
-                        sgst: sgstInput ? parseFloat(sgstInput.value) || 0 : 0,
-                        rate_A: rateAInput ? (parseFloat(rateAInput.value) || 0) : 0,
-                        rate_B: rateBInput ? (parseFloat(rateBInput.value) || 0) : 0,
-                        rate_C: rateCInput ? (parseFloat(rateCInput.value) || 0) : 0,
-                        rate_a: rateAInput ? (parseFloat(rateAInput.value) || 0) : 0,
-                        rate_b: rateBInput ? (parseFloat(rateBInput.value) || 0) : 0,
-                        rate_c: rateCInput ? (parseFloat(rateCInput.value) || 0) : 0
-                    });
-                }
-            });
-            
-            // Add products data as JSON
-            formData.append('products_data', JSON.stringify(products));
-            
-            fetch('{% url "edit_invoice" pk=invoice.invoiceid %}', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.error || 'Unknown error'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error updating invoice');
-            });
-        });
-    }
-});
+function escapeHtml(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 
-function formatExpiryToMMYYYY(dateStr) {
-    if (!dateStr) return '';
-    
-    // If already in MM-YYYY format, return as is
-    if (/^(0[1-9]|1[0-2])-[0-9]{4}$/.test(dateStr)) {
-        return dateStr;
+/* ------------------------------------------------------------------
+   Edit invoice modal
+------------------------------------------------------------------ */
+function openEditInvoiceModal() {
+    document.getElementById('editInvoiceModal').classList.add('is-open');
+    document.body.classList.add('modal-open');
+    loadExistingProducts();
+
+    // Autofill whole discount if it was applied when invoice was saved.
+    // Must run AFTER loadExistingProducts() so updateInvoiceTotal() recalculates with the right discount.
+    var productsTotal = {{ purchases_total|default:0 }};
+    var transport = {{ invoice.transport_charges|default:0 }};
+    var invoiceTotal = {{ invoice.invoice_total|default:0 }};
+    var savedWholeDisc = (productsTotal + transport) - invoiceTotal;
+    if (savedWholeDisc > 0.01) {
+        document.getElementById('editWholeDiscountAmount').value = savedWholeDisc.toFixed(2);
+        updateInvoiceTotal();
     }
-    
-    // Convert YYYY-MM-DD to MM-YYYY
-    if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(dateStr)) {
-        const parts = dateStr.split('-');
-        return `${parts[1]}-${parts[0]}`;
+
+    // Transport charges listener (guard against duplicates)
+    const transportInput = document.getElementById('transport_charges');
+    if (transportInput && !transportInput.dataset.listenerAdded) {
+        transportInput.addEventListener('input', updateInvoiceTotal);
+        transportInput.dataset.listenerAdded = '1';
     }
-    
-    // Convert MMYY to MM-YYYY
-    if (/^[0-9]{4}$/.test(dateStr)) {
-        return `${dateStr.substring(0,2)}-20${dateStr.substring(2,4)}`;
-    }
-    
-    return dateStr;
+}
+
+function closeEditInvoiceModal() {
+    document.getElementById('editInvoiceModal').classList.remove('is-open');
+    document.body.classList.remove('modal-open');
+}
+
+function isEditModalOpen() {
+    const modal = document.getElementById('editInvoiceModal');
+    return !!(modal && modal.classList.contains('is-open'));
 }
 
 function loadExistingProducts() {
     const container = document.getElementById('productsContainer');
+    if (!container) return;
+
     container.innerHTML = '';
-    
+
     {% for purchase in purchases %}
     addProductRow({
         productid: {{ purchase.productid.productid }},
@@ -848,14 +495,34 @@ function loadExistingProducts() {
         rate_C: {{ purchase.rate_c|default:0 }}
     });
     {% endfor %}
-    
+
     updateInvoiceTotal();
 }
 
+function formatExpiryToMMYYYY(dateStr) {
+    if (!dateStr) return '';
+
+    if (/^(0[1-9]|1[0-2])-[0-9]{4}$/.test(dateStr)) return dateStr;
+
+    if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(dateStr)) {
+        const parts = dateStr.split('-');
+        return `${parts[1]}-${parts[0]}`;
+    }
+
+    if (/^[0-9]{4}$/.test(dateStr)) {
+        return `${dateStr.substring(0, 2)}-20${dateStr.substring(2, 4)}`;
+    }
+
+    return dateStr;
+}
+
+/* ------------------------------------------------------------------
+   Totals inside edit modal
+------------------------------------------------------------------ */
 function updateInvoiceTotal() {
     let productsTotal = 0;
     const productRows = document.querySelectorAll('.product-row');
-    
+
     productRows.forEach(row => {
         const rateInput = row.querySelector('input[name*="[purchase_rate]"]');
         const qtyInput = row.querySelector('input[name*="[quantity]"]');
@@ -863,7 +530,7 @@ function updateInvoiceTotal() {
         const calcModeSelect = row.querySelector('select[name*="[calculation_mode]"]');
         const cgstInput = row.querySelector('input[name*="[cgst]"]');
         const sgstInput = row.querySelector('input[name*="[sgst]"]');
-        
+
         if (rateInput && qtyInput) {
             const rate = parseFloat(rateInput.value) || 0;
             const qty = parseFloat(qtyInput.value) || 0;
@@ -871,20 +538,19 @@ function updateInvoiceTotal() {
             const calcMode = calcModeSelect ? calcModeSelect.value : 'flat';
             const cgst = parseFloat(cgstInput?.value) || 0;
             const sgst = parseFloat(sgstInput?.value) || 0;
-            
+
             const baseAmount = rate * qty;
             const discountAmt = calcMode === 'percentage' ? (baseAmount * discount / 100) : discount;
             const afterDiscount = baseAmount - discountAmt;
             const gstAmount = (afterDiscount * (cgst + sgst)) / 100;
-            const total = afterDiscount + gstAmount;
-            
-            productsTotal += total;
+
+            productsTotal += afterDiscount + gstAmount;
         }
     });
-    
+
     const transportCharges = parseFloat(document.getElementById('transport_charges')?.value) || 0;
 
-    // Whole invoice discount in edit modal
+    // Whole invoice discount
     const editWholeDiscTypeEl = document.querySelector('input[name="edit_whole_disc_type"]:checked');
     const editWholeDiscType = editWholeDiscTypeEl ? editWholeDiscTypeEl.value : 'flat';
     const editWholeDiscVal = parseFloat(document.getElementById('editWholeDiscountAmount')?.value) || 0;
@@ -894,14 +560,14 @@ function updateInvoiceTotal() {
             ? Math.min(productsTotal * editWholeDiscVal / 100, productsTotal)
             : Math.min(editWholeDiscVal, productsTotal);
     }
-    // Sync hidden field and display
+
     const hiddenDiscType = document.getElementById('editWholeDiscountTypeHidden');
     if (hiddenDiscType) hiddenDiscType.value = editWholeDiscType;
     const wholeDiscDisplay = document.getElementById('editWholeDiscDisplay');
     if (wholeDiscDisplay) wholeDiscDisplay.textContent = '₹' + wholeDisc.toFixed(2);
     const wholeDiscRow = document.getElementById('editWholeDiscRow');
     if (wholeDiscRow) {
-        wholeDiscRow.style.display = wholeDisc > 0 ? 'flex' : 'none';
+        wholeDiscRow.classList.toggle('is-visible', wholeDisc > 0);
         const wholeDiscRowVal = document.getElementById('editWholeDiscRowVal');
         if (wholeDiscRowVal) wholeDiscRowVal.textContent = '₹' + wholeDisc.toFixed(2);
     }
@@ -909,19 +575,22 @@ function updateInvoiceTotal() {
     const rawTotal = productsTotal + transportCharges - wholeDisc;
     const roundedTotal = Math.round(rawTotal);
     const roundoffAmount = roundedTotal - rawTotal;
-    
+
     document.getElementById('productsTotal').textContent = '₹' + productsTotal.toFixed(2);
     document.getElementById('transportChargesDisplay').textContent = '₹' + transportCharges.toFixed(2);
-    
+
     const invoiceTotalElement = document.getElementById('invoiceTotal');
     if (Math.abs(roundoffAmount) > 0.001) {
         const sign = roundoffAmount > 0 ? '+' : '-';
-        invoiceTotalElement.innerHTML = `₹${roundedTotal} <small style="color: #6c757d; font-size: 0.85em;">(₹${rawTotal.toFixed(2)} ${sign} ${Math.abs(roundoffAmount).toFixed(2)})</small>`;
+        invoiceTotalElement.innerHTML = `₹${roundedTotal} <small class="total-sub">(₹${rawTotal.toFixed(2)} ${sign} ${Math.abs(roundoffAmount).toFixed(2)})</small>`;
     } else {
-        invoiceTotalElement.innerHTML = `₹${roundedTotal} <small style="color: #6c757d; font-size: 0.85em;">(₹${rawTotal.toFixed(2)})</small>`;
+        invoiceTotalElement.innerHTML = `₹${roundedTotal} <small class="total-sub">(₹${rawTotal.toFixed(2)})</small>`;
     }
 }
 
+/* ------------------------------------------------------------------
+   Product rows inside edit modal
+------------------------------------------------------------------ */
 function addNewProduct() {
     addProductRow({});
 }
@@ -929,16 +598,15 @@ function addNewProduct() {
 function addProductRow(data = {}) {
     const container = document.getElementById('productsContainer');
     const productId = `product_${productCounter++}`;
-    
+
     const productRow = document.createElement('div');
     productRow.className = 'product-row';
-    
-    // Create product options with proper selection
+
     let productOptions = '<option value="">Select Product</option>';
     {% for product in products %}
     productOptions += `<option value="{{ product.productid }}" ${data.productid == {{ product.productid }} ? 'selected' : ''}>{{ product.product_name|escapejs }} - {{ product.product_company|escapejs }}</option>`;
     {% endfor %}
-    
+
     productRow.innerHTML = `
         <div class="product-grid">
             <div class="form-group">
@@ -949,7 +617,7 @@ function addProductRow(data = {}) {
             </div>
             <div class="form-group">
                 <label>Batch No:</label>
-                <input type="text" name="products[${productId}][batch_no]" value="${data.product_batch_no || ''}" class="edit-batch-no" data-product-id="${productId}">
+                <input type="text" name="products[${productId}][batch_no]" value="${escapeHtml(data.product_batch_no || '')}" class="edit-batch-no" data-product-id="${productId}">
             </div>
             <div class="form-group">
                 <label>Expiry (MM-YYYY):</label>
@@ -973,9 +641,9 @@ function addProductRow(data = {}) {
             </div>
             <div class="form-group">
                 <label>Disc Type:</label>
-                <select name="products[${productId}][calculation_mode]" onchange="updateInvoiceTotal()" style="padding:0.75rem;border:1px solid #ddd;border-radius:5px;font-size:0.9rem;">
-                    <option value="flat" ${(data.purchase_calculation_mode||'flat')==='flat'?'selected':''}>&#8377; Flat</option>
-                    <option value="percentage" ${data.purchase_calculation_mode==='percentage'?'selected':''}>% Percent</option>
+                <select name="products[${productId}][calculation_mode]" onchange="updateInvoiceTotal()">
+                    <option value="flat" ${(data.purchase_calculation_mode || 'flat') === 'flat' ? 'selected' : ''}>&#8377; Flat</option>
+                    <option value="percentage" ${data.purchase_calculation_mode === 'percentage' ? 'selected' : ''}>% Percent</option>
                 </select>
             </div>
             <div class="form-group">
@@ -992,44 +660,43 @@ function addProductRow(data = {}) {
             </div>
             <div class="form-group">
                 <label>Rate A:</label>
-                <input type="number" name="products[${productId}][rate_a]" value="${data.rate_A || data.rate_a || data.rate_A || 0}" step="0.01">
+                <input type="number" name="products[${productId}][rate_a]" value="${data.rate_A || data.rate_a || 0}" step="0.01">
             </div>
             <div class="form-group">
                 <label>Rate B:</label>
-                <input type="number" name="products[${productId}][rate_b]" value="${data.rate_B || data.rate_b || data.rate_B || 0}" step="0.01">
+                <input type="number" name="products[${productId}][rate_b]" value="${data.rate_B || data.rate_b || 0}" step="0.01">
             </div>
             <div class="form-group">
                 <label>Rate C:</label>
-                <input type="number" name="products[${productId}][rate_c]" value="${data.rate_C || data.rate_c || data.rate_C || 0}" step="0.01">
+                <input type="number" name="products[${productId}][rate_c]" value="${data.rate_C || data.rate_c || 0}" step="0.01">
             </div>
-            <div class="form-group">
+            <div class="form-group form-group--action">
                 <button type="button" onclick="removeProduct(this)" class="btn btn-danger">
                     <i class="fas fa-trash"></i> Remove
                 </button>
             </div>
         </div>
     `;
-    
+
     container.appendChild(productRow);
-    
-    // Add event listeners for real-time calculation
-    const calcInputs = productRow.querySelectorAll('input[type="number"]');
-    calcInputs.forEach(input => {
+
+    // Real-time calculation
+    productRow.querySelectorAll('input[type="number"]').forEach(input => {
         input.addEventListener('input', updateInvoiceTotal);
     });
-    
-    // Add event listener for expiry date formatting
+
+    // Expiry formatting
     const expiryInput = productRow.querySelector(`input[name="products[${productId}][expiry]"]`);
     if (expiryInput) {
-        expiryInput.addEventListener('input', function(e) {
+        expiryInput.addEventListener('input', function (e) {
             let value = e.target.value.replace(/[^0-9]/g, '');
             if (value.length >= 2) {
-                value = value.substring(0,2) + '-' + value.substring(2,6);
+                value = value.substring(0, 2) + '-' + value.substring(2, 6);
             }
             e.target.value = value;
         });
-        
-        expiryInput.addEventListener('blur', function(e) {
+
+        expiryInput.addEventListener('blur', function (e) {
             const value = e.target.value;
             if (value && !/^(0[1-9]|1[0-2])-[0-9]{4}$/.test(value)) {
                 alert('Please enter expiry in MM-YYYY format (e.g., 12-2024)');
@@ -1041,24 +708,109 @@ function addProductRow(data = {}) {
 
 function removeProduct(button) {
     button.closest('.product-row').remove();
+    updateInvoiceTotal();
 }
 
-// Enhanced keyboard shortcuts and navigation
-document.addEventListener('keydown', function(e) {
-    // F2: Open quick product search (only when modal is open)
+/* ------------------------------------------------------------------
+   Page load: product cache, progress bar, edit form submit
+------------------------------------------------------------------ */
+document.addEventListener('DOMContentLoaded', function () {
+    window.initializeProductCache();
+
+    // Payment progress bar width (data-driven)
+    const fill = document.querySelector('.payment-progress-fill');
+    if (fill) {
+        const pct = parseFloat(String(fill.dataset.percent).replace(',', '.')) || 0;
+        fill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+    }
+
+    const editForm = document.getElementById('editInvoiceForm');
+    if (editForm) {
+        editForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const products = [];
+            const productRows = document.querySelectorAll('.product-row');
+
+            productRows.forEach(row => {
+                const productSelect = row.querySelector('select[name*="[productid]"]');
+                const batchInput = row.querySelector('input[name*="[batch_no]"]');
+                const expiryInput = row.querySelector('input[name*="[expiry]"]');
+                const mrpInput = row.querySelector('input[name*="[mrp]"]');
+                const rateInput = row.querySelector('input[name*="[purchase_rate]"]');
+                const qtyInput = row.querySelector('input[name*="[quantity]"]');
+                const freeQtyInput = row.querySelector('input[name*="[free_qty]"]');
+                const discountInput = row.querySelector('input[name*="[discount]"]');
+                const calcModeSelect = row.querySelector('select[name*="[calculation_mode]"]');
+                const cgstInput = row.querySelector('input[name*="[cgst]"]');
+                const sgstInput = row.querySelector('input[name*="[sgst]"]');
+                const rateAInput = row.querySelector('input[name*="[rate_a]"]');
+                const rateBInput = row.querySelector('input[name*="[rate_b]"]');
+                const rateCInput = row.querySelector('input[name*="[rate_c]"]');
+
+                if (productSelect && productSelect.value) {
+                    products.push({
+                        productid: productSelect.value,
+                        batch_no: batchInput ? batchInput.value : '',
+                        expiry: expiryInput ? expiryInput.value : '',
+                        mrp: mrpInput ? parseFloat(mrpInput.value) || 0 : 0,
+                        purchase_rate: rateInput ? parseFloat(rateInput.value) || 0 : 0,
+                        quantity: qtyInput ? parseFloat(qtyInput.value) || 0 : 0,
+                        free_qty: freeQtyInput ? parseFloat(freeQtyInput.value) || 0 : 0,
+                        discount: discountInput ? parseFloat(discountInput.value) || 0 : 0,
+                        calculation_mode: calcModeSelect ? calcModeSelect.value : 'flat',
+                        cgst: cgstInput ? parseFloat(cgstInput.value) || 0 : 0,
+                        sgst: sgstInput ? parseFloat(sgstInput.value) || 0 : 0,
+                        rate_A: rateAInput ? (parseFloat(rateAInput.value) || 0) : 0,
+                        rate_B: rateBInput ? (parseFloat(rateBInput.value) || 0) : 0,
+                        rate_C: rateCInput ? (parseFloat(rateCInput.value) || 0) : 0,
+                        rate_a: rateAInput ? (parseFloat(rateAInput.value) || 0) : 0,
+                        rate_b: rateBInput ? (parseFloat(rateBInput.value) || 0) : 0,
+                        rate_c: rateCInput ? (parseFloat(rateCInput.value) || 0) : 0
+                    });
+                }
+            });
+
+            formData.append('products_data', JSON.stringify(products));
+
+            fetch('{% url "edit_invoice" pk=invoice.invoiceid %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error updating invoice');
+            });
+        });
+    }
+});
+
+/* ------------------------------------------------------------------
+   Keyboard shortcuts (F2, Alt+W, Esc, Ctrl+E, Ctrl+P)
+------------------------------------------------------------------ */
+document.addEventListener('keydown', function (e) {
+    // F2: quick product search (only when edit modal is open)
     if (e.key === 'F2') {
         e.preventDefault();
-        const modal = document.getElementById('editInvoiceModal');
-        if (modal && modal.style.display === 'block') {
-            openQuickProductSearch();
-        }
+        if (isEditModalOpen()) openQuickProductSearch();
     }
-    
-    // Alt+W: Batch selection (only when edit modal is open)
+
+    // Alt+W: batch selection (only when edit modal is open)
     if (e.altKey && e.key.toLowerCase() === 'w') {
         e.preventDefault();
-        const modal = document.getElementById('editInvoiceModal');
-        if (modal && modal.style.display === 'block') {
+        if (isEditModalOpen()) {
             const focused = document.activeElement;
             if (focused && focused.classList.contains('edit-batch-no')) {
                 const productRow = focused.closest('.product-row');
@@ -1071,35 +823,42 @@ document.addEventListener('keydown', function(e) {
             }
         }
     }
-    
-    // Escape: Close modals
+
+    // Escape: close modals
     if (e.key === 'Escape') {
         e.preventDefault();
-        const quickModal = document.getElementById('quickProductModal');
-        if (quickModal) {
+        if (document.getElementById('quickProductModal')) {
             closeQuickSearch();
             return;
         }
-        
-        const editModal = document.getElementById('editInvoiceModal');
-        if (editModal && editModal.style.display === 'block') {
-            closeEditInvoiceModal();
-        }
+        if (isEditModalOpen()) closeEditInvoiceModal();
+    }
+
+    // Ctrl+E: edit invoice
+    if (e.ctrlKey && e.key === 'e') {
+        e.preventDefault();
+        openEditInvoiceModal();
+    }
+
+    // Ctrl+P: print receipt
+    if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        printPurchaseReceipt();
     }
 });
 
-// Quick product search functionality
+/* ------------------------------------------------------------------
+   Quick product search
+------------------------------------------------------------------ */
 function openQuickProductSearch() {
     const existingModal = document.getElementById('quickProductModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-    
+    if (existingModal) existingModal.remove();
+
     const modalHTML = `
         <div id="quickProductModal" class="quick-search-overlay">
             <div class="quick-search-content">
                 <div class="quick-search-header">
-                    <h4>🔍 Quick Product Search</h4>
+                    <h4><i class="fas fa-search"></i> Quick Product Search</h4>
                     <small>Type product name and press Enter</small>
                 </div>
                 <div class="quick-search-input">
@@ -1112,53 +871,34 @@ function openQuickProductSearch() {
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
+
     setTimeout(() => {
         const input = document.getElementById('quickProductInput');
         input.focus();
-        
-        input.addEventListener('keydown', function(e) {
+
+        input.addEventListener('keydown', function (e) {
             const resultsDiv = document.getElementById('quickResults');
-            
-            switch(e.key) {
+
+            switch (e.key) {
                 case 'Escape':
                     closeQuickSearch();
                     break;
-                    
                 case 'ArrowDown':
                     e.preventDefault();
                     navigateResults(1);
                     break;
-                    
                 case 'ArrowUp':
                     e.preventDefault();
                     navigateResults(-1);
                     break;
-                    
-                case 'Enter':
+                case 'Enter': {
                     e.preventDefault();
                     const selected = resultsDiv.querySelector('.selected') || resultsDiv.querySelector('.quick-result-item');
-                    if (selected) {
-                        const productName = selected.querySelector('.product-name').textContent;
-                        const productCompany = selected.querySelector('.product-company').textContent;
-                        
-                        const products = [{% for product in products %}{
-                            id: {{ product.productid }},
-                            name: '{{ product.product_name|escapejs }}',
-                            company: '{{ product.product_company|escapejs }}'
-                        },{% endfor %}];
-                        
-                        const matchedProduct = products.find(p => 
-                            p.name === productName && p.company === productCompany
-                        );
-                        
-                        if (matchedProduct) {
-                            quickSelectProduct(matchedProduct.id, matchedProduct.name, matchedProduct.company);
-                        }
-                    }
+                    if (selected) quickSelectProduct(parseInt(selected.dataset.id, 10));
                     break;
+                }
             }
         });
     }, 100);
@@ -1168,68 +908,42 @@ function quickSearchProducts(event) {
     const originalSearchTerm = event.target.value;
     const searchTerm = originalSearchTerm.toLowerCase();
     const resultsDiv = document.getElementById('quickResults');
-    
-    if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) {
-        return;
-    }
-    
+
+    if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) return;
+
     if (originalSearchTerm.length < 2) {
         resultsDiv.innerHTML = '<div class="quick-hint">Type at least 2 characters...</div>';
         return;
     }
-    
-    const products = [{% for product in products %}{
-        id: {{ product.productid }},
-        name: '{{ product.product_name|escapejs }}',
-        company: '{{ product.product_company|escapejs }}'
-    },{% endfor %}];
-    
-    // Filter products that START with the search term (first 2+ letters)
-    // Use cached products or fallback to template data
-    const filtered = (window.productCache.length > 0 ? window.productCache : products).filter(p => {
-        // Primary filter: starts with search term (case-sensitive first, then case-insensitive)
-        const exactStartsName = p.name.startsWith(originalSearchTerm);
-        const exactStartsCompany = p.company.startsWith(originalSearchTerm);
-        const startsName = p.name.toLowerCase().startsWith(searchTerm);
-        const startsCompany = p.company.toLowerCase().startsWith(searchTerm);
-        
-        return exactStartsName || exactStartsCompany || startsName || startsCompany;
+
+    const filtered = window.productCache.filter(p => {
+        return p.name.startsWith(originalSearchTerm) ||
+               p.company.startsWith(originalSearchTerm) ||
+               p.name.toLowerCase().startsWith(searchTerm) ||
+               p.company.toLowerCase().startsWith(searchTerm);
     }).sort((a, b) => {
-        // Priority scoring for "starts with" matches
-        let aScore = 0;
-        let bScore = 0;
-        
-        // Exact case "starts with" gets highest priority (100 points)
+        let aScore = 0, bScore = 0;
         if (a.name.startsWith(originalSearchTerm)) aScore += 100;
         if (a.company.startsWith(originalSearchTerm)) aScore += 90;
         if (b.name.startsWith(originalSearchTerm)) bScore += 100;
         if (b.company.startsWith(originalSearchTerm)) bScore += 90;
-        
-        // Case-insensitive "starts with" gets medium priority (50 points)
         if (a.name.toLowerCase().startsWith(searchTerm)) aScore += 50;
         if (a.company.toLowerCase().startsWith(searchTerm)) aScore += 40;
         if (b.name.toLowerCase().startsWith(searchTerm)) bScore += 50;
         if (b.company.toLowerCase().startsWith(searchTerm)) bScore += 40;
-        
-        // Sort by score (higher score first)
-        if (aScore !== bScore) {
-            return bScore - aScore;
-        }
-        
-        // If scores are equal, sort alphabetically
+        if (aScore !== bScore) return bScore - aScore;
         return a.name.localeCompare(b.name);
     });
-    
+
     if (filtered.length === 0) {
-        resultsDiv.innerHTML = '<div class="no-results">No products starting with "' + originalSearchTerm + '" found</div>';
+        resultsDiv.innerHTML = '<div class="no-results">No products starting with "' + escapeHtml(originalSearchTerm) + '" found</div>';
         return;
     }
-    
+
     resultsDiv.innerHTML = filtered.map((product, index) => `
-        <div class="quick-result-item ${index === 0 ? 'selected' : ''}" 
-             onclick="quickSelectProduct(${product.id}, '${product.name}', '${product.company}')">
-            <div class="product-name">${product.name}</div>
-            <div class="product-company">${product.company}</div>
+        <div class="quick-result-item ${index === 0 ? 'selected' : ''}" data-id="${product.id}" onclick="quickSelectProduct(${product.id})">
+            <div class="product-name">${escapeHtml(product.name)}</div>
+            <div class="product-company">${escapeHtml(product.company)}</div>
         </div>
     `).join('');
 }
@@ -1237,29 +951,26 @@ function quickSearchProducts(event) {
 function navigateResults(direction) {
     const items = document.querySelectorAll('.quick-result-item');
     if (items.length === 0) return;
-    
+
     const current = document.querySelector('.quick-result-item.selected');
     let newIndex = 0;
-    
+
     if (current) {
         const currentIndex = Array.from(items).indexOf(current);
         newIndex = currentIndex + direction;
-        
         if (newIndex < 0) newIndex = items.length - 1;
         else if (newIndex >= items.length) newIndex = 0;
-        
         current.classList.remove('selected');
     }
-    
+
     items[newIndex].classList.add('selected');
     items[newIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function quickSelectProduct(productId, productName, productCompany) {
-    // Find empty product row or add new one
+function quickSelectProduct(productId) {
     const productRows = document.querySelectorAll('.product-row');
     let targetRow = null;
-    
+
     for (let row of productRows) {
         const productSelect = row.querySelector('select[name*="[productid]"]');
         if (productSelect && !productSelect.value) {
@@ -1267,7 +978,7 @@ function quickSelectProduct(productId, productName, productCompany) {
             break;
         }
     }
-    
+
     if (!targetRow) {
         addNewProduct();
         setTimeout(() => {
@@ -1278,7 +989,7 @@ function quickSelectProduct(productId, productName, productCompany) {
     } else {
         fillProductInRow(targetRow, productId);
     }
-    
+
     closeQuickSearch();
 }
 
@@ -1286,8 +997,6 @@ function fillProductInRow(row, productId) {
     const productSelect = row.querySelector('select[name*="[productid]"]');
     if (productSelect) {
         productSelect.value = productId;
-        
-        // Focus on batch field after selection
         setTimeout(() => {
             const batchField = row.querySelector('input[name*="[batch_no]"]');
             if (batchField) {
@@ -1300,12 +1009,12 @@ function fillProductInRow(row, productId) {
 
 function closeQuickSearch() {
     const modal = document.getElementById('quickProductModal');
-    if (modal) {
-        modal.remove();
-    }
+    if (modal) modal.remove();
 }
 
-// Batch selection for edit invoice modal
+/* ------------------------------------------------------------------
+   Batch selection (Alt+W)
+------------------------------------------------------------------ */
 function showBatchSelectionDialog(productId, batchInput) {
     const invoiceDate = document.getElementById('invoice_date')?.value || '';
     const dateParam = invoiceDate ? `&invoice_date=${encodeURIComponent(invoiceDate)}` : '';
@@ -1327,45 +1036,45 @@ function createBatchSelectionModal(batches, batchInput) {
     if (existing) existing.remove();
 
     const modalHTML = `
-        <div id="batchSelectionModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:20000;display:flex;align-items:center;justify-content:center;">
-            <div style="background:#fff;border-radius:10px;width:96%;max-width:780px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.28);overflow:hidden;color:#212529;">
-                <div style="padding:14px 20px;background:#1e40af;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-                    <h3 style="margin:0;font-size:1rem;font-weight:600;color:#fff;">Select Batch</h3>
-                    <button onclick="closeBatchModal()" style="background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer;">&times;</button>
+        <div id="batchSelectionModal" class="batch-modal-overlay">
+            <div class="batch-modal-content">
+                <div class="batch-modal-header">
+                    <h3>Select Batch</h3>
+                    <button type="button" class="batch-modal-close" onclick="closeBatchModal()" aria-label="Close">&times;</button>
                 </div>
-                <div style="padding:14px 16px;flex:1;overflow-y:auto;background:#fff;">
-                    <div style="margin-bottom:10px;">
-                        <input type="text" id="batchSearch" placeholder="Search batch..." onkeyup="filterBatches()" style="width:100%;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:0.9rem;color:#212529;background:#fff;box-sizing:border-box;">
+                <div class="batch-modal-body">
+                    <div class="batch-search-wrap">
+                        <input type="text" id="batchSearch" class="batch-search-input" placeholder="Search batch..." onkeyup="filterBatches()">
                     </div>
-                    <div id="batchList" style="border:1px solid #e2e8f0;border-radius:6px;overflow:auto;max-height:340px;background:#fff;">
-                        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;background:#fff;color:#212529;table-layout:auto;">
+                    <div id="batchList" class="batch-list">
+                        <table class="batch-table">
                             <thead>
-                                <tr style="background:#f1f5f9;">
-                                    <th style="padding:9px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Batch No</th>
-                                    <th style="padding:9px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Packing</th>
-                                    <th style="padding:9px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Expiry</th>
-                                    <th style="padding:9px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">MRP</th>
-                                    <th style="padding:9px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Rate A</th>
-                                    <th style="padding:9px 12px;font-weight:600;color:#374151;border-bottom:2px solid #e2e8f0;white-space:nowrap;position:sticky;top:0;z-index:1;">Stock</th>
+                                <tr>
+                                    <th>Batch No</th>
+                                    <th>Packing</th>
+                                    <th>Expiry</th>
+                                    <th>MRP</th>
+                                    <th>Rate A</th>
+                                    <th>Stock</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${batches.map(b => `
-                                <tr class="edit-batch-item" onclick="selectEditBatch(this, ${JSON.stringify(b).replace(/"/g, '&quot;')})" style="cursor:pointer;background:#fff;transition:background 0.12s;">
-                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#212529;white-space:nowrap;"><strong>${b.batch_no}</strong></td>
-                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#212529;white-space:nowrap;">${b.packing || '-'}</td>
-                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#212529;white-space:nowrap;">${b.expiry}</td>
-                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#212529;white-space:nowrap;">&#8377;${b.mrp}</td>
-                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#2563eb;font-weight:600;white-space:nowrap;">${b.rate_a > 0 ? '&#8377;' + b.rate_a.toFixed(2) : '-'}</td>
-                                    <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;white-space:nowrap;" class="${b.stock <= 10 ? 'text-danger' : 'text-success'}">${b.stock}</td>
+                                <tr class="edit-batch-item" onclick="selectEditBatch(this, ${JSON.stringify(b).replace(/"/g, '&quot;')})">
+                                    <td><strong>${escapeHtml(b.batch_no)}</strong></td>
+                                    <td>${escapeHtml(b.packing || '-')}</td>
+                                    <td>${escapeHtml(b.expiry)}</td>
+                                    <td>&#8377;${b.mrp}</td>
+                                    <td class="batch-rate-a">${b.rate_a > 0 ? '&#8377;' + b.rate_a.toFixed(2) : '-'}</td>
+                                    <td class="${b.stock <= 10 ? 'stock-low' : 'stock-ok'}">${b.stock}</td>
                                 </tr>`).join('')}
                             </tbody>
                         </table>
                     </div>
                 </div>
-                <div style="padding:10px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-                    <small style="color:#64748b;font-size:0.78rem;">&#8593;&#8595;: Navigate | Enter: Select | Esc: Close</small>
-                    <button onclick="closeBatchModal()" class="btn btn-secondary">Cancel</button>
+                <div class="batch-modal-footer">
+                    <small>&#8593;&#8595;: Navigate | Enter: Select | Esc: Close</small>
+                    <button type="button" onclick="closeBatchModal()" class="btn btn-secondary">Cancel</button>
                 </div>
             </div>
         </div>`;
@@ -1377,21 +1086,21 @@ function createBatchSelectionModal(batches, batchInput) {
         const search = document.getElementById('batchSearch');
         search.focus();
         const first = document.querySelector('.edit-batch-item');
-        if (first) first.style.background = '#dbeafe';
+        if (first) first.classList.add('is-active');
 
-        search.addEventListener('keydown', function(e) {
-            const items = Array.from(document.querySelectorAll('.edit-batch-item')).filter(i => i.style.display !== 'none');
-            let idx = items.findIndex(i => i.style.background === 'rgb(219, 234, 254)');
+        search.addEventListener('keydown', function (e) {
+            const items = Array.from(document.querySelectorAll('.edit-batch-item')).filter(i => !i.hidden);
+            let idx = items.findIndex(i => i.classList.contains('is-active'));
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                if (idx >= 0) items[idx].style.background = '#fff';
+                if (idx >= 0) items[idx].classList.remove('is-active');
                 idx = Math.min(idx + 1, items.length - 1);
-                if (items[idx]) { items[idx].style.background = '#dbeafe'; items[idx].scrollIntoView({block:'nearest'}); }
+                if (items[idx]) { items[idx].classList.add('is-active'); items[idx].scrollIntoView({ block: 'nearest' }); }
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                if (idx >= 0) items[idx].style.background = '#fff';
+                if (idx >= 0) items[idx].classList.remove('is-active');
                 idx = Math.max(idx - 1, 0);
-                if (items[idx]) { items[idx].style.background = '#dbeafe'; items[idx].scrollIntoView({block:'nearest'}); }
+                if (items[idx]) { items[idx].classList.add('is-active'); items[idx].scrollIntoView({ block: 'nearest' }); }
             } else if (e.key === 'Enter') {
                 e.preventDefault();
                 const sel = items[idx] || items[0];
@@ -1422,7 +1131,10 @@ function selectEditBatch(tr, batchData) {
         if (rateInp) rateInp.value = batchData.purchase_rate || '';
         if (rateAInp && batchData.rate_a > 0) rateAInp.value = batchData.rate_a;
         updateInvoiceTotal();
-        setTimeout(() => { const q = row.querySelector('input[name*="[quantity]"]'); if (q) { q.focus(); q.select(); } }, 100);
+        setTimeout(() => {
+            const q = row.querySelector('input[name*="[quantity]"]');
+            if (q) { q.focus(); q.select(); }
+        }, 100);
     }
     closeBatchModal();
 }
@@ -1436,55 +1148,35 @@ function closeBatchModal() {
 function filterBatches() {
     const term = document.getElementById('batchSearch').value.toLowerCase();
     document.querySelectorAll('.edit-batch-item').forEach(item => {
-        item.style.display = item.textContent.toLowerCase().includes(term) ? '' : 'none';
+        item.hidden = !item.textContent.toLowerCase().includes(term);
     });
 }
 
-// Close modal when clicking outside
-window.onclick = function(event) {
+// Close edit modal when clicking the backdrop
+window.onclick = function (event) {
     const modal = document.getElementById('editInvoiceModal');
-    if (event.target === modal) {
-        closeEditInvoiceModal();
-    }
-}
+    if (event.target === modal) closeEditInvoiceModal();
+};
 
-// Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
-    // Ctrl+E for edit invoice
-    if (e.ctrlKey && e.key === 'e') {
-        e.preventDefault();
-        openEditInvoiceModal();
-    }
-    
-    // Ctrl+P for print receipt
-    if (e.ctrlKey && e.key === 'p') {
-        e.preventDefault();
-        const receiptUrl = `{% url 'print_gst_purchase_invoice' invoice_id=invoice.invoiceid %}`;
-        window.open(receiptUrl, '_blank');
-    }
-});
-
-// Delete Purchase Confirmation Dialog
+/* ------------------------------------------------------------------
+   Delete purchase (product line) dialog
+------------------------------------------------------------------ */
 let deleteDialogPurchaseId = null;
 let deleteDialogProductName = null;
 
 function confirmDeletePurchase(purchaseId, productName) {
     deleteDialogPurchaseId = purchaseId;
     deleteDialogProductName = productName;
-    
+
     const existingDialog = document.getElementById('deleteConfirmDialog');
-    if (existingDialog) {
-        existingDialog.remove();
-    }
-    
+    if (existingDialog) existingDialog.remove();
+
     const dialogHTML = `
         <div id="deleteConfirmDialog" class="delete-confirm-overlay">
             <div class="delete-confirm-content">
-                <div class="delete-confirm-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
+                <div class="delete-confirm-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <h3>Delete Product?</h3>
-                <p>Are you sure you want to delete <strong>${productName}</strong> from this invoice?</p>
+                <p>Are you sure you want to delete <strong>${escapeHtml(productName)}</strong> from this invoice?</p>
                 <div class="delete-confirm-buttons">
                     <button type="button" class="btn-confirm-delete" onclick="executePurchaseDelete()">
                         <i class="fas fa-check"></i> Yes, Delete (Enter)
@@ -1496,20 +1188,16 @@ function confirmDeletePurchase(purchaseId, productName) {
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', dialogHTML);
-    
-    setTimeout(() => {
-        document.querySelector('.btn-confirm-delete').focus();
-    }, 100);
-    
+    setTimeout(() => document.querySelector('#deleteConfirmDialog .btn-confirm-delete').focus(), 100);
     document.addEventListener('keydown', handleDeleteDialogKeys);
 }
 
 function handleDeleteDialogKeys(e) {
     const dialog = document.getElementById('deleteConfirmDialog');
     if (!dialog) return;
-    
+
     if (e.key === 'Enter') {
         e.preventDefault();
         executePurchaseDelete();
@@ -1519,75 +1207,73 @@ function handleDeleteDialogKeys(e) {
     }
 }
 
-function executePurchaseDelete() {
-    if (!deleteDialogPurchaseId) return;
-    
+function submitPostForm(action) {
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = `/invoices/{{ invoice.invoiceid }}/delete-purchase/${deleteDialogPurchaseId}/`;
-    
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    form.action = action;
+
     const csrfInput = document.createElement('input');
     csrfInput.type = 'hidden';
     csrfInput.name = 'csrfmiddlewaretoken';
-    csrfInput.value = csrfToken;
+    csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
     form.appendChild(csrfInput);
-    
+
     document.body.appendChild(form);
     form.submit();
 }
 
+function executePurchaseDelete() {
+    if (!deleteDialogPurchaseId) return;
+    submitPostForm(`/invoices/{{ invoice.invoiceid }}/delete-purchase/${deleteDialogPurchaseId}/`);
+}
+
 function closeDeleteDialog() {
     const dialog = document.getElementById('deleteConfirmDialog');
-    if (dialog) {
-        dialog.remove();
-    }
+    if (dialog) dialog.remove();
     document.removeEventListener('keydown', handleDeleteDialogKeys);
     deleteDialogPurchaseId = null;
     deleteDialogProductName = null;
 }
 
-// Add Payment Dialog
+/* ------------------------------------------------------------------
+   Add payment dialog
+------------------------------------------------------------------ */
 function openAddPaymentDialog() {
     const existingDialog = document.getElementById('addPaymentDialog');
-    if (existingDialog) {
-        existingDialog.remove();
-    }
-    
+    if (existingDialog) existingDialog.remove();
+
     const today = new Date().toISOString().split('T')[0];
     const balance = Math.round({{ invoice.balance_due }});
-    
+
     const dialogHTML = `
         <div id="addPaymentDialog" class="payment-dialog-overlay">
             <div class="payment-dialog-content">
                 <div class="payment-dialog-header">
                     <h3><i class="fas fa-money-bill-wave"></i> Add Payment</h3>
-                    <span class="close" onclick="closePaymentDialog()">&times;</span>
+                    <span class="close" onclick="closePaymentDialog()" role="button" aria-label="Close">&times;</span>
                 </div>
                 <div class="payment-dialog-body">
                     <form id="addPaymentForm" method="post">
                         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                        
+
                         <div class="payment-balance-info">
                             <span>Balance Due:</span>
                             <strong>₹${balance.toFixed(2)}</strong>
                         </div>
-                        
+
                         <div class="payment-form-row">
                             <div class="payment-form-group">
                                 <label for="payment_amount">Amount <span class="required">*</span></label>
-                                <input type="number" id="payment_amount" name="payment_amount" 
-                                       step="0.01" min="0.01"
-                                       value="${balance}" required autofocus>
-                                <small style="color:#6c757d;font-size:11px;">Any amount allowed (partial or excess)</small>
+                                <input type="number" id="payment_amount" name="payment_amount"
+                                       step="0.01" min="0.01" value="${balance}" required autofocus>
+                                <small class="payment-hint">Any amount allowed (partial or excess)</small>
                             </div>
                             <div class="payment-form-group">
                                 <label for="payment_date">Date <span class="required">*</span></label>
-                                <input type="date" id="payment_date" name="payment_date" 
-                                       value="${today}" required>
+                                <input type="date" id="payment_date" name="payment_date" value="${today}" required>
                             </div>
                         </div>
-                        
+
                         <div class="payment-form-row">
                             <div class="payment-form-group">
                                 <label for="payment_mode">Payment Mode <span class="required">*</span></label>
@@ -1601,11 +1287,10 @@ function openAddPaymentDialog() {
                             </div>
                             <div class="payment-form-group">
                                 <label for="payment_ref_no">Reference No</label>
-                                <input type="text" id="payment_ref_no" name="payment_ref_no" 
-                                       placeholder="Optional">
+                                <input type="text" id="payment_ref_no" name="payment_ref_no" placeholder="Optional">
                             </div>
                         </div>
-                        
+
                         <div class="payment-dialog-footer">
                             <button type="button" onclick="closePaymentDialog()" class="btn-payment-cancel">
                                 <i class="fas fa-times"></i> Cancel (Esc)
@@ -1619,22 +1304,20 @@ function openAddPaymentDialog() {
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', dialogHTML);
-    
+
     setTimeout(() => {
         document.getElementById('payment_amount').focus();
         document.getElementById('payment_amount').select();
     }, 100);
-    
+
     document.getElementById('addPaymentForm').addEventListener('submit', handlePaymentSubmit);
     document.addEventListener('keydown', handlePaymentDialogKeys);
 }
 
 function handlePaymentDialogKeys(e) {
-    const dialog = document.getElementById('addPaymentDialog');
-    if (!dialog) return;
-    
+    if (!document.getElementById('addPaymentDialog')) return;
     if (e.key === 'Escape') {
         e.preventDefault();
         closePaymentDialog();
@@ -1643,16 +1326,14 @@ function handlePaymentDialogKeys(e) {
 
 function handlePaymentSubmit(e) {
     e.preventDefault();
-    
+
     const form = e.target;
     const formData = new FormData(form);
-    
+
     fetch('{% url "add_invoice_payment" invoice_id=invoice.invoiceid %}', {
         method: 'POST',
         body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => {
         if (response.redirected) {
@@ -1664,20 +1345,19 @@ function handlePaymentSubmit(e) {
     .then(data => {
         if (!data) return;
         if (data.success) {
-            // Update payment summary with new values
             const balanceElement = document.querySelector('.balance-due-pending, .balance-due-paid');
             const paidElement = document.querySelector('.invoice-detail-summary-item:nth-child(2) .invoice-detail-summary-value');
             const statusElement = document.querySelector('.purchase-invoice-detail-status span');
-            
+
             if (balanceElement) {
                 balanceElement.textContent = '₹' + data.new_balance.toFixed(2);
                 balanceElement.className = data.new_balance > 0 ? 'invoice-detail-summary-value balance-due-pending' : 'invoice-detail-summary-value balance-due-paid';
             }
-            
+
             if (paidElement) {
                 paidElement.textContent = '₹' + data.new_paid_amount.toFixed(2);
             }
-            
+
             if (statusElement && data.payment_status) {
                 const statusMap = {
                     'paid': { text: 'Paid', class: 'purchase-status-paid' },
@@ -1689,15 +1369,14 @@ function handlePaymentSubmit(e) {
                 statusElement.textContent = status.text;
                 statusElement.className = status.class;
             }
-            
-            // Update progress bar
+
             const progressBar = document.querySelector('.payment-progress-fill');
             if (progressBar && data.invoice_total) {
                 const percentage = (data.new_paid_amount / data.invoice_total) * 100;
                 progressBar.style.width = percentage + '%';
                 progressBar.textContent = percentage.toFixed(1) + '%';
             }
-            
+
             closePaymentDialog();
             alert('Payment added successfully! Balance updated.');
             setTimeout(() => window.location.reload(), 1000);
@@ -1713,24 +1392,22 @@ function handlePaymentSubmit(e) {
 
 function closePaymentDialog() {
     const dialog = document.getElementById('addPaymentDialog');
-    if (dialog) {
-        dialog.remove();
-    }
+    if (dialog) dialog.remove();
     document.removeEventListener('keydown', handlePaymentDialogKeys);
 }
 
-// Edit Payment Dialog
+/* ------------------------------------------------------------------
+   Edit payment dialog
+------------------------------------------------------------------ */
 let editPaymentId = null;
 
 function openEditPaymentDialog(paymentId, paymentDate, paymentAmount, paymentMode, paymentRef) {
     editPaymentId = paymentId;
-    
+
     const existingDialog = document.getElementById('editPaymentDialog');
-    if (existingDialog) {
-        existingDialog.remove();
-    }
-    
-    // Convert date to yyyy-MM-dd format
+    if (existingDialog) existingDialog.remove();
+
+    // Convert date to yyyy-MM-dd
     let formattedDate = paymentDate;
     if (paymentDate && !paymentDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
         const dateObj = new Date(paymentDate);
@@ -1741,31 +1418,30 @@ function openEditPaymentDialog(paymentId, paymentDate, paymentAmount, paymentMod
             formattedDate = `${year}-${month}-${day}`;
         }
     }
-    
+
     const dialogHTML = `
         <div id="editPaymentDialog" class="payment-dialog-overlay">
             <div class="payment-dialog-content">
-                <div class="payment-dialog-header" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                <div class="payment-dialog-header payment-dialog-header--edit">
                     <h3><i class="fas fa-edit"></i> Edit Payment</h3>
-                    <span class="close" onclick="closeEditPaymentDialog()">&times;</span>
+                    <span class="close" onclick="closeEditPaymentDialog()" role="button" aria-label="Close">&times;</span>
                 </div>
                 <div class="payment-dialog-body">
                     <form id="editPaymentForm" method="post">
                         <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
-                        
+
                         <div class="payment-form-row">
                             <div class="payment-form-group">
                                 <label for="edit_payment_amount">Amount <span class="required">*</span></label>
-                                <input type="number" id="edit_payment_amount" name="payment_amount" 
+                                <input type="number" id="edit_payment_amount" name="payment_amount"
                                        step="0.01" min="0.01" value="${paymentAmount}" required autofocus>
                             </div>
                             <div class="payment-form-group">
                                 <label for="edit_payment_date">Date <span class="required">*</span></label>
-                                <input type="date" id="edit_payment_date" name="payment_date" 
-                                       value="${formattedDate}" required>
+                                <input type="date" id="edit_payment_date" name="payment_date" value="${formattedDate}" required>
                             </div>
                         </div>
-                        
+
                         <div class="payment-form-row">
                             <div class="payment-form-group">
                                 <label for="edit_payment_mode">Payment Mode <span class="required">*</span></label>
@@ -1779,16 +1455,16 @@ function openEditPaymentDialog(paymentId, paymentDate, paymentAmount, paymentMod
                             </div>
                             <div class="payment-form-group">
                                 <label for="edit_payment_ref_no">Reference No</label>
-                                <input type="text" id="edit_payment_ref_no" name="payment_ref_no" 
-                                       value="${paymentRef}" placeholder="Optional">
+                                <input type="text" id="edit_payment_ref_no" name="payment_ref_no"
+                                       value="${escapeHtml(paymentRef)}" placeholder="Optional">
                             </div>
                         </div>
-                        
+
                         <div class="payment-dialog-footer">
                             <button type="button" onclick="closeEditPaymentDialog()" class="btn-payment-cancel">
                                 <i class="fas fa-times"></i> Cancel (Esc)
                             </button>
-                            <button type="submit" class="btn-payment-submit" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+                            <button type="submit" class="btn-payment-submit btn-payment-submit--edit">
                                 <i class="fas fa-save"></i> Update (Enter)
                             </button>
                         </div>
@@ -1797,22 +1473,20 @@ function openEditPaymentDialog(paymentId, paymentDate, paymentAmount, paymentMod
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', dialogHTML);
-    
+
     setTimeout(() => {
         document.getElementById('edit_payment_amount').focus();
         document.getElementById('edit_payment_amount').select();
     }, 100);
-    
+
     document.getElementById('editPaymentForm').addEventListener('submit', handleEditPaymentSubmit);
     document.addEventListener('keydown', handleEditPaymentDialogKeys);
 }
 
 function handleEditPaymentDialogKeys(e) {
-    const dialog = document.getElementById('editPaymentDialog');
-    if (!dialog) return;
-    
+    if (!document.getElementById('editPaymentDialog')) return;
     if (e.key === 'Escape') {
         e.preventDefault();
         closeEditPaymentDialog();
@@ -1821,16 +1495,14 @@ function handleEditPaymentDialogKeys(e) {
 
 function handleEditPaymentSubmit(e) {
     e.preventDefault();
-    
+
     const form = e.target;
     const formData = new FormData(form);
-    
+
     fetch(`/invoices/{{ invoice.invoiceid }}/edit-payment/${editPaymentId}/`, {
         method: 'POST',
         body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => {
         if (response.redirected) {
@@ -1851,35 +1523,31 @@ function handleEditPaymentSubmit(e) {
 
 function closeEditPaymentDialog() {
     const dialog = document.getElementById('editPaymentDialog');
-    if (dialog) {
-        dialog.remove();
-    }
+    if (dialog) dialog.remove();
     document.removeEventListener('keydown', handleEditPaymentDialogKeys);
     editPaymentId = null;
 }
 
-// Delete Payment Dialog
+/* ------------------------------------------------------------------
+   Delete payment dialog
+------------------------------------------------------------------ */
 let deletePaymentId = null;
 let deletePaymentAmount = null;
 
 function confirmDeletePayment(paymentId, amount) {
     deletePaymentId = paymentId;
     deletePaymentAmount = amount;
-    
+
     const existingDialog = document.getElementById('deletePaymentDialog');
-    if (existingDialog) {
-        existingDialog.remove();
-    }
-    
+    if (existingDialog) existingDialog.remove();
+
     const dialogHTML = `
         <div id="deletePaymentDialog" class="delete-confirm-overlay">
             <div class="delete-confirm-content">
-                <div class="delete-confirm-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
+                <div class="delete-confirm-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <h3>Delete Payment?</h3>
                 <p>Are you sure you want to delete payment of <strong>₹${amount.toFixed(2)}</strong>?</p>
-                <p style="font-size: 0.9rem; color: #7f8c8d;">This will increase the invoice balance.</p>
+                <p class="delete-confirm-note">This will increase the invoice balance.</p>
                 <div class="delete-confirm-buttons">
                     <button type="button" class="btn-confirm-delete" onclick="executePaymentDelete()">
                         <i class="fas fa-check"></i> Yes, Delete (Enter)
@@ -1891,20 +1559,15 @@ function confirmDeletePayment(paymentId, amount) {
             </div>
         </div>
     `;
-    
+
     document.body.insertAdjacentHTML('beforeend', dialogHTML);
-    
-    setTimeout(() => {
-        document.querySelector('.btn-confirm-delete').focus();
-    }, 100);
-    
+    setTimeout(() => document.querySelector('#deletePaymentDialog .btn-confirm-delete').focus(), 100);
     document.addEventListener('keydown', handleDeletePaymentDialogKeys);
 }
 
 function handleDeletePaymentDialogKeys(e) {
-    const dialog = document.getElementById('deletePaymentDialog');
-    if (!dialog) return;
-    
+    if (!document.getElementById('deletePaymentDialog')) return;
+
     if (e.key === 'Enter') {
         e.preventDefault();
         executePaymentDelete();
@@ -1916,47 +1579,35 @@ function handleDeletePaymentDialogKeys(e) {
 
 function executePaymentDelete() {
     if (!deletePaymentId) return;
-    
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/invoices/{{ invoice.invoiceid }}/delete-payment/${deletePaymentId}/`;
-    
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrfmiddlewaretoken';
-    csrfInput.value = csrfToken;
-    form.appendChild(csrfInput);
-    
-    document.body.appendChild(form);
-    form.submit();
+    submitPostForm(`/invoices/{{ invoice.invoiceid }}/delete-payment/${deletePaymentId}/`);
 }
 
 function closeDeletePaymentDialog() {
     const dialog = document.getElementById('deletePaymentDialog');
-    if (dialog) {
-        dialog.remove();
-    }
+    if (dialog) dialog.remove();
     document.removeEventListener('keydown', handleDeletePaymentDialogKeys);
     deletePaymentId = null;
     deletePaymentAmount = null;
 }
 
-// Print purchase receipt function
+/* ------------------------------------------------------------------
+   Print receipt
+------------------------------------------------------------------ */
 function printPurchaseReceipt() {
-    // Open the purchase receipt in a new window
     const receiptUrl = `{% url 'print_gst_purchase_invoice' invoice_id=invoice.invoiceid %}`;
     window.open(receiptUrl, '_blank');
 }
 
-// Calculate and display subtotal, discount, taxable, GST from table rows
+/* ------------------------------------------------------------------
+   Totals shown in the table footer
+------------------------------------------------------------------ */
 function calculateDetailTotals() {
     let subtotal = 0;
     let totalDiscount = 0;
     let totalGST = 0;
 
     {% for purchase in purchases %}
-    (function() {
+    (function () {
         var rate = {{ purchase.product_purchase_rate|default:0 }};
         var qty  = {{ purchase.product_quantity|default:0 }};
         var disc = {{ purchase.product_discount_got|default:0 }};
@@ -1971,8 +1622,7 @@ function calculateDetailTotals() {
         totalDiscount += discAmt;
 
         var taxable = base - discAmt;
-        var gst = taxable * (cgst + sgst) / 100;
-        totalGST += gst;
+        totalGST += taxable * (cgst + sgst) / 100;
     })();
     {% endfor %}
 
@@ -1983,8 +1633,7 @@ function calculateDetailTotals() {
     document.getElementById('detailTaxable').textContent  = taxable.toFixed(2);
     document.getElementById('detailGST').textContent      = totalGST.toFixed(2);
 
-    // Whole invoice discount = invoice_total vs (products_total + transport)
-    // invoice_total already has whole discount applied, so:
+    // invoice_total already has the whole-invoice discount applied
     var productsTotal = {{ purchases_total|default:0 }};
     var transport = {{ invoice.transport_charges|default:0 }};
     var invoiceTotal = {{ invoice.invoice_total|default:0 }};
@@ -1996,331 +1645,13 @@ function calculateDetailTotals() {
 }
 
 document.addEventListener('DOMContentLoaded', calculateDetailTotals);
-
 </script>
 
-<style>
-.delete-confirm-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 10001;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.delete-confirm-content {
-    background: white;
-    border-radius: 12px;
-    padding: 2rem;
-    max-width: 450px;
-    width: 90%;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    text-align: center;
-    animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-    from {
-        transform: translateY(-30px) scale(0.9);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0) scale(1);
-        opacity: 1;
-    }
-}
-
-.delete-confirm-icon {
-    font-size: 3rem;
-    color: #e74c3c;
-    margin-bottom: 1rem;
-}
-
-.delete-confirm-content h3 {
-    color: #2c3e50;
-    margin-bottom: 1rem;
-    font-size: 1.5rem;
-}
-
-.delete-confirm-content p {
-    color: #555;
-    margin-bottom: 1.5rem;
-    font-size: 1rem;
-    line-height: 1.5;
-}
-
-.delete-confirm-content p strong {
-    color: #e74c3c;
-}
-
-.delete-confirm-buttons {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-}
-
-.btn-confirm-delete,
-.btn-cancel-delete {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.95rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
-}
-
-.btn-confirm-delete {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-    color: white;
-}
-
-.btn-confirm-delete:hover {
-    background: linear-gradient(135deg, #c0392b, #a93226);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
-}
-
-.btn-cancel-delete {
-    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-    color: white;
-}
-
-.btn-cancel-delete:hover {
-    background: linear-gradient(135deg, #7f8c8d, #6c7a7b);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(149, 165, 166, 0.3);
-}
-
-/* Payment Dialog Styles */
-.payment-dialog-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 10002;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.2s ease-out;
-}
-
-.payment-dialog-content {
-    background: white;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 550px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-    animation: slideIn 0.3s ease-out;
-    overflow: hidden;
-}
-
-.payment-dialog-header {
-    background: linear-gradient(135deg, #27ae60, #229954);
-    color: white;
-    padding: 1.25rem 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.payment-dialog-header h3 {
-    margin: 0;
-    font-size: 1.3rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.payment-dialog-header .close {
-    font-size: 28px;
-    font-weight: bold;
-    cursor: pointer;
-    color: white;
-    opacity: 0.9;
-    transition: opacity 0.2s;
-}
-
-.payment-dialog-header .close:hover {
-    opacity: 1;
-}
-
-.payment-dialog-body {
-    padding: 1.5rem;
-}
-
-.payment-balance-info {
-    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 1.1rem;
-    color: red;
-}
-
-.payment-balance-info strong {
-    color: #27ae60;
-    font-size: 1.3rem;
-}
-
-.payment-form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.payment-form-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.payment-form-group label {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #2c3e50;
-    font-size: 0.9rem;
-}
-
-.payment-form-group .required {
-    color: #e74c3c;
-}
-
-.payment-form-group input,
-.payment-form-group select {
-    padding: 0.75rem;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    font-size: 0.95rem;
-    transition: border-color 0.2s;
-}
-
-.payment-form-group input:focus,
-.payment-form-group select:focus {
-    outline: none;
-    border-color: #27ae60;
-    box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
-}
-
-.payment-dialog-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    margin-top: 1.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid #eee;
-}
-
-.btn-payment-cancel,
-.btn-payment-submit {
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 0.95rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.2s;
-}
-
-.btn-payment-cancel {
-    background: linear-gradient(135deg, #95a5a6, #7f8c8d);
-    color: white;
-}
-
-.btn-payment-cancel:hover {
-    background: linear-gradient(135deg, #7f8c8d, #6c7a7b);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(149, 165, 166, 0.3);
-}
-
-.btn-payment-submit {
-    background: linear-gradient(135deg, #27ae60, #229954);
-    color: white;
-}
-
-.btn-payment-submit:hover {
-    background: linear-gradient(135deg, #229954, #1e8449);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
-}
-
-@media (max-width: 600px) {
-    .payment-form-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .payment-dialog-content {
-        width: 95%;
-    }
-}
-.challan-badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #2c3e50, #34495e);
-    color: white;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-align: center;
-    white-space: nowrap;
-}
-
-.direct-entry-badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #27ae60, #229954);
-    color: white;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-align: center;
-    white-space: nowrap;
-}
-</style>
-<div style="position: fixed; bottom: 0; left: 0; right: 0; background: #1f2937; color: #d1d5db; padding: 10px 20px; font-size: 0.8rem; display: flex; justify-content: center; gap: 30px; z-index: 100; box-shadow: 0 -2px 10px rgba(0,0,0,0.1);">
-    <div style="display: flex; align-items: center; gap: 5px;">
-        <span style="background: #374151; padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 0.7rem;">Ctrl+E</span>
-        <span>Edit Invoice</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 5px;">
-        <span style="background: #374151; padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 0.7rem;">Ctrl+P</span>
-        <span>Print Purchase Receipt</span>
-    </div>
-    <div style="display: flex; align-items: center; gap: 5px;">
-        <span style="background: #374151; padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 0.7rem;">Alt+W</span>
-        <span>Batch Select</span>
-    </div>
-    <!-- <div style="display: flex; align-items: center; gap: 5px;">
-        <span style="background: #374151; padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 0.7rem;">Ctrl+S</span>
-        <span>Save Invoice</span>
-    </div> -->
-    <!-- <div style="display: flex; align-items: center; gap: 5px;">
-        <span style="background: #374151; padding: 2px 6px; border-radius: 3px; font-weight: 600; font-size: 0.7rem;">Ctrl+D</span>
-        <span>Duplicate Row</span>
-    </div> -->
+<!-- Keyboard shortcut bar -->
+<div class="shortcut-bar" aria-label="Keyboard shortcuts">
+    <div class="shortcut-item"><kbd class="shortcut-key">Ctrl+E</kbd><span>Edit Invoice</span></div>
+    <div class="shortcut-item"><kbd class="shortcut-key">Ctrl+P</kbd><span>Print Purchase Receipt</span></div>
+    <div class="shortcut-item"><kbd class="shortcut-key">Alt+W</kbd><span>Batch Select</span></div>
+    <div class="shortcut-item"><kbd class="shortcut-key">F2</kbd><span>Quick Product Search</span></div>
 </div>
 {% endblock %}
-
-

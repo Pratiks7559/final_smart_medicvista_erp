@@ -203,20 +203,96 @@ def get_stock_status(product_id, start_date=None, end_date=None):
 
         if start_date or end_date:
             transactions = InventoryTransaction.objects.filter(product_id=product_id)
+            period_transactions = transactions
             if start_date:
-                transactions = transactions.filter(transaction_date__date__gte=start_date)
+                period_transactions = period_transactions.filter(transaction_date__date__gte=start_date)
             if end_date:
-                transactions = transactions.filter(transaction_date__date__lte=end_date)
+                period_transactions = period_transactions.filter(transaction_date__date__lte=end_date)
 
-            totals = transactions.aggregate(
+            if not period_transactions.exists():
+                purchase_filters = {'productid': product_id}
+                sales_filters = {'productid': product_id}
+                if start_date:
+                    purchase_filters['product_invoiceid__invoice_date__gte'] = start_date
+                    sales_filters['sales_invoice_no__sales_invoice_date__gte'] = start_date
+                if end_date:
+                    purchase_filters['product_invoiceid__invoice_date__lte'] = end_date
+                    sales_filters['sales_invoice_no__sales_invoice_date__lte'] = end_date
+
+                batches_by_key = {}
+                purchase_rows = PurchaseMaster.objects.filter(**purchase_filters).values(
+                    'product_batch_no', 'product_expiry', 'product_quantity',
+                    'product_free_qty', 'product_MRP', 'product_purchase_rate',
+                )
+                for purchase in purchase_rows:
+                    key = (purchase['product_batch_no'], purchase['product_expiry'])
+                    batch = batches_by_key.setdefault(key, {
+                        'batch_no': key[0],
+                        'expiry': key[1],
+                        'quantity': 0,
+                        'free_qty': 0,
+                        'mrp': purchase['product_MRP'] or 0,
+                        'purchase_rate': purchase['product_purchase_rate'] or 0,
+                    })
+                    batch['quantity'] += purchase['product_quantity'] or 0
+                    batch['free_qty'] += purchase['product_free_qty'] or 0
+
+                sales_rows = SalesMaster.objects.filter(**sales_filters).values(
+                    'product_batch_no', 'product_expiry', 'sale_quantity',
+                    'sale_free_qty', 'product_MRP',
+                )
+                for sale in sales_rows:
+                    key = (sale['product_batch_no'], sale['product_expiry'])
+                    batch = batches_by_key.setdefault(key, {
+                        'batch_no': key[0],
+                        'expiry': key[1],
+                        'quantity': 0,
+                        'free_qty': 0,
+                        'mrp': sale['product_MRP'] or 0,
+                        'purchase_rate': 0,
+                    })
+                    batch['quantity'] -= sale['sale_quantity'] or 0
+                    batch['free_qty'] -= sale['sale_free_qty'] or 0
+
+                expiry_stock = []
+                for batch in batches_by_key.values():
+                    batch['total_qty'] = batch['quantity'] + batch['free_qty']
+                    expiry_stock.append(batch)
+                expiry_stock.sort(key=lambda item: (item['expiry'] or '', item['batch_no'] or ''))
+                current_stock = sum(item['quantity'] for item in expiry_stock)
+                total_free_qty = sum(item['free_qty'] for item in expiry_stock)
+                purchased = sum(
+                    purchase['product_quantity'] or 0 for purchase in purchase_rows
+                )
+                sold = sum(sale['sale_quantity'] or 0 for sale in sales_rows)
+                return {
+                    'purchased': purchased,
+                    'sold': sold,
+                    'purchase_returns': 0,
+                    'sales_returns': 0,
+                    'stock_issues': 0,
+                    'current_stock': current_stock,
+                    'total_free_qty': total_free_qty,
+                    'current_stock_with_free': current_stock + total_free_qty,
+                    'expiry_stock': expiry_stock,
+                }
+
+            totals = period_transactions.aggregate(
                 purchased=Sum('quantity', filter=Q(transaction_type__in=['PURCHASE', 'SUPPLIER_CHALLAN'])),
                 sold=Sum('quantity', filter=Q(transaction_type__in=['SALE', 'CUSTOMER_CHALLAN'])),
                 purchase_returns=Sum('quantity', filter=Q(transaction_type='PURCHASE_RETURN')),
                 sales_returns=Sum('quantity', filter=Q(transaction_type='SALES_RETURN')),
                 stock_issues=Sum('quantity', filter=Q(transaction_type='STOCK_ISSUE')),
+            )
+
+            closing_transactions = transactions
+            if end_date:
+                closing_transactions = closing_transactions.filter(transaction_date__date__lte=end_date)
+            closing_totals = closing_transactions.aggregate(
+                quantity=Sum('quantity'),
                 free_quantity=Sum('free_quantity'),
             )
-            batches = transactions.values('batch_no', 'expiry_date').annotate(
+            batches = closing_transactions.values('batch_no', 'expiry_date').annotate(
                 quantity=Sum('quantity'),
                 free_qty=Sum('free_quantity'),
                 mrp=Max('mrp'),
@@ -231,11 +307,8 @@ def get_stock_status(product_id, start_date=None, end_date=None):
                 'purchase_rate': batch['rate'] or 0,
                 'mrp': batch['mrp'] or 0,
             } for batch in batches]
-            current_stock = totals['purchased'] or 0
-            current_stock += totals['sold'] or 0
-            current_stock += totals['purchase_returns'] or 0
-            current_stock += totals['sales_returns'] or 0
-            current_stock += totals['stock_issues'] or 0
+            current_stock = closing_totals['quantity'] or 0
+            total_free_qty = closing_totals['free_quantity'] or 0
             return {
                 'purchased': totals['purchased'] or 0,
                 'sold': abs(totals['sold'] or 0),
@@ -243,8 +316,8 @@ def get_stock_status(product_id, start_date=None, end_date=None):
                 'sales_returns': totals['sales_returns'] or 0,
                 'stock_issues': abs(totals['stock_issues'] or 0),
                 'current_stock': current_stock,
-                'total_free_qty': sum(item['free_qty'] for item in expiry_stock),
-                'current_stock_with_free': current_stock + sum(item['free_qty'] for item in expiry_stock),
+                'total_free_qty': total_free_qty,
+                'current_stock_with_free': current_stock + total_free_qty,
                 'expiry_stock': expiry_stock,
             }
         

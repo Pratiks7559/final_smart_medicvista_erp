@@ -80,8 +80,18 @@ def logout_view(request):
         if backup_choice == 'yes':
             from django.http import JsonResponse
             from .backup_views import create_backup_file
-            backup_path = create_backup_file()
-            return JsonResponse({'success': True, 'backup_url': f'/download-backup-logout/{backup_path}'})
+            try:
+                backup_filename = create_backup_file()
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception('Backup creation failed during logout')
+                logout(request)
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Backup could not be created. You have been logged out.',
+                }, status=500)
+            backup_url = reverse('download_backup_and_logout', args=[backup_filename])
+            return JsonResponse({'success': True, 'backup_url': backup_url})
         logout(request)
         messages.info(request, "You have successfully logged out.")
         return redirect('login')
@@ -90,10 +100,11 @@ def logout_view(request):
 def download_backup_and_logout(request, filename):
     from django.http import FileResponse
     import os
-    filepath = os.path.join('backups', filename)
-    if os.path.exists(filepath):
+    from django.conf import settings
+    filepath = os.path.join(settings.BASE_DIR, 'backups', filename)
+    if os.path.basename(filename) == filename and os.path.isfile(filepath):
         response = FileResponse(open(filepath, 'rb'), as_attachment=True)
-        response['Content-Type'] = 'application/x-sqlite3'
+        response['Content-Type'] = 'application/sql'
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         logout(request)
         return response
@@ -722,6 +733,8 @@ def product_detail(request, pk):
     context = {
         'product': product,
         'stock_info': stock_info,
+        'selected_fy_label': f'{selected_year}-{str(int(selected_year) + 1)[-2:]}',
+        'fy_end': fy_end,
         'purchases': purchases,
         'sales': sales,
         'rates': rates,

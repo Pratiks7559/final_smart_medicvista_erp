@@ -4,10 +4,11 @@ from django.contrib import messages
 from django.http import JsonResponse, FileResponse
 from django.conf import settings
 import os
+import shutil
 import subprocess
 from datetime import datetime
 
-MYSQL_BIN_DIR = r"C:\Program Files\MySQL\MySQL Server 8.0\bin"
+MYSQL_BIN_DIR = os.getenv('MYSQL_BIN_DIR', r"C:\Program Files\MySQL\MySQL Server 8.0\bin")
 
 
 def get_mysql_config():
@@ -21,13 +22,40 @@ def get_mysql_config():
     }
 
 
+def get_mysql_client_path(executable, env_var):
+    configured_path = os.getenv(env_var)
+    if configured_path and os.path.isfile(configured_path):
+        return configured_path
+
+    discovered_path = shutil.which(executable)
+    if discovered_path:
+        return discovered_path
+
+    if os.name == 'nt':
+        windows_path = os.path.join(MYSQL_BIN_DIR, f'{executable}.exe')
+        if os.path.isfile(windows_path):
+            return windows_path
+
+    raise FileNotFoundError(
+        f'{executable} is not installed or {env_var} points to an invalid path'
+    )
+
+
+def get_mysqldump_path():
+    return get_mysql_client_path('mysqldump', 'MYSQLDUMP_PATH')
+
+
+def get_mysql_path():
+    return get_mysql_client_path('mysql', 'MYSQL_PATH')
+
+
 @login_required
 def backup_list(request):
     if request.user.user_type != 'admin':
         messages.error(request, "Only admins can access backup management.")
         return redirect('dashboard')
 
-    backup_dir = 'backups'
+    backup_dir = os.path.join(settings.BASE_DIR, 'backups')
     os.makedirs(backup_dir, exist_ok=True)
 
     backups = []
@@ -57,44 +85,8 @@ def create_backup(request):
         return JsonResponse({'success': False, 'error': 'Permission denied'})
 
     try:
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_dir = 'backups'
-        os.makedirs(backup_dir, exist_ok=True)
-
-        cfg = get_mysql_config()
-        filename = f'backup_{timestamp}.sql'
-        destination = os.path.join(backup_dir, filename)
-
-        mysqldump = os.path.join(MYSQL_BIN_DIR, 'mysqldump.exe')
-
-        cmd = [
-            mysqldump,
-            f'-h{cfg["host"]}',
-            f'-P{cfg["port"]}',
-            f'-u{cfg["user"]}',
-            f'-p{cfg["password"]}',
-            '--single-transaction',
-            '--routines',
-            '--triggers',
-            '--add-drop-table',
-            '--complete-insert',
-            cfg['name'],
-        ]
-
-        with open(destination, 'w', encoding='utf-8') as outfile:
-            result = subprocess.run(
-                cmd,
-                stdout=outfile,
-                stderr=subprocess.PIPE,
-                text=True
-            )
-
-        if result.returncode != 0:
-            # Remove empty file on failure
-            if os.path.exists(destination):
-                os.remove(destination)
-            return JsonResponse({'success': False, 'error': f'Backup failed: {result.stderr}'})
-
+        filename = create_backup_file()
+        destination = os.path.join(settings.BASE_DIR, 'backups', filename)
         backup_size = os.path.getsize(destination)
         return JsonResponse({
             'success': True,
@@ -125,7 +117,7 @@ def restore_backup(request):
             return JsonResponse({'success': False, 'error': 'Backup file not found'})
 
         cfg = get_mysql_config()
-        mysql = os.path.join(MYSQL_BIN_DIR, 'mysql.exe')
+        mysql = get_mysql_path()
 
         cmd = [
             mysql,
@@ -159,21 +151,20 @@ def restore_backup(request):
 def create_backup_file():
     """Create backup file and return filename (used internally)"""
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    backup_dir = 'backups'
+    backup_dir = os.path.join(settings.BASE_DIR, 'backups')
     os.makedirs(backup_dir, exist_ok=True)
 
     cfg = get_mysql_config()
     filename = f'backup_{timestamp}.sql'
     destination = os.path.join(backup_dir, filename)
 
-    mysqldump = os.path.join(MYSQL_BIN_DIR, 'mysqldump.exe')
+    mysqldump = get_mysqldump_path()
 
     cmd = [
         mysqldump,
         f'-h{cfg["host"]}',
         f'-P{cfg["port"]}',
         f'-u{cfg["user"]}',
-        f'-p{cfg["password"]}',
         '--single-transaction',
         '--routines',
         '--triggers',
@@ -182,8 +173,25 @@ def create_backup_file():
         cfg['name'],
     ]
 
-    with open(destination, 'w', encoding='utf-8') as outfile:
-        subprocess.run(cmd, stdout=outfile, check=True)
+    process_env = os.environ.copy()
+    if cfg['password']:
+        process_env['MYSQL_PWD'] = cfg['password']
+
+    try:
+        with open(destination, 'wb') as outfile:
+            result = subprocess.run(
+                cmd,
+                stdout=outfile,
+                stderr=subprocess.PIPE,
+                text=True,
+                env=process_env,
+            )
+        if result.returncode != 0:
+            raise RuntimeError(f'Backup failed: {result.stderr.strip()}')
+    except Exception:
+        if os.path.exists(destination):
+            os.remove(destination)
+        raise
 
     return filename
 
@@ -194,7 +202,7 @@ def download_backup(request, filename):
         messages.error(request, "Permission denied")
         return redirect('backup_list')
 
-    filepath = os.path.join('backups', filename)
+    filepath = os.path.join(settings.BASE_DIR, 'backups', filename)
     if os.path.exists(filepath):
         response = FileResponse(open(filepath, 'rb'), as_attachment=True)
         response['Content-Type'] = 'application/sql'
