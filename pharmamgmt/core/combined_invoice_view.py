@@ -10,7 +10,7 @@ from .forms import InvoiceForm
 from .stock_manager import StockManager
 import logging
 from datetime import datetime, timedelta, date
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from .roundoff_utils import apply_roundoff, calculate_roundoff
 from .year_filter_utils import get_current_financial_year, is_date_in_financial_year
 
@@ -26,6 +26,47 @@ file_handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
+
+
+def _record_initial_supplier_payment(invoice, amount, payment_mode):
+    invoice_balance = max(
+        Decimal('0'),
+        Decimal(str(invoice.invoice_total or 0))
+        - Decimal(str(invoice.invoice_paid or 0)),
+    )
+    applied_amount = min(amount, invoice_balance)
+    excess_amount = amount - applied_amount
+
+    if applied_amount > 0:
+        InvoicePaid.objects.create(
+            ip_invoiceid=invoice,
+            payment_date=invoice.invoice_date,
+            payment_amount=float(applied_amount),
+            payment_mode=payment_mode,
+            payment_ref_no='',
+        )
+
+    if excess_amount > 0:
+        SupplierAdvance.objects.create(
+            supplier=invoice.supplierid,
+            amount=float(excess_amount),
+            payment_date=invoice.invoice_date,
+            payment_mode=payment_mode.lower(),
+            reference_no='',
+            narration=f'Advance from payment of Invoice {invoice.invoice_no}',
+        )
+        AdvanceLedger.objects.create(
+            party_type='supplier',
+            supplier=invoice.supplierid,
+            entry_type='advance_in',
+            amount=float(excess_amount),
+            entry_date=invoice.invoice_date,
+            invoice_ref=invoice.invoice_no,
+            narration=f'Advance paid with Invoice {invoice.invoice_no}',
+        )
+
+    return applied_amount, excess_amount
+
 
 @login_required
 def add_invoice_with_products(request):
@@ -71,6 +112,21 @@ def add_invoice_with_products(request):
                     'current_fy': current_fy,
                     'title': 'Add Invoice with Products',
                 })
+
+            payment_mode = request.POST.get('initial_payment_mode', 'Cash').strip().lower()
+            if payment_mode not in {'cash', 'credit'}:
+                messages.error(request, 'Select Cash or Credit as the payment mode.')
+                return redirect('add_invoice_with_products')
+            try:
+                initial_payment_amount = Decimal(
+                    request.POST.get('initial_payment_amount', '').strip()
+                ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            except (InvalidOperation, TypeError, ValueError):
+                messages.error(request, 'Enter a valid payment amount.')
+                return redirect('add_invoice_with_products')
+            if not initial_payment_amount.is_finite() or initial_payment_amount < 0:
+                messages.error(request, 'Payment amount cannot be negative.')
+                return redirect('add_invoice_with_products')
             
             # Process products data from JavaScript
             products_data = request.POST.get('products_data')
@@ -389,6 +445,12 @@ def add_invoice_with_products(request):
                     for error in errors[:3]:
                         logger.warning(error)
 
+                applied_payment, excess_payment = _record_initial_supplier_payment(
+                    invoice,
+                    initial_payment_amount,
+                    payment_mode.title(),
+                )
+
                 # Auto-adjust supplier advance against this invoice
                 invoice.refresh_from_db()
                 adv_msg = _auto_adjust_advance(invoice)
@@ -402,6 +464,10 @@ def add_invoice_with_products(request):
 
                 if adv_msg:
                     success_msg += f" {adv_msg}"
+                if applied_payment > 0:
+                    success_msg += f" Rs.{applied_payment} {payment_mode} payment recorded."
+                if excess_payment > 0:
+                    success_msg += f" Rs.{excess_payment} recorded as supplier advance."
 
                 messages.success(request, success_msg)
                 logger.info(f"Invoice {invoice.invoice_no} created successfully with {products_added} products")

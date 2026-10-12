@@ -441,3 +441,329 @@
         font-size: 0.8rem;
     }
 }
+
+/* Sales invoice list refinement */
+.sales-invoice-list-container {
+    min-height: auto;
+    padding: 1.25rem;
+    background: #f5f6f8;
+}
+
+.sales-invoice-list-page-actions {
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+}
+
+.sales-invoice-list-quick-btn,
+.sales-invoice-list-add-btn {
+    min-height: 40px;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid #9e3f3a;
+    border-radius: 7px;
+    background: #9e3f3a;
+    box-shadow: none;
+    font-size: 0.84rem;
+    font-weight: 650;
+    transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.sales-invoice-list-add-btn {
+    border-color: #d9b6b1;
+    background: #fff;
+    color: #843b37;
+}
+
+.sales-invoice-list-quick-btn:hover,
+.sales-invoice-list-add-btn:hover {
+    transform: translateY(-1px);
+    border-color: #762d2b;
+    background: #762d2b;
+    box-shadow: 0 4px 12px rgba(118, 45, 43, 0.16);
+    color: #fff;
+}
+
+.sales-invoice-list-wrapper {
+    display: grid;
+    gap: 0.85rem;
+    max-width: 1440px;
+    overflow: visible;
+    background: transparent !important;
+    box-shadow: none;
+}
+
+.sales-invoice-list-filters {
+    flex-wrap: wrap;
+    padding: 0.85rem;
+    border: 1px solid #e0e4e8;
+    border-radius: 9px;
+    background: #fff;
+    gap: 0.75rem;
+}
+
+.sales-invoice-list-search-section,
+.sales-invoice-list-date-section {
+    min-width: min(100%, 280px);
+}
+
+.sales-invoice-list-search-form,
+.sales-invoice-list-date-form {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.sales-invoice-list-search-input,
+.sales-invoice-list-start-date,
+.sales-invoice-list-end-date {
+    min-height: 40px;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid #d4dbe0;
+    border-radius: 7px;
+    background: #fff;
+    color: #26353e;
+    font-size: 0.86rem;
+}
+
+.sales-invoice-list-search-input:focus,
+.sales-invoice-list-start-date:focus,
+.sales-invoice-list-end-date:focus {
+    border-color: #a64a44;
+    box-shadow: 0 0 0 3px rgba(166, 74, 68, 0.12);
+}
+
+.sales-invoice-list-search-btn,
+.sales-invoice-list-filter-btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0.55rem 0.75rem;
+    border: 1px solid #9e3f3a;
+    border-radius: 7px;
+    background: #9e3f3a;
+    color: #fff;
+}
+
+.sales-invoice-list-search-btn:hover,
+.sales-invoice-list-filter-btn:hover {
+    border-color: #762d2b;
+    background: #762d2b;
+}
+
+.sales-invoice-list-table-section {
+    overflow: auto;
+    border: 1px solid #e0e4e8;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 6px 20px rgba(31, 43, 52, 0.05);
+    scrollbar-color: #c3cbd1 #f3f5f6;
+}
+
+.sales-invoice-list-table {
+    min-width: 820px;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: #2d3a42;
+    font-size: 0.84rem;
+}
+
+.sales-invoice-list-table-head {
+    background: #f0f3f5;
+}
+
+.sales-invoice-list-table-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 0.75rem 0.7rem;
+    border-bottom: 1px solid #dce2e6;
+    background: #f0f3f5;
+    color: #52616a;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.sales-invoice-list-table-header-row {
+    border: 0;
+}
+
+.sales-invoice-list-table-body {
+    background: #fff !important;
+}
+
+.sales-invoice-list-table-row {
+    border: 0;
+}
+
+.sales-invoice-list-table-row:hover {
+    background: #fff8f7 !important;
+}
+
+.sales-invoice-list-table-cell {
+    padding: 0.72rem 0.7rem;
+    border-bottom: 1px solid #edf0f2;
+    color: #43515a !important;
+    font-size: 0.84rem;
+}
+
+.sales-invoice-list-invoice-number-cell {
+    color: #923d38 !important;
+    font-weight: 700;
+}
+
+.sales-invoice-list-date-cell {
+    color: #6c7980 !important;
+    white-space: nowrap;
+}
+
+.sales-invoice-list-customer-cell {
+    color: #34434b !important;
+    font-weight: 600;
+}
+
+.sales-invoice-list-total-cell,
+.sales-invoice-list-paid-cell,
+.sales-invoice-list-balance-cell {
+    font-variant-numeric: tabular-nums;
+}
+
+.sales-invoice-list-balance-due {
+    color: #a13e39 !important;
+}
+
+.sales-invoice-list-balance-paid {
+    color: #28714b !important;
+}
+
+.sales-invoice-list-actions-cell {
+    min-width: 140px;
+    white-space: nowrap;
+}
+
+.sales-invoice-list-view-btn,
+.sales-invoice-list-print-btn,
+.sales-invoice-list-payment-btn,
+.sales-invoice-list-delete-btn {
+    width: 34px;
+    height: 34px;
+    margin: 0 2px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.sales-invoice-list-view-btn {
+    border-color: #d7c3c0;
+    background: #f8eeed;
+    color: #8b3d38;
+}
+
+.sales-invoice-list-print-btn {
+    border-color: #d7dfe5;
+    background: #f0f4f7;
+    color: #496474;
+}
+
+.sales-invoice-list-payment-btn {
+    border-color: #bfdecc;
+    background: #edf7f0;
+    color: #28714b;
+}
+
+.sales-invoice-list-delete-btn {
+    border-color: #efcecb;
+    background: #fff1f0;
+    color: #a13e39;
+}
+
+.sales-invoice-list-view-btn:hover,
+.sales-invoice-list-print-btn:hover,
+.sales-invoice-list-payment-btn:hover,
+.sales-invoice-list-delete-btn:hover {
+    transform: translateY(-1px);
+    color: inherit;
+}
+
+.sales-invoice-list-view-btn:hover { background: #f0dedd; }
+.sales-invoice-list-print-btn:hover { background: #e2eaf0; }
+.sales-invoice-list-payment-btn:hover { background: #dcefe3; }
+.sales-invoice-list-delete-btn:hover { background: #ffe1df; }
+
+.sales-invoice-list-empty-cell {
+    padding: 3rem 1rem;
+    color: #718087;
+    font-style: normal;
+}
+
+.sales-invoice-list-pagination-nav {
+    padding: 0.85rem;
+    border: 1px solid #e0e4e8;
+    border-radius: 9px;
+    background: #fff;
+}
+
+.sales-invoice-list-pagination-link {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #d7dfe3;
+    border-radius: 7px;
+    background: #fff !important;
+    color: #52636c !important;
+}
+
+.sales-invoice-list-pagination-link:hover,
+.sales-invoice-list-pagination-active .sales-invoice-list-pagination-link {
+    border-color: #9e3f3a;
+    background: #9e3f3a !important;
+    color: #fff !important;
+}
+
+.sales-invoice-list-pagination-disabled .sales-invoice-list-pagination-link {
+    background: #f2f4f5 !important;
+    color: #a2adb3 !important;
+}
+
+.sales-invoice-list-container :is(a, button, input):focus-visible {
+    outline: 2px solid #aa514a;
+    outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+    .sales-invoice-list-container {
+        padding: 0.85rem;
+    }
+
+    .sales-invoice-list-filters {
+        padding: 0.75rem;
+    }
+
+    .sales-invoice-list-search-section,
+    .sales-invoice-list-date-section {
+        min-width: 100%;
+    }
+
+    .sales-invoice-list-search-form,
+    .sales-invoice-list-date-form {
+        width: 100%;
+    }
+
+    .sales-invoice-list-search-input {
+        min-width: 0;
+    }
+
+    .sales-invoice-list-pagination-nav {
+        padding: 0.65rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sales-invoice-list-page-actions a,
+    .sales-invoice-list-search-btn,
+    .sales-invoice-list-filter-btn,
+    .sales-invoice-list-view-btn,
+    .sales-invoice-list-print-btn,
+    .sales-invoice-list-payment-btn,
+    .sales-invoice-list-delete-btn {
+        transition: none;
+    }
+}

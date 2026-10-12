@@ -1,10 +1,9 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
 from django.utils import timezone
 from datetime import datetime
 from .models import (
-    CustomerMaster, SupplierMaster, SalesInvoiceMaster, SalesMaster,
+    CustomerMaster, SupplierMaster, SalesInvoiceMaster,
     SalesInvoicePaid, ReturnSalesInvoiceMaster, InvoiceMaster, InvoicePaid,
     ReturnInvoiceMaster, Pharmacy_Details, SupplierAdvance, CustomerAdvance, AdvanceLedger
 )
@@ -59,13 +58,11 @@ def customer_ledger(request, customer_id=None):
         sales = sales.filter(sales_invoice_date__range=[start_date, end_date])
     
     for sale in sales:
-        total = SalesMaster.objects.filter(sales_invoice_no=sale.sales_invoice_no).aggregate(
-            Sum('sale_total_amount'))['sale_total_amount__sum'] or 0
         transactions.append({
             'date': sale.sales_invoice_date,
             'type': 'Sales Invoice',
             'reference': sale.sales_invoice_no,
-            'debit': total,
+            'debit': sale.sales_invoice_total,
             'credit': 0,
             'invoice_obj': sale
         })
@@ -281,13 +278,11 @@ def customer_ledger_print(request, customer_id):
     sales = sales.filter(sales_invoice_date__range=[start_date, end_date])
     
     for sale in sales:
-        total = SalesMaster.objects.filter(sales_invoice_no=sale.sales_invoice_no).aggregate(
-            Sum('sale_total_amount'))['sale_total_amount__sum'] or 0
         transactions.append({
             'date': sale.sales_invoice_date,
             'type': 'Sales Invoice',
             'reference': sale.sales_invoice_no,
-            'debit': total,
+            'debit': sale.sales_invoice_total,
             'credit': 0
         })
     
@@ -738,13 +733,11 @@ def export_customer_ledger_pdf(request, customer_id):
     sales = sales.filter(sales_invoice_date__range=[start_date, end_date])
     
     for sale in sales:
-        total = SalesMaster.objects.filter(sales_invoice_no=sale.sales_invoice_no).aggregate(
-            Sum('sale_total_amount'))['sale_total_amount__sum'] or 0
         transactions.append({
             'date': sale.sales_invoice_date,
             'type': 'Sales Invoice',
             'reference': sale.sales_invoice_no,
-            'debit': total,
+            'debit': sale.sales_invoice_total,
             'credit': 0
         })
     
@@ -884,13 +877,11 @@ def export_customer_ledger_excel(request, customer_id):
         sales = sales.filter(sales_invoice_date__range=[start_date, end_date])
     
     for sale in sales:
-        total = SalesMaster.objects.filter(sales_invoice_no=sale.sales_invoice_no).aggregate(
-            Sum('sale_total_amount'))['sale_total_amount__sum'] or 0
         transactions.append({
             'date': sale.sales_invoice_date,
             'type': 'Sales Invoice',
             'reference': sale.sales_invoice_no,
-            'debit': total,
+            'debit': sale.sales_invoice_total,
             'credit': 0
         })
     

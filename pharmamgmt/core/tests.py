@@ -1,13 +1,246 @@
 from datetime import date
+from contextlib import nullcontext
+from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
+from django.forms.utils import ErrorDict
 from django.test import RequestFactory, SimpleTestCase
 
 from core import backup_views
+from core import combined_invoice_view
+from core import ledger_views
 from core import models
 from core import reorder_level_views
 from core import utils
 from core import views
+from core.forms import InvoiceForm
+from core.year_filter_utils import get_financial_year_label, get_financial_year_start
+
+
+class CustomerLedgerSalesTotalTests(SimpleTestCase):
+    def test_customer_ledger_debit_uses_discounted_invoice_total(self):
+        request = RequestFactory().get(
+            '/ledger/customer/1/',
+            {'start_date': '2026-04-01', 'end_date': '2027-03-31'},
+        )
+        request.user = MagicMock(is_authenticated=True)
+        customer = MagicMock(customer_name='Test Customer')
+        sale = MagicMock(
+            sales_invoice_date=date(2026, 6, 1),
+            sales_invoice_no='SI-100',
+            sales_invoice_total=675,
+        )
+
+        customer_qs = MagicMock()
+        customer_qs.order_by.return_value = []
+        sales_qs = MagicMock()
+        sales_qs.order_by.return_value = sales_qs
+        sales_qs.filter.return_value = [sale]
+        payments_qs = MagicMock()
+        payments_qs.order_by.return_value = payments_qs
+        payments_qs.filter.return_value = []
+        returns_qs = MagicMock()
+        returns_qs.order_by.return_value = returns_qs
+        returns_qs.filter.return_value = []
+
+        with patch.object(ledger_views.CustomerMaster.objects, 'all', return_value=customer_qs), \
+             patch.object(ledger_views, 'get_object_or_404', return_value=customer), \
+             patch.object(ledger_views.SalesInvoiceMaster.objects, 'filter', return_value=sales_qs), \
+             patch.object(ledger_views.SalesInvoicePaid.objects, 'filter', return_value=payments_qs), \
+             patch.object(ledger_views.ReturnSalesInvoiceMaster.objects, 'filter', return_value=returns_qs), \
+             patch.object(ledger_views.Pharmacy_Details.objects, 'first', return_value=None), \
+             patch.object(ledger_views, 'render', return_value=object()) as render:
+            ledger_views.customer_ledger.__wrapped__(request, customer_id=1)
+
+        context = render.call_args.args[2]
+        self.assertEqual(context['transactions'][0]['debit'], 675)
+        self.assertEqual(context['total_debit'], 675)
+        self.assertEqual(context['closing_balance'], 675)
+
+
+class PurchaseInvoiceFinancialYearTests(SimpleTestCase):
+    def test_combined_invoice_form_records_submitted_payment(self):
+        request = RequestFactory().post(
+            '/invoices/add-with-products/',
+            {
+                'invoice_date': '2026-06-01',
+                'products_data': '[]',
+                'initial_payment_mode': 'Credit',
+                'initial_payment_amount': '40.50',
+            },
+        )
+        request.session = {'selected_year': 2026}
+        request.user = MagicMock(is_authenticated=True)
+        invoice = MagicMock(
+            invoiceid=12,
+            invoice_no='PUR-100',
+            invoice_date=date(2026, 6, 1),
+            invoice_total=100,
+            invoice_paid=0,
+        )
+
+        class FormStub:
+            cleaned_data = {'invoice_date': date(2026, 6, 1)}
+            errors = {}
+
+            def is_valid(self):
+                return True
+
+            def save(self, commit=False):
+                return invoice
+
+        with patch.object(combined_invoice_view, 'InvoiceForm', return_value=FormStub()), \
+             patch.object(combined_invoice_view.transaction, 'atomic', return_value=nullcontext()), \
+             patch.object(combined_invoice_view.InvoicePaid.objects, 'create') as create_payment, \
+             patch.object(combined_invoice_view, '_auto_adjust_advance', return_value=''), \
+             patch.object(combined_invoice_view, 'redirect', return_value=object()), \
+             patch.object(combined_invoice_view.messages, 'info'), \
+             patch.object(combined_invoice_view.messages, 'success'):
+            combined_invoice_view.add_invoice_with_products.__wrapped__(request)
+
+        create_payment.assert_called_once_with(
+            ip_invoiceid=invoice,
+            payment_date=date(2026, 6, 1),
+            payment_amount=40.5,
+            payment_mode='Credit',
+            payment_ref_no='',
+        )
+
+    def test_combined_invoice_payment_is_saved_with_selected_mode(self):
+        invoice = MagicMock(
+            invoice_total=100,
+            invoice_paid=0,
+            invoice_date=date(2026, 6, 1),
+            invoice_no='PUR-100',
+        )
+        with patch.object(combined_invoice_view.InvoicePaid.objects, 'create') as create_payment:
+            applied_amount, excess_amount = combined_invoice_view._record_initial_supplier_payment(
+                invoice,
+                Decimal('40.50'),
+                'Credit',
+            )
+
+        self.assertEqual(applied_amount, Decimal('40.50'))
+        self.assertEqual(excess_amount, Decimal('0.00'))
+        create_payment.assert_called_once_with(
+            ip_invoiceid=invoice,
+            payment_date=date(2026, 6, 1),
+            payment_amount=40.5,
+            payment_mode='Credit',
+            payment_ref_no='',
+        )
+
+    def test_combined_invoice_overpayment_becomes_supplier_advance(self):
+        invoice = MagicMock(
+            invoice_total=100,
+            invoice_paid=0,
+            invoice_date=date(2026, 6, 1),
+            invoice_no='PUR-100',
+        )
+        with patch.object(combined_invoice_view.InvoicePaid.objects, 'create') as create_payment, \
+             patch.object(combined_invoice_view.SupplierAdvance.objects, 'create') as create_advance, \
+             patch.object(combined_invoice_view.AdvanceLedger.objects, 'create') as create_ledger:
+            applied_amount, excess_amount = combined_invoice_view._record_initial_supplier_payment(
+                invoice,
+                Decimal('120.00'),
+                'Cash',
+            )
+
+        self.assertEqual(applied_amount, Decimal('100'))
+        self.assertEqual(excess_amount, Decimal('20.00'))
+        create_payment.assert_called_once()
+        create_advance.assert_called_once_with(
+            supplier=invoice.supplierid,
+            amount=20.0,
+            payment_date=date(2026, 6, 1),
+            payment_mode='cash',
+            reference_no='',
+            narration='Advance from payment of Invoice PUR-100',
+        )
+        create_ledger.assert_called_once_with(
+            party_type='supplier',
+            supplier=invoice.supplierid,
+            entry_type='advance_in',
+            amount=20.0,
+            entry_date=date(2026, 6, 1),
+            invoice_ref='PUR-100',
+            narration='Advance paid with Invoice PUR-100',
+        )
+
+    def test_financial_year_starts_in_april_and_changes_in_march(self):
+        self.assertEqual(get_financial_year_start(date(2012, 4, 1)), 2012)
+        self.assertEqual(get_financial_year_start(date(2013, 3, 31)), 2012)
+        self.assertEqual(get_financial_year_start(date(2013, 4, 1)), 2013)
+
+    def test_financial_year_label_is_readable(self):
+        self.assertEqual(get_financial_year_label(date(2026, 4, 1)), '2026-27')
+        self.assertEqual(get_financial_year_label(date(2026, 3, 31)), '2025-26')
+
+    def test_invoice_save_sets_financial_year_and_updates_it_with_invoice_date(self):
+        invoice = models.InvoiceMaster(invoice_date=date(2013, 4, 1))
+
+        with patch.object(models.models.Model, 'save') as save_model:
+            invoice.save(update_fields=['invoice_date'])
+
+        self.assertEqual(invoice.invoice_financial_year, '2013-14')
+        self.assertEqual(
+            save_model.call_args.kwargs['update_fields'],
+            {'invoice_date', 'invoice_financial_year'},
+        )
+
+    def test_invoice_form_rejects_duplicate_number_within_supplier_fy(self):
+        supplier = MagicMock()
+        supplier.pk = 101
+        form = InvoiceForm()
+        form._errors = ErrorDict()
+        form.cleaned_data = {
+            'invoice_no': '101',
+            'supplierid': supplier,
+            'invoice_date': date(2013, 3, 31),
+        }
+        existing_invoices = MagicMock()
+        existing_invoices.exists.return_value = True
+
+        with patch.object(
+            models.InvoiceMaster.objects,
+            'filter',
+            return_value=existing_invoices,
+        ) as filter_invoices:
+            form.clean()
+
+        filter_invoices.assert_called_once_with(
+            invoice_no='101',
+            supplierid=supplier,
+            invoice_financial_year='2012-13',
+        )
+        self.assertIn('invoice_no', form.errors)
+
+    def test_invoice_form_allows_duplicate_number_in_another_fy(self):
+        supplier = MagicMock()
+        supplier.pk = 101
+        form = InvoiceForm()
+        form._errors = ErrorDict()
+        form.cleaned_data = {
+            'invoice_no': '101',
+            'supplierid': supplier,
+            'invoice_date': date(2013, 4, 1),
+        }
+        existing_invoices = MagicMock()
+        existing_invoices.exists.return_value = False
+
+        with patch.object(
+            models.InvoiceMaster.objects,
+            'filter',
+            return_value=existing_invoices,
+        ) as filter_invoices:
+            form.clean()
+
+        filter_invoices.assert_called_once_with(
+            invoice_no='101',
+            supplierid=supplier,
+            invoice_financial_year='2013-14',
+        )
+        self.assertNotIn('invoice_no', form.errors)
 
 
 class BackupLogoutTests(SimpleTestCase):
@@ -394,6 +627,56 @@ class ReorderLevelReportTests(SimpleTestCase):
 
 
 class CombinedSalesInvoiceDateTests(SimpleTestCase):
+    def test_initial_payment_is_saved_with_selected_mode_and_amount(self):
+        request = RequestFactory().post(
+            '/sales/add-with-products/',
+            {
+                'sales_invoice_date': '2026-06-01',
+                'products_data': '[]',
+                'initial_payment_mode': 'credit',
+                'initial_payment_amount': '40.50',
+            },
+        )
+        request.session = {'selected_year': 2026}
+        request.user = MagicMock(is_authenticated=True)
+
+        customer = MagicMock(customer_type='TYPE-A')
+        invoice = MagicMock(
+            sales_invoice_no='INV-TEST',
+            sales_invoice_date=date(2026, 6, 1),
+            sales_invoice_total=100,
+            sales_invoice_paid=0,
+            customerid=customer,
+        )
+
+        class FormStub:
+            cleaned_data = {'sales_invoice_date': date(2026, 6, 1)}
+            errors = {}
+
+            def is_valid(self):
+                return True
+
+            def save(self, commit=False):
+                return invoice
+
+        with patch.object(views, 'SalesInvoiceForm', return_value=FormStub()), \
+             patch.object(views, 'generate_sales_invoice_number', return_value='INV-TEST'), \
+             patch.object(views.SalesInvoicePaid.objects, 'create') as create_payment, \
+             patch.object(views.transaction, 'atomic', return_value=nullcontext()), \
+             patch.object(views, '_auto_adjust_customer_advance', return_value=''), \
+             patch.object(views, 'redirect', return_value=object()), \
+             patch.object(views.messages, 'info'), \
+             patch.object(views.messages, 'success'):
+            views.add_sales_invoice_with_products.__wrapped__(request)
+
+        create_payment.assert_called_once_with(
+            sales_ip_invoice_no=invoice,
+            sales_payment_date=date(2026, 6, 1),
+            sales_payment_amount=40.5,
+            sales_payment_mode='Credit',
+            sales_payment_ref_no='',
+        )
+
     def test_invoice_outside_selected_fy_is_not_saved(self):
         request = RequestFactory().post(
             '/sales/add-with-products/',

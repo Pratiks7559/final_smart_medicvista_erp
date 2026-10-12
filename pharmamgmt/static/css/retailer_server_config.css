@@ -1,0 +1,196 @@
+.sc-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.sc-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #4a4e69;
+    margin-bottom: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.sc-mode-badge {
+    display: inline-block;
+    padding: 0.3rem 1rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 1px;
+}
+.sc-mode-LOCAL  { background: #dbeafe; color: #1e40af; }
+.sc-mode-CLOUD  { background: #d1fae5; color: #065f46; }
+.sc-url-box {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    font-family: monospace;
+    font-size: 1rem;
+    color: #374151;
+    word-break: break-all;
+}
+.sc-copy-btn {
+    background: #667eea;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.82rem;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.sc-copy-btn:hover { background: #5a67d8; }
+.sc-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.sc-table th {
+    background: #f9fafb;
+    padding: 0.55rem 0.8rem;
+    text-align: left;
+    font-weight: 600;
+    color: #6b7280;
+    border-bottom: 2px solid #e5e7eb;
+    white-space: nowrap;
+}
+.sc-table td {
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+    font-family: monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
+}
+.sc-table tr:hover td { background: #f9fafb; }
+.sc-note {
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    border-radius: 6px;
+    padding: 0.8rem 1rem;
+    font-size: 0.88rem;
+    color: #78350f;
+    margin-top: 1rem;
+}
+.sc-env-block {
+    background: #1f2937;
+    color: #d1fae5;
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+    font-family: monospace;
+    font-size: 0.88rem;
+    line-height: 1.8;
+    margin-top: 0.5rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+.sc-inactive { opacity: 0.45; }
+
+.retailer-extracted-inline-1 {
+    padding: 1.5rem !important;
+}
+
+.retailer-extracted-inline-2 {
+    display: flex !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    margin-bottom: 1.5rem !important;
+}
+
+.retailer-extracted-inline-3 {
+    color: #667eea !important;
+    text-decoration: none !important;
+    font-size: 0.9rem !important;
+}
+
+.retailer-extracted-inline-4 {
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+    color: #4a4e69 !important;
+}
+
+.retailer-extracted-inline-5 {
+    color: #764ba2 !important;
+}
+
+.retailer-extracted-inline-6 {
+    color: #667eea !important;
+}
+
+.retailer-extracted-inline-7 {
+    display: flex !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    margin-bottom: 1rem !important;
+    flex-wrap: wrap !important;
+}
+
+.retailer-extracted-inline-8 {
+    font-size: 0.85rem !important;
+    color: #6b7280 !important;
+    font-weight: 600 !important;
+}
+
+.retailer-extracted-inline-9 {
+    font-size: 0.85rem !important;
+    color: #6b7280 !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.4rem !important;
+}
+
+.retailer-extracted-inline-10 {
+    color: #667eea !important;
+}
+
+.retailer-extracted-inline-11 {
+    font-size: 0.88rem !important;
+    color: #6b7280 !important;
+    margin-bottom: 1rem !important;
+}
+
+.retailer-extracted-inline-12 {
+    overflow-x: auto !important;
+}
+
+.retailer-extracted-inline-13 {
+    font-family: sans-serif !important;
+}
+
+.retailer-extracted-inline-14 {
+    margin-left: 0.5rem !important;
+}
+
+.retailer-extracted-inline-15 {
+    text-align: center !important;
+    color: #9ca3af !important;
+    padding: 2rem !important;
+}
+
+.retailer-extracted-inline-16 {
+    color: #667eea !important;
+}
+
+.retailer-extracted-inline-17 {
+    font-size: 0.88rem !important;
+    color: #6b7280 !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.retailer-extracted-inline-18 {
+    margin-top: 0.75rem !important;
+}
+
+.retailer-extracted-inline-19 {
+    color: #667eea !important;
+}
+
+.retailer-extracted-inline-20 {
+    font-size: 0.88rem !important;
+    color: #6b7280 !important;
+    margin-bottom: 0.5rem !important;
+}

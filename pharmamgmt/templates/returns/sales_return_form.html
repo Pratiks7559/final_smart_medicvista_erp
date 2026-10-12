@@ -1173,26 +1173,6 @@ document.addEventListener('DOMContentLoaded', function() {
         validateReturnDate();
     }
     
-    // Enhanced focus on return date field first
-    function focusReturnDate() {
-        const returnDateField = document.querySelector('[name="return_sales_invoice_date"]') ||
-                               document.querySelector('#return_date');
-        
-        if (returnDateField) {
-            returnDateField.focus();
-            console.log('✓ Sales return date field focused:', returnDateField.name);
-            return true;
-        } else {
-            console.error('❌ Sales return date field not found');
-            return false;
-        }
-    }
-    
-    // Try multiple times with increasing delays
-    setTimeout(focusReturnDate, 100);
-    setTimeout(focusReturnDate, 300);
-    setTimeout(focusReturnDate, 500);
-    
     // Initialize with one product row
     setTimeout(() => {
         const tbody = document.getElementById('productsTableBody');

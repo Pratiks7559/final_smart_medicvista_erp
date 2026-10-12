@@ -9,6 +9,7 @@ from django.http import HttpResponse
 from django.db.models import Q, F
 from PIL import Image
 import os
+from .year_filter_utils import get_financial_year_label
 
 # Create your models here.
 class Web_User(AbstractUser):
@@ -108,6 +109,7 @@ class InvoiceMaster(models.Model):
     invoiceid=models.BigAutoField(primary_key=True, auto_created=True)
     invoice_no=models.CharField(max_length=20)
     invoice_date=models.DateField(null=False, blank=False, default=timezone.now)
+    invoice_financial_year=models.CharField(max_length=7)
     supplierid=models.ForeignKey(SupplierMaster, on_delete=models.CASCADE)
     transport_charges=models.FloatField()
     invoice_total=models.FloatField(null=False, blank=False)
@@ -119,10 +121,14 @@ class InvoiceMaster(models.Model):
         ('paid', 'Fully Paid'),
         ('overdue', 'Overdue')
     ], default='pending')
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['invoice_no', 'supplierid'], name='unique_invoiceno_supplierid')
-        ]
+    
+
+    def save(self, *args, **kwargs):
+        self.invoice_financial_year = get_financial_year_label(self.invoice_date)
+        update_fields = kwargs.get('update_fields')
+        if update_fields:
+            kwargs['update_fields'] = set(update_fields) | {'invoice_financial_year'}
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"Invoice #{self.invoice_no} - {self.supplierid.supplier_name}"

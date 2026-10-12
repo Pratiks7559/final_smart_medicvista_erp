@@ -1519,3 +1519,348 @@ select.form-control {
     background-color: #6c757d !important;
     color: white !important;
 }
+
+/* Purchase return workspace: clinical danger palette */
+.purchase-return-page {
+    --p: #96363a;
+    --p-lite: #fff2f1;
+    --purple: #68272e;
+    --green: #28714d;
+    --g-lite: #e8f4ec;
+    --red: #b8323a;
+    --r-lite: #fff0ef;
+    --amber: #a9701b;
+    --a-lite: #fff5df;
+    --blue: #3b6878;
+    --dark: #273832;
+    --mid: #56665e;
+    --muted: #748078;
+    --border: #dce5df;
+    --bg: #f4f7f4;
+    --card: #fff;
+    --r: 8px;
+    --rs: 6px;
+    padding-bottom: 4.25rem;
+    background: #f4f7f4 !important;
+    color: #273832 !important;
+}
+
+.purchase-return-page .ci-wrapper-card {
+    border-color: #e2d8d7;
+    border-radius: 8px;
+    box-shadow: 0 8px 28px rgba(71, 34, 34, 0.08);
+}
+
+.purchase-return-page .ci-page-header {
+    min-height: 58px;
+    padding: 0.8rem 1.25rem;
+    border-left: 4px solid #c45a50;
+    background: linear-gradient(105deg, #51282d 0%, #7b3037 65%, #913a3d 100%) !important;
+}
+
+.purchase-return-page .ci-main-title {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: #fff !important;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.purchase-return-page .ci-main-title i {
+    color: #ffc1a5 !important;
+}
+
+.purchase-return-page .ci-content-body {
+    padding: 1.2rem;
+    background: #fff !important;
+}
+
+.purchase-return-page .ci-invoice-details-section,
+.purchase-return-page .ci-products-section {
+    border-color: #e1e7e3;
+    border-radius: 8px;
+    background: #f8faf8 !important;
+}
+
+.purchase-return-page .ci-invoice-details-section {
+    padding: 1rem;
+}
+
+.purchase-return-page .ci-products-section {
+    padding: 1rem;
+    background: #fff !important;
+}
+
+.purchase-return-page .ci-section-title {
+    padding-bottom: 0.5rem;
+    border-color: #a8433e;
+    color: #542d30 !important;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+}
+
+.purchase-return-page .ci-invoice-details-section > .return-details-grid:first-of-type {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin: 0;
+}
+
+.purchase-return-page .return-details-grid .ci-form-column {
+    min-width: 0;
+}
+
+.purchase-return-page .ci-field-label,
+.purchase-return-page .ci-supplier-label {
+    margin-bottom: 0.4rem;
+    color: #45564e !important;
+    font-size: 0.7rem;
+    letter-spacing: 0.055em;
+}
+
+.purchase-return-page .ci-content-body .form-control {
+    min-height: 40px;
+    height: auto;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid #cfd9d3 !important;
+    border-radius: 6px;
+    background-color: #fff !important;
+    color: #26352f !important;
+    font-size: 0.875rem;
+}
+
+.purchase-return-page .ci-content-body .form-control:focus {
+    border-color: #a8433e !important;
+    box-shadow: 0 0 0 3px rgba(168, 67, 62, 0.13) !important;
+}
+
+.purchase-return-page .return-details-grid .ci-form-column:last-child .form-control {
+    border-color: #d7b5b1 !important;
+    background: #fff8f7 !important;
+    color: #702d32 !important;
+    font-weight: 700;
+}
+
+.purchase-return-page .ci-products-header {
+    min-height: 54px;
+    padding: 0.65rem 0.8rem;
+    border-color: #e1e7e3;
+    border-radius: 7px;
+    background: #f4f7f5 !important;
+}
+
+.purchase-return-page .ci-products-header .ci-section-title {
+    margin: 0;
+    border: 0;
+    padding: 0;
+    font-size: 0.82rem;
+}
+
+.purchase-return-page .ci-keyboard-shortcuts {
+    color: #737f78 !important;
+    font-size: 0.68rem;
+    font-style: normal;
+}
+
+.purchase-return-page .ci-add-product-btn {
+    min-height: 38px;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid #7b2d34 !important;
+    border-radius: 6px;
+    background: #87323a !important;
+    font-size: 0.8rem;
+}
+
+.purchase-return-page .ci-add-product-btn:hover {
+    transform: translateY(-1px);
+    background: #69262d !important;
+    box-shadow: 0 4px 10px rgba(105, 38, 45, 0.18);
+}
+
+.purchase-return-page .ci-table-container {
+    max-height: min(54vh, 560px);
+    border-color: #dce4df;
+    border-radius: 7px;
+    box-shadow: none;
+}
+
+.purchase-return-page .ci-products-table {
+    min-width: 1180px;
+    font-variant-numeric: tabular-nums;
+}
+
+.purchase-return-page .ci-table-header {
+    background: linear-gradient(100deg, #48252a, #712b32) !important;
+}
+
+.purchase-return-page .ci-header-row th {
+    padding: 0.65rem 0.5rem;
+    color: #fff !important;
+    font-size: 0.68rem;
+}
+
+.purchase-return-page .ci-table-body tr:hover {
+    background: #fff7f6 !important;
+}
+
+.purchase-return-page .ci-table-body td {
+    vertical-align: middle !important;
+}
+
+.purchase-return-page .ci-table-body input:not([type="radio"]),
+.purchase-return-page .ci-table-body select {
+    min-height: 34px;
+    height: 34px;
+    border-color: #d4ddd8;
+    border-radius: 5px;
+}
+
+.purchase-return-page .ci-table-body input:focus,
+.purchase-return-page .ci-table-body select:focus {
+    border-color: #a8433e;
+    box-shadow: 0 0 0 2px rgba(168, 67, 62, 0.12);
+}
+
+.purchase-return-page .stock-error-row {
+    background: #fff0ef !important;
+}
+
+.purchase-return-page .available-stock {
+    border-left-color: #28714d;
+    background: #e9f4ed;
+    color: #286345;
+}
+
+.purchase-return-page .return-row-total {
+    border-radius: 5px;
+    background: #e8f4ec;
+    color: #286345;
+    font-variant-numeric: tabular-nums;
+}
+
+.purchase-return-page .ci-grand-total-display {
+    border-radius: 7px;
+    background: linear-gradient(110deg, #762b32, #96363a);
+    box-shadow: 0 4px 12px rgba(118, 43, 50, 0.16);
+}
+
+.purchase-return-page .ci-total-amount {
+    color: #fff !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.purchase-return-page .ci-form-actions {
+    justify-content: flex-end;
+    padding-top: 1rem;
+    border-color: #e3e8e5;
+}
+
+.purchase-return-page .ci-save-btn {
+    min-height: 42px;
+    padding: 0.6rem 1rem;
+    border: 1px solid #762b32 !important;
+    border-radius: 6px;
+    background: #87323a !important;
+    box-shadow: none;
+}
+
+.purchase-return-page .ci-save-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    background: #69262d !important;
+    box-shadow: 0 4px 12px rgba(105, 38, 45, 0.2);
+}
+
+.purchase-return-page :is(a, button, input, select):focus-visible {
+    outline: 2px solid #b6534d;
+    outline-offset: 2px;
+}
+
+.purchase-return-shortcut-bar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 900;
+    display: flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    padding: 0.45rem 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    background: #352023;
+    box-shadow: 0 -4px 16px rgba(45, 21, 23, 0.12);
+    color: #f5e9e7;
+    font-size: 0.76rem;
+}
+
+.purchase-return-shortcut-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    white-space: nowrap;
+}
+
+.purchase-return-shortcut-key {
+    padding: 0.2rem 0.4rem;
+    border: 1px solid #855055;
+    border-radius: 4px;
+    background: #4b2b30;
+    color: #ffd5ca;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+
+@media (max-width: 900px) {
+    .purchase-return-page .ci-invoice-details-section > .return-details-grid:first-of-type {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .purchase-return-page.ci-main-container {
+        padding: 0.65rem 0.65rem 4rem;
+    }
+
+    .purchase-return-page .ci-content-body {
+        padding: 0.75rem;
+    }
+
+    .purchase-return-page .ci-invoice-details-section > .return-details-grid:first-of-type {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.65rem;
+    }
+
+    .purchase-return-page .ci-products-header {
+        align-items: flex-start;
+    }
+
+    .purchase-return-page .ci-form-actions {
+        justify-content: stretch;
+    }
+
+    .purchase-return-page .ci-save-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .purchase-return-shortcut-bar {
+        justify-content: flex-start;
+        gap: 0.9rem;
+        overflow-x: auto;
+        padding-right: 0.75rem;
+        padding-left: 0.75rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .purchase-return-page *,
+    .purchase-return-page *::before,
+    .purchase-return-page *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}

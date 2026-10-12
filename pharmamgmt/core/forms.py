@@ -7,6 +7,7 @@ from .models import (
     ReturnPurchaseMaster, ReturnSalesInvoiceMaster, ReturnSalesInvoicePaid, ReturnSalesMaster,
     SaleRateMaster
 )
+from .year_filter_utils import get_financial_year_label
 
 class DateInput(forms.TextInput):
     input_type = 'text'
@@ -203,6 +204,29 @@ class InvoiceForm(forms.ModelForm):
             raise forms.ValidationError(f"Year {parsed.year} is too far in the future.")
 
         return parsed
+
+    def clean(self):
+        cleaned_data = super().clean()
+        invoice_no = cleaned_data.get('invoice_no')
+        supplier = cleaned_data.get('supplierid')
+        invoice_date = cleaned_data.get('invoice_date')
+
+        if invoice_no and supplier and invoice_date:
+            financial_year = get_financial_year_label(invoice_date)
+            existing_invoices = InvoiceMaster.objects.filter(
+                invoice_no=invoice_no,
+                supplierid=supplier,
+                invoice_financial_year=financial_year,
+            )
+            if self.instance.pk:
+                existing_invoices = existing_invoices.exclude(pk=self.instance.pk)
+            if existing_invoices.exists():
+                self.add_error(
+                    'invoice_no',
+                    'This supplier already has an invoice with this number in the same financial year.',
+                )
+
+        return cleaned_data
     
     class Meta:
         model = InvoiceMaster

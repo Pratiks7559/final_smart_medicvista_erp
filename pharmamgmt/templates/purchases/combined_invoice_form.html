@@ -11,7 +11,7 @@
 
 {% block content %}
 {% include 'components/combined_invoice_date_dialog.html' with date_field_id='invoice_date' %}
-<div class="ci-light-protect ci-main-container">
+<div class="ci-light-protect ci-main-container ci-purchase-invoice">
     <div class="ci-wrapper-card">
         <div class="ci-page-header">
             <h5 class="ci-main-title">Add Purchase Invoice with Products</h5>
@@ -163,6 +163,20 @@
                                         <tr style="border-top:2px solid #27ae60;background:#f0fdf4;">
                                             <td style="padding:6px 12px;font-weight:700;font-size:1rem;color:#27ae60;">Invoice Total:</td>
                                             <td style="padding:6px 12px;text-align:right;font-weight:700;font-size:1rem;color:#27ae60;">₹<span id="invoiceTotal" class="ci-total-amount">0.00</span></td>
+                                        </tr>
+                                        <tr class="ci-payment-row">
+                                            <td><strong>Payment:</strong></td>
+                                            <td>
+                                                <div class="ci-initial-payment-controls">
+                                                    <div class="ci-payment-mode-buttons" role="group" aria-label="Payment mode">
+                                                        <button type="button" class="ci-payment-mode-btn is-selected" aria-pressed="true" onclick="selectInitialPaymentMode('Credit', this)">Credit</button>
+                                                        <button type="button" class="ci-payment-mode-btn" aria-pressed="false" onclick="selectInitialPaymentMode('Cash', this)">Cash</button>
+                                                    </div>
+                                                    <input type="hidden" name="initial_payment_mode" id="initialPaymentMode" value="Credit">
+                                                    <label for="initialPaymentAmount">Amount</label>
+                                                    <input type="number" name="initial_payment_amount" id="initialPaymentAmount" min="0" step="0.01" value="0.00" required aria-label="Payment amount">
+                                                </div>
+                                            </td>
                                         </tr>
                                     </table>
                                     <button type="button" onclick="forceChallanTotalCalculation()" class="btn btn-sm btn-outline-primary ms-2" title="Recalculate Totals" style="margin-top:8px;">
@@ -1235,6 +1249,23 @@ function calculateInvoiceTotal() {
         invoiceTotalInput.value = rawTotal.toFixed(2);
         invoiceTotalInput.dispatchEvent(new Event('change', { bubbles: true }));
     }
+    syncInitialPaymentAmount(rawTotal);
+}
+
+function syncInitialPaymentAmount(total) {
+    const paymentAmountInput = document.getElementById('initialPaymentAmount');
+    if (paymentAmountInput && paymentAmountInput.dataset.userEdited !== 'true') {
+        paymentAmountInput.value = Math.max(0, total).toFixed(2);
+    }
+}
+
+function selectInitialPaymentMode(mode, selectedButton) {
+    document.getElementById('initialPaymentMode').value = mode;
+    document.querySelectorAll('.ci-payment-mode-btn').forEach(button => {
+        const isSelected = button === selectedButton;
+        button.classList.toggle('is-selected', isSelected);
+        button.setAttribute('aria-pressed', String(isSelected));
+    });
 }
 
 // Expiry date formatting for MM-YYYY format
@@ -1504,6 +1535,12 @@ function duplicateLastProductRow() {
 // Enhanced date input handling
 document.addEventListener('DOMContentLoaded', function() {
     setCurrentDate();
+    const paymentAmountInput = document.getElementById('initialPaymentAmount');
+    if (paymentAmountInput) {
+        paymentAmountInput.addEventListener('input', function() {
+            this.dataset.userEdited = 'true';
+        });
+    }
     const invoiceDateField = document.getElementById('invoice_date');
     const invoiceDateError = document.getElementById('invoiceDateFyError');
     if (invoiceDateField) {
@@ -2971,6 +3008,7 @@ function forceChallanTotalCalculation() {
         invoiceTotalInput.dispatchEvent(new Event('change', { bubbles: true }));
         console.log(`Invoice total field updated to: ${rawTotal.toFixed(2)} (Rounded display: ${finalTotal})`);
     }
+    syncInitialPaymentAmount(rawTotal);
     
     return finalTotal;
 }

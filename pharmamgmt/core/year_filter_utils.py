@@ -14,6 +14,17 @@ def get_financial_year_dates(fy_year):
     end_date = date(fy_year + 1, 3, 31)  # 31 March next year
     return start_date, end_date
 
+def get_financial_year_start(value):
+    """Return the starting calendar year for a date's April-to-March FY."""
+    if isinstance(value, datetime):
+        value = value.date()
+    return value.year if value.month >= 4 else value.year - 1
+
+def get_financial_year_label(value):
+    """Return an April-to-March financial year as a readable label, such as 2026-27."""
+    start_year = get_financial_year_start(value)
+    return f'{start_year}-{(start_year + 1) % 100:02d}'
+
 def is_date_in_financial_year(value, fy_year):
     """Return whether a date belongs to the selected financial year."""
     if not value:

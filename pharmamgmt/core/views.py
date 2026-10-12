@@ -2967,6 +2967,7 @@ def _auto_adjust_customer_advance(invoice):
 
 @login_required
 def add_sales_invoice_with_products(request):
+    from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
     from .year_filter_utils import (
         get_current_financial_year,
         get_financial_year_dates,
@@ -3032,8 +3033,25 @@ def add_sales_invoice_with_products(request):
                     'sales_invoice_date',
                     f'Invoice date must be within FY {current_fy}-{str(current_fy + 1)[2:]}.'
                 )
-                
+                        
             if invoice_form.is_valid():
+                payment_mode = request.POST.get('initial_payment_mode', '').strip().lower()
+                if payment_mode not in {'cash', 'credit'}:
+                    messages.error(request, 'Select Cash or Credit as the payment mode.')
+                    return redirect('add_sales_invoice_with_products')
+
+                try:
+                    initial_payment_amount = Decimal(
+                        request.POST.get('initial_payment_amount', '').strip()
+                    ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                except (InvalidOperation, TypeError, ValueError):
+                    messages.error(request, 'Enter a valid payment amount.')
+                    return redirect('add_sales_invoice_with_products')
+
+                if not initial_payment_amount.is_finite() or initial_payment_amount < 0:
+                    messages.error(request, 'Payment amount cannot be negative.')
+                    return redirect('add_sales_invoice_with_products')
+
                 # Create sales invoice
                 invoice = invoice_form.save(commit=False)
                 # Get series from form data
@@ -3307,7 +3325,6 @@ def add_sales_invoice_with_products(request):
                 # Apply a submitted whole discount after all product rows exist.
                 # The amount is the source of truth because older forms can submit
                 # the mode field as product_wise even when a whole discount is set.
-                from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
                 try:
                     whole_disc_val = Decimal(str(request.POST.get(
                         'whole_discount_value',
@@ -3326,6 +3343,45 @@ def add_sales_invoice_with_products(request):
                     disc_amt = max(Decimal('0'), min(disc_amt, products_sum))
                     invoice.whole_discount_amount = float(disc_amt)
                     invoice.save(update_fields=['whole_discount_amount'])
+
+                if initial_payment_amount > 0:
+                    from .models import CustomerAdvance, AdvanceLedger
+
+                    invoice_balance = max(
+                        Decimal('0'),
+                        Decimal(str(invoice.sales_invoice_total or 0))
+                        - Decimal(str(invoice.sales_invoice_paid or 0)),
+                    )
+                    applied_payment = min(initial_payment_amount, invoice_balance)
+                    excess_payment = initial_payment_amount - applied_payment
+
+                    with transaction.atomic():
+                        if applied_payment > 0:
+                            SalesInvoicePaid.objects.create(
+                                sales_ip_invoice_no=invoice,
+                                sales_payment_date=invoice.sales_invoice_date,
+                                sales_payment_amount=float(applied_payment),
+                                sales_payment_mode=payment_mode.title(),
+                                sales_payment_ref_no='',
+                            )
+                        if excess_payment > 0:
+                            CustomerAdvance.objects.create(
+                                customer=invoice.customerid,
+                                amount=float(excess_payment),
+                                receipt_date=invoice.sales_invoice_date,
+                                receipt_mode=payment_mode,
+                                reference_no='',
+                                narration=f'Advance from payment of Invoice {invoice.sales_invoice_no}',
+                            )
+                            AdvanceLedger.objects.create(
+                                party_type='customer',
+                                customer=invoice.customerid,
+                                entry_type='advance_in',
+                                amount=float(excess_payment),
+                                entry_date=invoice.sales_invoice_date,
+                                invoice_ref=invoice.sales_invoice_no,
+                                narration=f'Advance received with Invoice {invoice.sales_invoice_no}',
+                            )
 
                 # Success message based on whether products were added
                 if sales_created_count > 0:

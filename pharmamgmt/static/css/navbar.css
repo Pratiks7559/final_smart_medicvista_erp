@@ -873,3 +873,381 @@
         min-width: 130px;
     }
 }
+
+/* MedicVista clinical navigation */
+.pharma-navbar {
+    --nav-ink: #203b32;
+    --nav-muted: #60766d;
+    --nav-green: #1e6654;
+    --nav-green-dark: #174f42;
+    --nav-red: #a8433e;
+    --nav-border: #dce7e1;
+    min-height: 64px;
+    height: 64px;
+    padding: 0 1.25rem;
+    border-bottom: 2px solid #b9524b;
+    background: linear-gradient(100deg, #ffffff 0%, #f5f8f6 100%);
+    box-shadow: 0 4px 16px rgba(26, 54, 44, 0.08);
+    color: var(--nav-ink);
+}
+
+.pharma-navbar-left,
+.pharma-navbar-right {
+    min-width: 0;
+    gap: 0.75rem;
+}
+
+.pharma-sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border: 1px solid var(--nav-border);
+    border-radius: 8px;
+    background: #f2f7f4;
+    color: var(--nav-green);
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.pharma-sidebar-toggle:hover {
+    transform: none;
+    border-color: #b9d2c7;
+    background: #e6f1eb;
+    color: var(--nav-green-dark);
+}
+
+.pharma-sidebar-toggle-icon {
+    font-size: 1rem;
+}
+
+.pharma-navbar-brand {
+    color: var(--nav-ink);
+    font-size: 1.2rem;
+    line-height: 1;
+    text-decoration: none;
+}
+
+.pharma-navbar-brand:hover {
+    color: var(--nav-green-dark);
+    text-decoration: none;
+}
+
+.pharma-brand-content {
+    gap: 0.65rem;
+}
+
+.pharma-logo-container {
+    margin: 0;
+    padding: 0;
+}
+
+.logo-wrapper {
+    width: 38px;
+    height: 38px;
+    padding: 3px;
+    border: 1px solid #e4eae6;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 2px 7px rgba(32, 59, 50, 0.08);
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.logo-wrapper:hover {
+    transform: none;
+    border-color: #c6dacf;
+    box-shadow: 0 3px 10px rgba(32, 59, 50, 0.12);
+}
+
+.pharma-logo-img {
+    animation: none;
+    filter: none;
+}
+
+.logo-shine {
+    display: none;
+}
+
+.pharma-navbar .pharma-brand-text {
+    background: none;
+    color: var(--nav-ink);
+    font-size: 1.13rem;
+    font-weight: 750;
+    letter-spacing: 0;
+    -webkit-text-fill-color: currentColor;
+}
+
+.year-filter-dropdown {
+    margin: 0;
+}
+
+.year-filter-button {
+    min-height: 40px;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid #d7e4dc;
+    border-radius: 8px;
+    background: #edf5f0;
+    box-shadow: none;
+    color: var(--nav-green-dark);
+    font-size: 0.82rem;
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.year-filter-button:hover,
+.year-filter-button.active {
+    transform: none;
+    border-color: #b4d0c2;
+    background: #e2efe7;
+    box-shadow: none;
+}
+
+.year-text {
+    font-size: 0.82rem;
+}
+
+.year-dropdown-menu {
+    border: 1px solid var(--nav-border);
+    border-radius: 8px;
+    background: #fff !important;
+    box-shadow: 0 12px 28px rgba(24, 45, 37, 0.16);
+}
+
+.year-option {
+    min-height: 40px;
+    padding: 0.65rem 0.85rem;
+    color: var(--nav-ink);
+    font-size: 0.84rem;
+}
+
+.year-option:hover {
+    background: #f2f7f4;
+    color: var(--nav-green-dark);
+}
+
+.year-option.active {
+    background: var(--nav-green);
+    color: #fff;
+}
+
+.pharma-user-dropdown-button {
+    min-height: 46px;
+    padding: 0.35rem 0.65rem 0.35rem 0.4rem;
+    border: 1px solid var(--nav-border);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--nav-ink);
+    transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.pharma-user-dropdown-button:hover,
+.pharma-user-dropdown.active .pharma-user-dropdown-button {
+    border-color: #c5d8ce;
+    background: #f5f9f6;
+}
+
+.pharma-user-avatar {
+    width: 34px;
+    height: 34px;
+    border: 2px solid #d8e9df;
+    background: #e8f3ed;
+}
+
+.pharma-default-avatar {
+    background: linear-gradient(145deg, #a8433e, #762f31);
+}
+
+.pharma-user-info {
+    max-width: 180px;
+}
+
+.pharma-user-name {
+    overflow: hidden;
+    color: var(--nav-ink);
+    font-size: 0.82rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pharma-user-role {
+    color: var(--nav-muted);
+    font-size: 0.7rem;
+}
+
+.pharma-dropdown-arrow {
+    color: var(--nav-muted);
+}
+
+.pharma-dropdown-menu {
+    overflow: hidden;
+    border: 1px solid var(--nav-border);
+    border-radius: 9px;
+    background: #fff !important;
+    box-shadow: 0 14px 30px rgba(24, 45, 37, 0.17);
+}
+
+.pharma-dropdown-header {
+    border-bottom-color: #e5ece8;
+    background: #f3f7f5;
+}
+
+.pharma-dropdown-user-name {
+    color: var(--nav-ink);
+}
+
+.pharma-dropdown-user-role {
+    color: var(--nav-muted);
+}
+
+.pharma-dropdown-item {
+    min-height: 42px;
+    color: #40574e;
+    font-size: 0.84rem;
+}
+
+.pharma-dropdown-item:hover {
+    background: #f1f7f3;
+    color: var(--nav-green-dark);
+}
+
+.pharma-dropdown-profile-icon,
+.pharma-dropdown-dashboard-icon {
+    color: var(--nav-green);
+}
+
+.pharma-logout-item,
+.pharma-logout-item .pharma-dropdown-logout-icon {
+    color: var(--nav-red);
+}
+
+.pharma-logout-item:hover {
+    background: #fff2f0;
+    color: #87332f;
+}
+
+.pharma-login-button {
+    min-height: 42px;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid var(--nav-green);
+    border-radius: 8px;
+    background: var(--nav-green);
+    color: #fff;
+    font-size: 0.84rem;
+}
+
+.pharma-login-button:hover {
+    transform: none;
+    border-color: var(--nav-green-dark);
+    background: var(--nav-green-dark);
+    color: #fff;
+}
+
+.pharma-navbar :is(button, a):focus-visible {
+    outline: 2px solid #b9524b;
+    outline-offset: 2px;
+}
+
+.dark-mode .pharma-navbar {
+    --nav-ink: #edf5f0;
+    --nav-muted: #aebfb6;
+    --nav-border: #3b5148;
+    background: linear-gradient(100deg, #1e3029 0%, #243a32 100%);
+    color: var(--nav-ink);
+}
+
+.dark-mode .pharma-sidebar-toggle,
+.dark-mode .year-filter-button,
+.dark-mode .pharma-user-dropdown-button {
+    border-color: var(--nav-border);
+    background: #2d443a;
+    color: #e6f2eb;
+}
+
+.dark-mode .logo-wrapper,
+.dark-mode .pharma-dropdown-menu,
+.dark-mode .year-dropdown-menu {
+    border-color: var(--nav-border);
+    background: #263a32 !important;
+}
+
+.dark-mode .pharma-navbar .pharma-brand-text,
+.dark-mode .pharma-user-name,
+.dark-mode .pharma-dropdown-user-name,
+.dark-mode .pharma-dropdown-item,
+.dark-mode .year-option {
+    color: #edf5f0;
+}
+
+.dark-mode .pharma-dropdown-header,
+.dark-mode .year-option:hover,
+.dark-mode .pharma-dropdown-item:hover {
+    background: #31483e;
+}
+
+.dark-mode .pharma-user-dropdown-button:hover,
+.dark-mode .pharma-user-dropdown.active .pharma-user-dropdown-button {
+    background: #354e43;
+}
+
+@media (max-width: 768px) {
+    .pharma-navbar {
+        min-height: 58px;
+        height: 58px;
+        padding: 0 0.75rem;
+    }
+
+    .pharma-navbar-left,
+    .pharma-navbar-right {
+        gap: 0.55rem;
+    }
+
+    .pharma-logo-container {
+        display: none;
+    }
+
+    .pharma-navbar .pharma-brand-text {
+        font-size: 1rem;
+    }
+
+    .year-filter-button {
+        min-height: 40px;
+        padding: 0.45rem 0.6rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .pharma-navbar {
+        padding: 0 0.55rem;
+    }
+
+    .pharma-navbar-left,
+    .pharma-navbar-right {
+        gap: 0.4rem;
+    }
+
+    .pharma-sidebar-toggle {
+        width: 38px;
+        height: 38px;
+    }
+
+    .pharma-user-dropdown-button {
+        min-height: 40px;
+        padding: 0.25rem 0.45rem;
+    }
+
+    .pharma-user-avatar {
+        width: 30px;
+        height: 30px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .pharma-navbar *,
+    .pharma-navbar *::before,
+    .pharma-navbar *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}

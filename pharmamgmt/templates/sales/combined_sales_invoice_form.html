@@ -7,7 +7,7 @@
 
 {% block content %}
 {% include 'components/combined_invoice_date_dialog.html' with date_field_id='sales_invoice_date' date_min=fy_start date_max=fy_end %}
-<div class="combined-invoice-container">
+<div class="combined-invoice-container sales-pharmacy-invoice">
     <div class="invoice-wrapper">
         <div class="invoice-card">
             <div class="invoice-header">
@@ -174,6 +174,20 @@
                                             <tr class="totals-row-grand" style="border-top:2px solid #27ae60;">
                                                 <td><strong>Invoice Total:</strong></td>
                                                 <td>₹<span id="salesInvoiceTotal" class="total-amount">0.00</span></td>
+                                            </tr>
+                                            <tr class="totals-row-payment">
+                                                <td><strong>Payment:</strong></td>
+                                                <td>
+                                                    <div class="initial-payment-controls">
+                                                        <div class="payment-mode-buttons" role="group" aria-label="Payment mode">
+                                                            <button type="button" class="payment-mode-btn is-selected" aria-pressed="true" onclick="selectInitialPaymentMode('credit', this)">Credit</button>
+                                                            <button type="button" class="payment-mode-btn" aria-pressed="false" onclick="selectInitialPaymentMode('cash', this)">Cash</button>
+                                                        </div>
+                                                        <input type="hidden" name="initial_payment_mode" id="initialPaymentMode" value="credit">
+                                                        <label class="initial-payment-amount-label" for="initialPaymentAmount">Amount</label>
+                                                        <input type="number" name="initial_payment_amount" id="initialPaymentAmount" min="0" step="0.01" value="0.00" required aria-label="Payment amount">
+                                                    </div>
+                                                </td>
                                             </tr>
                                         </table>
                                         <small class="totals-actual">(Actual: ₹<span id="actualTotal">0.00</span>)</small>
@@ -1311,6 +1325,15 @@ function onSalesDiscountModeChange() {}
 
 function updateSalesGrandTotalWithWholeDisc() { calculateGrandTotal(); }
 
+function selectInitialPaymentMode(mode, selectedButton) {
+    document.getElementById('initialPaymentMode').value = mode;
+    document.querySelectorAll('.payment-mode-btn').forEach(button => {
+        const isSelected = button === selectedButton;
+        button.classList.toggle('is-selected', isSelected);
+        button.setAttribute('aria-pressed', String(isSelected));
+    });
+}
+
 function calculateGrandTotal() {
     let subtotal = 0, totalDiscount = 0, taxableAmount = 0, totalCGST = 0, totalSGST = 0, productsTotal = 0;
 
@@ -1370,6 +1393,10 @@ function calculateGrandTotal() {
     if (grandTotalEl) grandTotalEl.textContent = productsTotal.toFixed(2);
     const invoiceTotalEl = document.getElementById('salesInvoiceTotal');
     if (invoiceTotalEl) invoiceTotalEl.textContent = roundedTotal.toFixed(2);
+    const paymentAmountEl = document.getElementById('initialPaymentAmount');
+    if (paymentAmountEl && paymentAmountEl.dataset.userEdited !== 'true') {
+        paymentAmountEl.value = roundedTotal.toFixed(2);
+    }
     const actualEl = document.getElementById('actualTotal');
     if (actualEl) actualEl.textContent = rawTotal.toFixed(2);
 
@@ -3054,6 +3081,12 @@ document.addEventListener('keydown', function(e) {
 // Initialize page with single product row and current date
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Page loaded, initializing...');
+    const paymentAmountInput = document.getElementById('initialPaymentAmount');
+    if (paymentAmountInput) {
+        paymentAmountInput.addEventListener('input', function() {
+            this.dataset.userEdited = 'true';
+        });
+    }
     
     // Initialize product cache
     window.initializeProductCache();
@@ -3063,27 +3096,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Load invoice series on page load
     loadInvoiceSeries();
-    
-    // Simple focus on invoice date field
-    function focusSalesInvoiceDate() {
-        const invoiceDateField = document.querySelector('[name="sales_invoice_date"]') ||
-                                document.querySelector('#id_sales_invoice_date') ||
-                                document.querySelector('input[type="date"]');
-        
-        if (invoiceDateField) {
-            invoiceDateField.focus();
-            console.log('✓ Sales invoice date field focused:', invoiceDateField.name || invoiceDateField.id);
-            return true;
-        } else {
-            console.error('❌ Sales invoice date field not found');
-            return false;
-        }
-    }
-    
-    // Try multiple times with increasing delays
-    setTimeout(focusSalesInvoiceDate, 100);
-    setTimeout(focusSalesInvoiceDate, 300);
-    setTimeout(focusSalesInvoiceDate, 500);
     
     // Single initialization point to avoid duplicates
     setTimeout(() => {
@@ -3170,10 +3182,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 {% endblock %}
-
-
-
-
-
 
 

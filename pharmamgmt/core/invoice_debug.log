@@ -1120,3 +1120,51 @@ ValueError: Invalid expiry format
 2026-09-30 18:34:04,240 - core.combined_invoice_view - INFO - Product ACASTER CAP 10 CAPS: Base=141.12, CGST=3.53, SGST=3.53, Total=148.18
 2026-09-30 18:34:04,376 - core.combined_invoice_view - INFO - PURCHASE CREATED: ACASTER CAP 10 CAPS, Batch: 43, Qty: 12.0, Free Qty: 12.0
 2026-09-30 18:34:04,519 - core.combined_invoice_view - INFO - Invoice 532 created successfully with 1 products
+2026-10-09 20:33:15,073 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['h0rJVE0kFMDO6V6KxlEYotfx6DVLcBAsx5GLAw5oSxLvpMszcl1LT0HEhbFyYEV8'], 'invoice_date': ['2027-02-01'], 'invoice_no': ['101'], 'supplierid': ['1'], 'transport_charges': ['0'], 'invoice_total': ['151.20'], 'whole_discount_amount': ['0.00'], 'whole_discount_type': ['percentage'], 'discount_mode_value': ['product_wise'], 'disc_type_0': ['percentage'], 'whole_disc_type': ['percentage'], 'products_data': ['[{"productid":"254","batch_no":"123","expiry":"12-2034","mrp":"12","purchase_rate":"12","quantity":"12","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"percentage","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-10-09 20:33:15,092 - core.combined_invoice_view - INFO - Products data received: [{"productid":"254","batch_no":"123","expiry":"12-2034","mrp":"12","purchase_rate":"12","quantity":"12","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"percentage","rate_a":"1","rate_b":"2","rate_c":"3","from_challan":false,"challan_no":"","challan_date":""}]
+2026-10-09 20:33:15,093 - core.combined_invoice_view - INFO - Challan flag: false
+2026-10-09 20:33:15,099 - core.combined_invoice_view - INFO - Invoice created with ID: 135041
+2026-10-09 20:33:15,107 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-10-09 20:33:15,108 - core.combined_invoice_view - INFO - Product ASITUSS-A SYP 100ML: Base=144.0, CGST=3.6, SGST=3.6, Total=151.2
+2026-10-09 20:33:15,232 - core.combined_invoice_view - INFO - PURCHASE CREATED: ASITUSS-A SYP 100ML, Batch: 123, Qty: 12.0, Free Qty: 2.0
+2026-10-09 20:33:15,264 - core.combined_invoice_view - INFO - Invoice 101 created successfully with 1 products
+2026-10-09 20:34:22,400 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['CuSn57EXjIffqx4sexinu9VN7ZsMExd1Sz7pKZJ1wtnWJoqhTxFaZGnUixczqAyH'], 'invoice_date': ['2026-01-01'], 'invoice_no': ['101'], 'supplierid': ['1'], 'transport_charges': ['0'], 'invoice_total': ['151.20'], 'whole_discount_amount': ['0.00'], 'whole_discount_type': ['percentage'], 'discount_mode_value': ['product_wise'], 'disc_type_0': ['percentage'], 'whole_disc_type': ['percentage'], 'products_data': ['[{"productid":"254","batch_no":"1222","expiry":"12-2045","mrp":"12","purchase_rate":"12","quantity":"12","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"percentage","rate_a":"1","rate_b":"0","rate_c":"0","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-10-09 20:34:22,412 - core.combined_invoice_view - INFO - Products data received: [{"productid":"254","batch_no":"1222","expiry":"12-2045","mrp":"12","purchase_rate":"12","quantity":"12","free_qty":"2","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"percentage","rate_a":"1","rate_b":"0","rate_c":"0","from_challan":false,"challan_no":"","challan_date":""}]
+2026-10-09 20:34:22,413 - core.combined_invoice_view - INFO - Challan flag: false
+2026-10-09 20:34:22,418 - core.combined_invoice_view - INFO - Invoice created with ID: 135042
+2026-10-09 20:34:22,426 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-10-09 20:34:22,428 - core.combined_invoice_view - INFO - Product ASITUSS-A SYP 100ML: Base=144.0, CGST=3.6, SGST=3.6, Total=151.2
+2026-10-09 20:34:22,522 - core.combined_invoice_view - INFO - PURCHASE CREATED: ASITUSS-A SYP 100ML, Batch: 1222, Qty: 12.0, Free Qty: 2.0
+2026-10-09 20:34:22,554 - core.combined_invoice_view - INFO - Invoice 101 created successfully with 1 products
+2026-10-12 15:35:44,005 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'invoice_date': ['2026-06-01'], 'products_data': ['[]'], 'initial_payment_mode': ['Credit'], 'initial_payment_amount': ['40.50']}>
+2026-10-12 15:35:44,010 - core.combined_invoice_view - INFO - Products data received: []
+2026-10-12 15:35:44,010 - core.combined_invoice_view - INFO - Challan flag: false
+2026-10-12 15:35:44,010 - core.combined_invoice_view - INFO - Invoice being created without products - header only
+2026-10-12 15:35:44,010 - core.combined_invoice_view - INFO - Creating invoice without valid products - header only invoice
+2026-10-12 15:35:44,012 - core.combined_invoice_view - INFO - Invoice created with ID: 12
+2026-10-12 15:35:44,012 - core.combined_invoice_view - INFO - Invoice PUR-100 created without products - header only
+2026-10-12 15:35:44,015 - core.combined_invoice_view - INFO - Invoice PUR-100 created successfully with 0 products
+2026-10-12 15:37:48,219 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['nXxtYHwfJ3GaMzeFfQ8ZBS0H9XPTGL4eZDlI1BnVopyGw2Ae58v9lY7KAV90zjHB'], 'invoice_date': ['2027-02-01'], 'invoice_no': ['23222'], 'supplierid': ['1'], 'transport_charges': ['0'], 'invoice_total': ['148.18'], 'whole_discount_amount': ['2.00'], 'whole_discount_type': ['percentage'], 'discount_mode_value': ['product_wise'], 'disc_type_0': ['percentage'], 'whole_disc_type': ['percentage'], 'initial_payment_mode': ['Credit'], 'initial_payment_amount': ['148.18'], 'products_data': ['[{"productid":"18","batch_no":"222","expiry":"12-2033","mrp":"12","purchase_rate":"12","quantity":"12","free_qty":"12","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"percentage","rate_a":"0","rate_b":"0","rate_c":"0","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-10-12 15:37:48,238 - core.combined_invoice_view - INFO - Products data received: [{"productid":"18","batch_no":"222","expiry":"12-2033","mrp":"12","purchase_rate":"12","quantity":"12","free_qty":"12","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"percentage","rate_a":"0","rate_b":"0","rate_c":"0","from_challan":false,"challan_no":"","challan_date":""}]
+2026-10-12 15:37:48,239 - core.combined_invoice_view - INFO - Challan flag: false
+2026-10-12 15:37:48,244 - core.combined_invoice_view - INFO - Invoice created with ID: 135043
+2026-10-12 15:37:48,250 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-10-12 15:37:48,251 - core.combined_invoice_view - INFO - Product ACASTER CAP 10 CAPS: Base=144.0, CGST=3.6, SGST=3.6, Total=151.2
+2026-10-12 15:37:48,361 - core.combined_invoice_view - INFO - PURCHASE CREATED: ACASTER CAP 10 CAPS, Batch: 222, Qty: 12.0, Free Qty: 12.0
+2026-10-12 15:37:48,415 - core.combined_invoice_view - INFO - Invoice 23222 created successfully with 1 products
+2026-10-12 15:45:40,416 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'csrfmiddlewaretoken': ['IrPZ4doBVgDADtt0SLU4UBuChkMl6W7rk7De77fhACv6nWPzI3heEHBFIi6sZuKO'], 'invoice_date': ['2027-02-01'], 'invoice_no': ['12'], 'supplierid': ['1'], 'transport_charges': ['0'], 'invoice_total': ['148.18'], 'whole_discount_amount': ['2.00'], 'whole_discount_type': ['percentage'], 'discount_mode_value': ['product_wise'], 'disc_type_0': ['percentage'], 'whole_disc_type': ['percentage'], 'initial_payment_mode': ['Cash'], 'initial_payment_amount': ['150'], 'products_data': ['[{"productid":"18","batch_no":"242232","expiry":"12-2033","mrp":"12","purchase_rate":"12","quantity":"12","free_qty":"0","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"percentage","rate_a":"0","rate_b":"0","rate_c":"0","from_challan":false,"challan_no":"","challan_date":""}]'], 'is_from_challan': ['false']}>
+2026-10-12 15:45:40,435 - core.combined_invoice_view - INFO - Products data received: [{"productid":"18","batch_no":"242232","expiry":"12-2033","mrp":"12","purchase_rate":"12","quantity":"12","free_qty":"0","scheme":"0","discount":"0","cgst":"2.5","sgst":"2.5","calculation_mode":"percentage","rate_a":"0","rate_b":"0","rate_c":"0","from_challan":false,"challan_no":"","challan_date":""}]
+2026-10-12 15:45:40,436 - core.combined_invoice_view - INFO - Challan flag: false
+2026-10-12 15:45:40,444 - core.combined_invoice_view - INFO - Invoice created with ID: 135044
+2026-10-12 15:45:40,450 - core.combined_invoice_view - INFO - Challan data received: challan_no=, challan_date=
+2026-10-12 15:45:40,450 - core.combined_invoice_view - INFO - Product ACASTER CAP 10 CAPS: Base=144.0, CGST=3.6, SGST=3.6, Total=151.2
+2026-10-12 15:45:40,548 - core.combined_invoice_view - INFO - PURCHASE CREATED: ACASTER CAP 10 CAPS, Batch: 242232, Qty: 12.0, Free Qty: 0.0
+2026-10-12 15:45:40,585 - core.combined_invoice_view - INFO - Invoice 12 created successfully with 1 products
+2026-10-12 15:47:40,903 - core.combined_invoice_view - INFO - POST data received: <QueryDict: {'invoice_date': ['2026-06-01'], 'products_data': ['[]'], 'initial_payment_mode': ['Credit'], 'initial_payment_amount': ['40.50']}>
+2026-10-12 15:47:40,904 - core.combined_invoice_view - INFO - Products data received: []
+2026-10-12 15:47:40,904 - core.combined_invoice_view - INFO - Challan flag: false
+2026-10-12 15:47:40,904 - core.combined_invoice_view - INFO - Invoice being created without products - header only
+2026-10-12 15:47:40,905 - core.combined_invoice_view - INFO - Creating invoice without valid products - header only invoice
+2026-10-12 15:47:40,906 - core.combined_invoice_view - INFO - Invoice created with ID: 12
+2026-10-12 15:47:40,906 - core.combined_invoice_view - INFO - Invoice PUR-100 created without products - header only
+2026-10-12 15:47:40,908 - core.combined_invoice_view - INFO - Invoice PUR-100 created successfully with 0 products

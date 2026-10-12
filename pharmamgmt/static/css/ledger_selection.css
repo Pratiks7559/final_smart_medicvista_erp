@@ -77,6 +77,8 @@
 }
 
 .ledger-section-icon { font-size: 1.1rem; }
+.ledger-customer-icon { color: #4f46e5; }
+.ledger-supplier-icon { color: #db2777; }
 
 .ledger-section-title {
     font-size: 0.95rem;
