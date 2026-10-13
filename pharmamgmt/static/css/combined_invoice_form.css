@@ -706,10 +706,15 @@
     font-size: .82rem !important;
 }
 
+.ci-grand-total-display .ci-total-summary-table {
+    table-layout: fixed;
+}
+
 .ci-grand-total-display table tr td {
     padding: 5px 10px !important;
     color: var(--pp-ink-2) !important;
     border-bottom: 1px solid var(--pp-line-3);
+    overflow-wrap: anywhere;
 }
 
 .ci-grand-total-display table tr:last-child td {
@@ -752,11 +757,63 @@
 
 .ci-total-amount {
     font-size: 1rem !important;
+    white-space: nowrap;
+}
+
+.ci-grand-total-display table tr.ci-calculation-row td {
+    padding: 3px 10px 6px !important;
+    color: var(--pp-ink-3) !important;
+    font-size: .68rem !important;
+    line-height: 1.45;
+    text-align: right !important;
+    font-variant-numeric: tabular-nums;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+}
+
+.ci-whole-discount-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    width: 100%;
+    min-width: 0;
+}
+
+.ci-whole-discount-controls > span:first-child {
+    font-weight: 600;
+}
+
+.ci-whole-discount-controls label {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin: 0;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.ci-whole-discount-deducted {
+    margin-left: auto;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.ci-grand-total-display .ci-whole-discount-controls input[type="number"] {
+    box-sizing: border-box;
+    flex: 0 1 90px;
+    width: 90px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
 }
 
 /* Whole discount row overrides */
-#wholeDiscountRow td[style*="color:#c62828"] {
+#wholeDiscountRow td {
     color: var(--pp-red) !important;
+    font-family: "DM Sans", sans-serif !important;
+    white-space: normal !important;
 }
 
 #wholeDiscountRow input[type="radio"] {
@@ -785,9 +842,19 @@
 .ci-payment-row td {
     padding: 8px 10px !important;
     border-top: 1px solid var(--pp-line-3);
+    font-family: "DM Sans", sans-serif !important;
+    white-space: normal !important;
 }
 
-.ci-payment-row td:first-child strong {
+.ci-payment-row-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.ci-payment-row-content > strong {
     color: var(--pp-ink);
     font-size: .82rem;
     font-weight: 600;
@@ -799,6 +866,7 @@
     justify-content: flex-end;
     gap: 8px;
     flex-wrap: wrap;
+    min-width: 0;
 }
 
 .ci-payment-mode-buttons {
@@ -843,7 +911,10 @@
 }
 
 #initialPaymentAmount {
+    flex: 0 1 110px;
     width: 110px;
+    min-width: 84px;
+    max-width: 100%;
     padding: 5px 8px !important;
     font-family: "JetBrains Mono", monospace !important;
     font-size: .82rem !important;
@@ -1822,12 +1893,17 @@ body > div[style*="position: fixed"][style*="bottom: 0"] span[style*="background
         gap: 6px;
     }
 
+    .ci-payment-row-content {
+        justify-content: flex-start;
+    }
+
     .ci-payment-mode-btn {
         padding: 4px 10px;
         font-size: .7rem;
     }
 
     #initialPaymentAmount {
+        flex-basis: 96px;
         width: 96px;
         font-size: .78rem !important;
     }

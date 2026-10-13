@@ -1,4 +1,5 @@
 import json
+import re
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -26,6 +27,44 @@ file_handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
+
+
+def _normalize_purchase_expiry(value):
+    expiry = str(value or '').strip()
+    month = None
+    year = None
+
+    match = re.fullmatch(r'(\d{1,2})[-/](\d{2}|\d{4})', expiry)
+    if match:
+        month = int(match.group(1))
+        year_text = match.group(2)
+        year = int(f'20{year_text}') if len(year_text) == 2 else int(year_text)
+    else:
+        match = re.fullmatch(r'(\d{4})[-/](\d{1,2})(?:[-/]\d{1,2})?', expiry)
+        if match:
+            year = int(match.group(1))
+            month = int(match.group(2))
+        else:
+            digits = re.sub(r'\D', '', expiry)
+            if len(digits) == 4:
+                month = int(digits[:2])
+                year = int(f'20{digits[2:]}')
+            elif len(digits) == 6:
+                month = int(digits[:2])
+                year = int(digits[2:])
+
+    if month is None or year is None:
+        raise ValueError(
+            f"Invalid expiry format {expiry!r}; enter MM-YYYY (for example, 08-2026)"
+        )
+    if not 1 <= month <= 12:
+        raise ValueError(f"Invalid expiry month in {expiry!r}; month must be between 01 and 12")
+
+    current_year = datetime.now().year
+    if year < 2000 or year > current_year + 50:
+        raise ValueError(f"Invalid expiry year {year}")
+
+    return f'{month:02d}-{year:04d}'
 
 
 def _record_initial_supplier_payment(invoice, amount, payment_mode):
@@ -129,7 +168,7 @@ def add_invoice_with_products(request):
                 return redirect('add_invoice_with_products')
             
             # Process products data from JavaScript
-            products_data = request.POST.get('products_data')
+            products_data = request.POST.get('products_data', '')
             challan_flag = request.POST.get('is_from_challan', 'false').lower()
             is_from_challan = challan_flag == 'true'
             is_mixed_mode = challan_flag == 'mixed'
@@ -156,21 +195,25 @@ def add_invoice_with_products(request):
                     'title': 'Add Invoice with Products'
                 }
                 return render(request, 'purchases/combined_invoice_form.html', context)
+
+            if not isinstance(products, list) or any(not isinstance(product, dict) for product in products):
+                messages.error(request, "Invalid products data. Please review the invoice products and try again.")
+                suppliers = SupplierMaster.objects.all().order_by('supplier_name')
+                products_list = ProductMaster.objects.all().order_by('product_name')
+                return render(request, 'purchases/combined_invoice_form.html', {
+                    'invoice_form': invoice_form,
+                    'suppliers': suppliers,
+                    'products': products_list,
+                    'products_data': products_data,
+                    'current_fy': current_fy,
+                    'title': 'Add Invoice with Products'
+                })
             
-            # Filter valid products but allow invoice creation even without products
+            # Ignore empty product rows while retaining selected rows for strict validation.
             valid_products = []
             for product in products:
-                try:
-                    product_id = product.get('productid')
-                    batch_no = str(product.get('batch_no', '')).strip()
-                    quantity_val = product.get('quantity', 0)
-                    quantity = float(str(quantity_val)) if quantity_val else 0.0
-                    
-                    if product_id and batch_no and quantity > 0:
-                        valid_products.append(product)
-                except (ValueError, TypeError) as e:
-                    logger.warning(f"Error validating product: {e}")
-                    continue
+                if product.get('productid'):
+                    valid_products.append(product)
             
             # Log if no valid products but continue with invoice creation
             if not valid_products:
@@ -201,8 +244,8 @@ def add_invoice_with_products(request):
                         product = ProductMaster.objects.get(productid=product_data['productid'])
                         
                         # Validate required fields
-                        batch_no = product_data.get('batch_no', '').strip()
-                        expiry = product_data.get('expiry', '').strip()
+                        batch_no = str(product_data.get('batch_no') or '').strip()
+                        expiry = str(product_data.get('expiry') or '').strip()
                         
                         if not batch_no:
                             raise ValueError(f"Batch number is required for {product.product_name}")
@@ -210,34 +253,8 @@ def add_invoice_with_products(request):
                         if not expiry:
                             raise ValueError(f"Expiry date is required for {product.product_name}")
                         
-                        # Validate and normalize expiry date to MM-YYYY format
-                        import re
-                        expiry = expiry.strip()
-                        
-                        if len(expiry) == 4 and expiry.isdigit():
-                            expiry = f"{expiry[:2]}-20{expiry[2:4]}"
-                        elif len(expiry) == 6 and expiry.isdigit():
-                            expiry = f"{expiry[:2]}-{expiry[2:6]}"
-                        elif '/' in expiry:
-                            expiry = expiry.replace('/', '-')
-                        elif len(expiry) == 7 and expiry.count('-') == 1:
-                            pass
-                        else:
-                            digits = re.sub(r'[^0-9]', '', expiry)
-                            if len(digits) == 4:
-                                expiry = f"{digits[:2]}-20{digits[2:4]}"
-                            elif len(digits) == 6:
-                                expiry = f"{digits[:2]}-{digits[2:6]}"
-                            else:
-                                raise ValueError("Invalid expiry format")
-                        
-                        if not re.match(r'^(0[1-9]|1[0-2])-\d{4}$', expiry):
-                            raise ValueError("Invalid MM-YYYY format")
-                        
-                        exp_month, exp_year = int(expiry.split('-')[0]), int(expiry.split('-')[1])
-                        current_year = datetime.now().year
-                        if exp_year < 2000 or exp_year > (current_year + 50):
-                            raise ValueError(f"Invalid expiry year {exp_year}")
+                        expiry = _normalize_purchase_expiry(expiry)
+                        exp_month, exp_year = map(int, expiry.split('-'))
                         expiry_date = datetime(exp_year, exp_month, 1).date()
                         
                         # Convert and validate numeric fields
@@ -354,6 +371,12 @@ def add_invoice_with_products(request):
                         transaction.savepoint_rollback(sid)
                         errors.append(f"Row {i+1}: {str(e)}")
                         logger.error(f"Error processing product {i+1}: {traceback.format_exc()}")
+
+                if errors:
+                    raise ValueError(
+                        "Invoice was not saved because one or more products are invalid: "
+                        + "; ".join(errors[:5])
+                    )
                 
                 # Allow invoice creation even without products
                 if products_added == 0:
@@ -487,9 +510,11 @@ def add_invoice_with_products(request):
             suppliers = SupplierMaster.objects.all().order_by('supplier_name')
             products = ProductMaster.objects.all().order_by('product_name')
             context = {
-                'invoice_form': InvoiceForm(),
+                'invoice_form': invoice_form,
                 'suppliers': suppliers,
                 'products': products,
+                'products_data': products_data,
+                'current_fy': current_fy,
                 'title': 'Add Invoice with Products'
             }
             return render(request, 'purchases/combined_invoice_form.html', context)

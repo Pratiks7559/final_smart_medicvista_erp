@@ -1548,12 +1548,35 @@
 
 #batchSelectionModal .batch-selection-table thead th {
     background: var(--cm-soft) !important;
-    color: var(--cm-ink-2) !important;
+    color: #365b72 !important;
     font-family: "IBM Plex Mono", monospace !important;
     font-size: .66rem !important;
     font-weight: 600 !important;
     letter-spacing: .06em !important;
     text-transform: uppercase !important;
+}
+
+#batchSelectionModal .batch-selection-table tbody td {
+    color: #40566f !important;
+}
+
+#batchSelectionModal .batch-selection-table tbody td strong {
+    color: #0f766e !important;
+}
+
+#batchSelectionModal .batch-selection-table tbody td:nth-child(5) {
+    color: #1d4ed8 !important;
+    font-weight: 600;
+}
+
+#batchSelectionModal .batch-selection-table tbody td.text-danger {
+    color: #b45309 !important;
+    font-weight: 600;
+}
+
+#batchSelectionModal .batch-selection-table tbody td.text-success {
+    color: #0f766e !important;
+    font-weight: 600;
 }
 
 #batchSelectionModal .batch-item:hover {

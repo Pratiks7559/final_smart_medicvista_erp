@@ -128,7 +128,7 @@
                             </div>
                             <div class="ci-total-section">
                                 <div class="ci-grand-total-display">
-                                    <table style="width:100%;max-width:420px;margin-left:auto;border-collapse:collapse;font-size:0.9rem;">
+                                    <table class="ci-total-summary-table" style="width:100%;max-width:420px;margin-left:auto;border-collapse:collapse;font-size:0.9rem;">
                                         <tr>
                                             <td style="padding:4px 12px;color:#555;">Subtotal (before discount):</td>
                                             <td style="padding:4px 12px;text-align:right;font-weight:600;">₹<span id="subtotalAmount">0.00</span></td>
@@ -150,31 +150,36 @@
                                             <td style="padding:4px 12px;text-align:right;font-weight:600;">₹<span id="totalSGST">0.00</span></td>
                                         </tr>
                                         <tr id="wholeDiscountRow">
-                                            <td style="padding:4px 12px;color:#c62828;">
-                                                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                            <td colspan="2" style="padding:4px 12px;color:#c62828;">
+                                                <div class="ci-whole-discount-controls">
                                                     <span>Whole Discount:</span>
-                                                    <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="whole_disc_type" id="wholeDiscFlat" value="flat" onchange="recalcWholeDiscount()"> Flat ₹</label>
-                                                    <label style="cursor:pointer;font-weight:600;font-size:0.85rem;"><input type="radio" name="whole_disc_type" id="wholeDiscPercent" value="percentage" checked onchange="recalcWholeDiscount()"> %</label>
-                                                    <input type="number" id="wholeDiscountAmount" min="0" step="any" placeholder="0" style="padding:4px 8px;border:1.5px solid #ffb300;border-radius:6px;width:110px;font-size:0.9rem;" oninput="recalcWholeDiscount()">
+                                                    <label for="wholeDiscFlat"><input type="radio" name="whole_disc_type" id="wholeDiscFlat" value="flat" onchange="recalcWholeDiscount()"> Flat ₹</label>
+                                                    <label for="wholeDiscPercent"><input type="radio" name="whole_disc_type" id="wholeDiscPercent" value="percentage" checked onchange="recalcWholeDiscount()"> %</label>
+                                                    <input type="number" id="wholeDiscountAmount" min="0" step="any" placeholder="0" oninput="recalcWholeDiscount()">
+                                                    <span class="ci-whole-discount-deducted">− ₹<span id="wholeDiscountDeducted">0.00</span></span>
                                                 </div>
                                             </td>
-                                            <td style="padding:4px 12px;text-align:right;font-weight:600;color:#c62828;">- ₹<span id="wholeDiscountDeducted">0.00</span></td>
+                                        </tr>
+                                        <tr class="ci-calculation-row">
+                                            <td colspan="2"><span id="invoiceCalculation">0.00</span></td>
                                         </tr>
                                         <tr style="border-top:2px solid #27ae60;background:#f0fdf4;">
                                             <td style="padding:6px 12px;font-weight:700;font-size:1rem;color:#27ae60;">Invoice Total:</td>
                                             <td style="padding:6px 12px;text-align:right;font-weight:700;font-size:1rem;color:#27ae60;">₹<span id="invoiceTotal" class="ci-total-amount">0.00</span></td>
                                         </tr>
                                         <tr class="ci-payment-row">
-                                            <td><strong>Payment:</strong></td>
-                                            <td>
-                                                <div class="ci-initial-payment-controls">
-                                                    <div class="ci-payment-mode-buttons" role="group" aria-label="Payment mode">
-                                                        <button type="button" class="ci-payment-mode-btn is-selected" aria-pressed="true" onclick="selectInitialPaymentMode('Credit', this)">Credit</button>
-                                                        <button type="button" class="ci-payment-mode-btn" aria-pressed="false" onclick="selectInitialPaymentMode('Cash', this)">Cash</button>
+                                            <td colspan="2">
+                                                <div class="ci-payment-row-content">
+                                                    <strong>Payment:</strong>
+                                                    <div class="ci-initial-payment-controls">
+                                                        <div class="ci-payment-mode-buttons" role="group" aria-label="Payment mode">
+                                                            <button type="button" class="ci-payment-mode-btn is-selected" aria-pressed="true" onclick="selectInitialPaymentMode('Credit', this)">Credit</button>
+                                                            <button type="button" class="ci-payment-mode-btn" aria-pressed="false" onclick="selectInitialPaymentMode('Cash', this)">Cash</button>
+                                                        </div>
+                                                        <input type="hidden" name="initial_payment_mode" id="initialPaymentMode" value="Credit">
+                                                        <label for="initialPaymentAmount">Amount</label>
+                                                        <input type="number" name="initial_payment_amount" id="initialPaymentAmount" min="0" step="0.01" value="0.00" required aria-label="Payment amount">
                                                     </div>
-                                                    <input type="hidden" name="initial_payment_mode" id="initialPaymentMode" value="Credit">
-                                                    <label for="initialPaymentAmount">Amount</label>
-                                                    <input type="number" name="initial_payment_amount" id="initialPaymentAmount" min="0" step="0.01" value="0.00" required aria-label="Payment amount">
                                                 </div>
                                             </td>
                                         </tr>
@@ -1225,7 +1230,7 @@ function calculateInvoiceTotal() {
             ? Math.min(productsTotal * wholeDiscVal / 100, productsTotal)
             : Math.min(wholeDiscVal, productsTotal);
     }
-    if (el('wholeDiscountAmountHidden')) el('wholeDiscountAmountHidden').value = wholeDiscType === 'percentage' ? wholeDiscVal.toFixed(2) : wholeDisc.toFixed(2);
+    if (el('wholeDiscountAmountHidden')) el('wholeDiscountAmountHidden').value = wholeDisc.toFixed(2);
     if (el('wholeDiscountTypeHidden')) el('wholeDiscountTypeHidden').value = wholeDiscType;
     if (el('wholeDiscountDeducted'))     el('wholeDiscountDeducted').textContent = wholeDisc.toFixed(2);
 
@@ -1233,15 +1238,16 @@ function calculateInvoiceTotal() {
     const roundedTotal = Math.round(rawTotal);
     const roundoffAmount = roundedTotal - rawTotal;
 
-    let displayHtml = productsTotal.toFixed(2);
-    if (transportCharges > 0) displayHtml += ` + ${transportCharges.toFixed(2)}`;
-    if (wholeDisc > 0) displayHtml += ` - ${wholeDisc.toFixed(2)} (whole disc)`;
+    let calculationText = productsTotal.toFixed(2);
+    if (transportCharges > 0) calculationText += ` + ${transportCharges.toFixed(2)}`;
+    if (wholeDisc > 0) calculationText += ` − ${wholeDisc.toFixed(2)} (whole discount)`;
     if (Math.abs(roundoffAmount) > 0.001) {
         const sign = roundoffAmount > 0 ? '+' : '-';
-        displayHtml += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off)`;
+        calculationText += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off)`;
     }
-    displayHtml += ` = <strong>\u20b9${roundedTotal}</strong>`;
-    if (el('invoiceTotal')) el('invoiceTotal').innerHTML = displayHtml;
+    calculationText += ` = ₹${roundedTotal}`;
+    if (el('invoiceCalculation')) el('invoiceCalculation').textContent = calculationText;
+    if (el('invoiceTotal')) el('invoiceTotal').textContent = String(roundedTotal);
 
     const invoiceTotalInput = document.querySelector('input[name*="invoice_total"]') ||
                               document.querySelector('#id_invoice_total');
@@ -1268,33 +1274,25 @@ function selectInitialPaymentMode(mode, selectedButton) {
     });
 }
 
-// Expiry date formatting for MM-YYYY format
+// Preserve partially typed MM-YYYY values; normalize only complete dates.
 function formatExpiryDate(input) {
-    let value = input.value.replace(/[^0-9]/g, '');
-    
-    if (value.length >= 2) {
-        let month = value.substring(0, 2);
-        let year = value.substring(2);
-        
-        // Validate month
-        if (parseInt(month) > 12) {
-            month = '12';
-        } else if (parseInt(month) < 1) {
-            month = '01';
-        }
-        
-        if (value.length === 4) {
-            // MMYY format - convert to MM-YYYY
-            year = '20' + year;
-            input.value = `${month}-${year}`;
-        } else if (value.length >= 6) {
-            // MMYYYY format - convert to MM-YYYY
-            year = year.substring(0, 4);
-            input.value = `${month}-${year}`;
-        } else if (value.length === 2) {
-            // Just month entered
-            input.value = month;
-        }
+    const value = input.value.trim();
+    let match = value.match(/^(\d{1,2})[-/](\d{4})$/);
+
+    if (!match && /^\d{6}$/.test(value)) {
+        match = [value, value.slice(0, 2), value.slice(2)];
+    }
+
+    if (!match && /^\d{4}$/.test(value)) {
+        match = [value, value.slice(0, 2), `20${value.slice(2)}`];
+    }
+
+    if (!match) return;
+
+    const month = Number(match[1]);
+    const year = Number(match[2]);
+    if (month >= 1 && month <= 12) {
+        input.value = `${String(month).padStart(2, '0')}-${year}`;
     }
 }
 
@@ -1596,8 +1594,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('blur', function(e) {
         // ONLY validate expiry fields for MM-YYYY format
         if (e.target.classList.contains('expiry') || e.target.id === 'updateExpiry') {
+            formatExpiryDate(e.target);
             const value = e.target.value;
-            if (value && !/^(0[1-9]|1[0-2])-\d{4}$/.test(value)) {
+            const expiryMatch = value.match(/^(0[1-9]|1[0-2])-(\d{4})$/);
+            const maxExpiryYear = new Date().getFullYear() + 50;
+            if (value && (!expiryMatch || Number(expiryMatch[2]) < 2000 || Number(expiryMatch[2]) > maxExpiryYear)) {
                 e.target.setCustomValidity('Please enter expiry in MM-YYYY format (e.g., 12-2025)');
             } else {
                 e.target.setCustomValidity('');
@@ -2323,6 +2324,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!product.expiry) {
                     errorMessages.push(`Row ${rowNum}: Expiry date is required`);
                     hasErrors = true;
+                } else if (!/^(0[1-9]|1[0-2])-\d{4}$/.test(product.expiry)) {
+                    errorMessages.push(`Row ${rowNum}: Expiry must be in MM-YYYY format (e.g., 08-2026)`);
+                    hasErrors = true;
                 }
                 if (!product.quantity || parseFloat(product.quantity) <= 0) {
                     errorMessages.push(`Row ${rowNum}: Quantity must be greater than 0`);
@@ -2946,71 +2950,12 @@ function recalculateAllTotals() {
 
 // Function specifically for challan products to force calculation
 function forceChallanTotalCalculation() {
-    console.log('Force calculating challan product totals...');
-    
-    let grandTotal = 0;
     const rows = document.querySelectorAll('#productRows tr');
-    
-    rows.forEach((row, index) => {
-        if (row.id) {
-            const rate = parseFloat(row.querySelector('.purchase-rate')?.value) || 0;
-            const qty = parseFloat(row.querySelector('.qty')?.value) || 0;
-            const discount = parseFloat(row.querySelector('.discount')?.value) || 0;
-            const cgstRate = parseFloat(row.querySelector('.cgst-rate')?.value) || 0;
-            const sgstRate = parseFloat(row.querySelector('.sgst-rate')?.value) || 0;
-            
-            if (rate > 0 && qty > 0) {
-                const baseAmount = rate * qty;
-                const afterDiscount = baseAmount - discount;
-                const cgstAmount = (afterDiscount * cgstRate) / 100;
-                const sgstAmount = (afterDiscount * sgstRate) / 100;
-                const total = afterDiscount + cgstAmount + sgstAmount;
-                
-                const totalSpan = row.querySelector('.row-total');
-                if (totalSpan) {
-                    totalSpan.textContent = total.toFixed(2);
-                    grandTotal += total;
-                }
-                
-                console.log(`Row ${index}: Rate=${rate}, Qty=${qty}, Discount=${discount}, CGST=${cgstRate}%, SGST=${sgstRate}%, Total=${total.toFixed(2)}`);
-            }
-        }
+    rows.forEach(row => {
+        const rowIndex = row.id.match(/^productRow_(\d+)$/)?.[1];
+        if (rowIndex) calculateRowTotal(Number(rowIndex));
     });
-    
-    // Update invoice total
-    const transportCharges = parseFloat(document.querySelector('input[name*="transport_charges"]')?.value) || 0;
-    const rawTotal = grandTotal + transportCharges;
-    const finalTotal = Math.round(rawTotal); // Round off
-    const roundoffAmount = finalTotal - rawTotal;
-    
-    console.log(`Grand Total: ${grandTotal.toFixed(2)}, Transport: ${transportCharges.toFixed(2)}, Raw: ${rawTotal.toFixed(2)}, RoundOff: ${roundoffAmount.toFixed(2)}, Final: ${finalTotal}`);
-    
-    // Update display
-    const invoiceTotalDisplay = document.getElementById('invoiceTotal');
-    if (invoiceTotalDisplay) {
-        let displayHtml = transportCharges > 0 ? `${grandTotal.toFixed(2)} + ${transportCharges.toFixed(2)}` : grandTotal.toFixed(2);
-        if (Math.abs(roundoffAmount) > 0.001) {
-            const sign = roundoffAmount > 0 ? '+' : '-';
-            displayHtml += ` ${sign} ${Math.abs(roundoffAmount).toFixed(2)} (round off) = <strong>${finalTotal}</strong>`;
-        } else {
-            displayHtml += ` = <strong>${finalTotal}</strong>`;
-        }
-        invoiceTotalDisplay.innerHTML = displayHtml;
-    }
-    
-    // Update invoice total input field
-    const invoiceTotalInput = document.querySelector('input[name*="invoice_total"]') || 
-                             document.querySelector('#id_invoice_total') ||
-                             document.querySelector('input[id*="invoice_total"]');
-    
-    if (invoiceTotalInput) {
-        invoiceTotalInput.value = rawTotal.toFixed(2);  // Save actual decimal value, not rounded
-        invoiceTotalInput.dispatchEvent(new Event('change', { bubbles: true }));
-        console.log(`Invoice total field updated to: ${rawTotal.toFixed(2)} (Rounded display: ${finalTotal})`);
-    }
-    syncInitialPaymentAmount(rawTotal);
-    
-    return finalTotal;
+    calculateInvoiceTotal();
 }
 
 

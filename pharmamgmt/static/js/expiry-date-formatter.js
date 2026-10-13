@@ -5,31 +5,23 @@
 
 // Format expiry date input to MM-YYYY format
 function formatExpiryDate(input) {
-    let value = input.value.replace(/[^0-9]/g, '');
-    
-    if (value.length >= 2) {
-        let month = value.substring(0, 2);
-        let year = value.substring(2);
-        
-        // Validate and correct month
-        if (parseInt(month) > 12) {
-            month = '12';
-        } else if (parseInt(month) < 1 && month.length === 2) {
-            month = '01';
-        }
-        
-        if (value.length === 4) {
-            // MMYY format - convert to MM-YYYY
-            year = '20' + year;
-            input.value = `${month}-${year}`;
-        } else if (value.length >= 6) {
-            // MMYYYY format - convert to MM-YYYY
-            year = year.substring(0, 4);
-            input.value = `${month}-${year}`;
-        } else if (value.length === 2) {
-            // Just month entered
-            input.value = month;
-        }
+    const value = input.value.trim();
+    let match = value.match(/^(\d{1,2})[-/](\d{4})$/);
+
+    if (!match && /^\d{6}$/.test(value)) {
+        match = [value, value.slice(0, 2), value.slice(2)];
+    }
+
+    if (!match && /^\d{4}$/.test(value)) {
+        match = [value, value.slice(0, 2), `20${value.slice(2)}`];
+    }
+
+    if (!match) return;
+
+    const month = Number(match[1]);
+    const year = Number(match[2]);
+    if (month >= 1 && month <= 12) {
+        input.value = `${String(month).padStart(2, '0')}-${year}`;
     }
 }
 
@@ -54,10 +46,11 @@ function validateExpiryDate(value) {
         };
     }
     
-    if (year < 2020 || year > 2050) {
+    const currentYear = new Date().getFullYear();
+    if (year < 2000 || year > currentYear + 50) {
         return {
             valid: false,
-            message: 'Invalid year. Use a year between 2020-2050.'
+            message: `Invalid year. Use a year between 2000-${currentYear + 50}.`
         };
     }
     
@@ -80,7 +73,7 @@ function initializeExpiryDateFormatting() {
         if (e.target.classList.contains('expiry') || 
             e.target.name === 'product_expiry' ||
             e.target.id === 'product_expiry') {
-            
+            formatExpiryDate(e.target);
             const validation = validateExpiryDate(e.target.value);
             if (!validation.valid) {
                 e.target.setCustomValidity(validation.message);

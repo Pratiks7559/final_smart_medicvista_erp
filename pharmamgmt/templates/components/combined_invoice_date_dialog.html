@@ -91,7 +91,7 @@
             let message = '';
             if (!isoDate) {
                 message = 'Enter a valid date.';
-            } else if (!dateMin || !dateMax || isoDate < dateMin || isoDate > dateMax) {
+            } else if ((dateMin && isoDate < dateMin) || (dateMax && isoDate > dateMax)) {
                 message = `${fyLabel} dates must be from ${dateMinLabel} to ${dateMaxLabel}.`;
             }
 
@@ -133,6 +133,14 @@
             form?.addEventListener('submit', event => {
                 if (fyGuardActive && !validateDateField()) blockUntilValidDate(event);
             }, true);
+        }
+
+        if (getIsoDate()) {
+            fyGuardActive = true;
+            if (validateDateField()) {
+                dialog.style.display = 'none';
+                return;
+            }
         }
 
         const formContainer = dateField.closest('form')?.parentElement;
