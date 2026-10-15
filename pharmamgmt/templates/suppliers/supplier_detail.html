@@ -132,9 +132,14 @@
         <div class="supplier-detail-history-card">
             <div class="supplier-detail-card-header supplier-detail-history-header">
                 <h5 class="supplier-detail-card-title">Purchase History</h5>
-                <a href="{% url 'add_invoice_with_products' %}" class="supplier-detail-new-invoice-btn">
-                    <i class="fas fa-plus me-1 supplier-detail-plus-icon"></i> New Invoice
-                </a>
+                <div class="supplier-detail-history-actions">
+                    <button type="button" class="all-fy-open-button" onclick="openAllFyHistory()">
+                        <i class="fas fa-calendar-alt"></i> All FY Details <kbd>Ctrl+H</kbd>
+                    </button>
+                    <a href="{% url 'add_invoice_with_products' %}" class="supplier-detail-new-invoice-btn">
+                        <i class="fas fa-plus me-1 supplier-detail-plus-icon"></i> New Invoice
+                    </a>
+                </div>
             </div>
             <div class="supplier-detail-card-body">
                 <div class="supplier-detail-table-wrapper">
@@ -181,6 +186,63 @@
             </div>
         </div>
     </div>
+</div>
+
+<div id="allFyHistoryModal" class="all-fy-modal" style="display: none;"
+     role="dialog" aria-modal="true" aria-labelledby="allFyHistoryTitle">
+    <div class="all-fy-modal-backdrop" onclick="closeAllFyHistory()"></div>
+    <section class="all-fy-modal-panel">
+        <header class="all-fy-modal-header">
+            <div>
+                <h2 id="allFyHistoryTitle">All Financial Year Purchase History</h2>
+                <p>{{ supplier.supplier_name }}</p>
+            </div>
+            <button type="button" class="all-fy-close-button" onclick="closeAllFyHistory()"
+                    aria-label="Close purchase history">&times;</button>
+        </header>
+        <div class="all-fy-modal-body">
+            {% for group in all_fy_groups %}
+            <section class="all-fy-year-section">
+                <h3>Financial Year {{ group.year }}</h3>
+                <div class="all-fy-table-scroll">
+                    <table class="all-fy-table">
+                        <thead>
+                            <tr><th>Invoice #</th><th>Date</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for row in group.invoices %}
+                            <tr>
+                                <td>{{ row.invoice.invoice_no }}</td>
+                                <td>{{ row.invoice.invoice_date|date:"d M Y" }}</td>
+                                <td>{{ row.amount|currency }}</td>
+                                <td>{{ row.paid|currency }}</td>
+                                <td class="{% if row.balance > 0 %}all-fy-balance-due{% else %}all-fy-balance-paid{% endif %}">
+                                    {{ row.balance|currency }}
+                                </td>
+                                <td class="all-fy-actions">
+                                    <a href="{% url 'invoice_detail' pk=row.invoice.invoiceid %}" aria-label="View invoice {{ row.invoice.invoice_no }}">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if row.balance > 0 %}
+                                    <a href="{% url 'add_invoice_payment' invoice_id=row.invoice.invoiceid %}" aria-label="Record payment for invoice {{ row.invoice.invoice_no }}">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr><th>FY Total</th><td></td><th>{{ group.total_amount|currency }}</th><th>{{ group.total_paid|currency }}</th><th>{{ group.balance|currency }}</th><td></td></tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </section>
+            {% empty %}
+            <p class="all-fy-empty">No purchase history is available for this supplier.</p>
+            {% endfor %}
+        </div>
+    </section>
 </div>
 
 <!-- Edit Supplier Modal -->
@@ -277,6 +339,195 @@
 </div>
 
 <style>
+.supplier-detail-history-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.all-fy-open-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 34px;
+    padding: 0 11px;
+    border: 1px solid #b9dce7;
+    border-radius: 7px;
+    background: linear-gradient(135deg, #f0f9fc, #e1f1f5);
+    color: #0f6079;
+    cursor: pointer;
+    font-size: .78rem;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 1px 3px rgba(15, 96, 121, .08);
+    transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+}
+
+.all-fy-open-button > i {
+    display: grid;
+    place-items: center;
+    width: 21px;
+    height: 21px;
+    border-radius: 6px;
+    background: #fff;
+    color: #0f7897;
+}
+
+.all-fy-open-button:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(135deg, #e1f1f5, #cce7ee);
+    box-shadow: 0 5px 12px rgba(15, 96, 121, .14);
+}
+
+.all-fy-open-button:focus-visible,
+.all-fy-close-button:focus-visible,
+.all-fy-actions a:focus-visible {
+    outline: 2px solid rgba(15, 110, 140, .35);
+    outline-offset: 2px;
+}
+
+.all-fy-open-button kbd {
+    padding: 1px 5px;
+    border: 1px solid #b9dce7;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, .8);
+    color: #0f6079;
+    font-family: inherit;
+    font-size: .63rem;
+    font-weight: 700;
+}
+
+.all-fy-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(10px, 2vw, 22px);
+    animation: all-fy-fade-in .16s ease-out;
+}
+
+.all-fy-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, .58);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+}
+
+.all-fy-modal-panel {
+    position: relative;
+    width: min(100%, 960px);
+    max-height: min(86vh, 760px);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .7);
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: 0 20px 55px rgba(15, 23, 42, .26), 0 3px 10px rgba(15, 23, 42, .1);
+    animation: all-fy-modal-rise .2s cubic-bezier(.2, .8, .2, 1);
+}
+
+.all-fy-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 15px 19px;
+    border-bottom: 1px solid #e1edf1;
+    background:
+        radial-gradient(circle at 0 0, rgba(15, 110, 140, .1), transparent 45%),
+        linear-gradient(135deg, #fff 0%, #f6fbfd 100%);
+}
+
+.all-fy-modal-header h2 { margin: 0; color: #1b2533; font-size: clamp(1rem, 1.8vw, 1.2rem); font-weight: 800; letter-spacing: -.02em; }
+.all-fy-modal-header p { margin: 3px 0 0; color: #64748b; font-size: .82rem; }
+.all-fy-close-button {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #dce9ee;
+    border-radius: 8px;
+    background: #fff;
+    color: #506875;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform .16s ease, background .16s ease, color .16s ease;
+}
+.all-fy-close-button:hover { transform: rotate(90deg); background: #effaff; color: #0369a1; }
+.all-fy-modal-body { max-height: calc(min(86vh, 760px) - 64px); overflow: auto; padding: 15px 18px 18px; background: #f7fafc; }
+.all-fy-year-section {
+    overflow: hidden;
+    border: 1px solid #e1e9ed;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, .04);
+}
+.all-fy-year-section + .all-fy-year-section { margin-top: 12px; }
+.all-fy-year-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    padding: 9px 12px;
+    border-bottom: 1px solid #e5eef2;
+    background: linear-gradient(90deg, #f0f9fc, #fbfdfe);
+    color: #0f6079;
+    font-size: .88rem;
+    font-weight: 800;
+}
+.all-fy-year-section h3::before { content: ""; width: 3px; height: 16px; border-radius: 9px; background: #0f6e8c; }
+.all-fy-table-scroll { overflow-x: auto; }
+.all-fy-table { width: 100%; border-collapse: separate; border-spacing: 0; white-space: nowrap; }
+.all-fy-table th, .all-fy-table td { padding: 8px 11px; border-bottom: 1px solid #edf1f3; text-align: left; }
+.all-fy-table th { color: #53656e; font-size: .67rem; font-weight: 800; letter-spacing: .045em; text-transform: uppercase; }
+.all-fy-table thead { background: #fbfdfe; }
+.all-fy-table tbody tr { transition: background .14s ease; }
+.all-fy-table tbody tr:hover { background: #f3faff; }
+.all-fy-table tbody td { color: #33444c; font-size: .8rem; }
+.all-fy-table tfoot { background: #f6fafc; }
+.all-fy-table tfoot th, .all-fy-table tfoot td { border-bottom: 0; color: #183b4b; font-weight: 800; }
+.all-fy-balance-due { color: #b42318 !important; font-weight: 700; }
+.all-fy-balance-paid { color: #15803d !important; font-weight: 700; }
+.all-fy-actions { display: flex; align-items: center; gap: 6px; }
+.all-fy-actions a {
+    display: grid;
+    place-items: center;
+    width: 27px;
+    height: 27px;
+    border: 1px solid #d8edf6;
+    border-radius: 7px;
+    background: #f1faff;
+    color: #087ba9;
+    text-decoration: none;
+    transition: transform .15s ease, background .15s ease;
+}
+.all-fy-actions a:hover { transform: translateY(-1px); background: #e0f2fe; }
+.all-fy-empty { margin: 0; padding: 22px; border: 1px dashed #c9d9e0; border-radius: 10px; background: #fff; color: #617985; text-align: center; font-size: .85rem; }
+
+@keyframes all-fy-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes all-fy-modal-rise { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+@media (max-width: 640px) {
+    .supplier-detail-history-actions { width: 100%; }
+    .all-fy-open-button { flex: 1; }
+    .all-fy-modal { padding: 10px; }
+    .all-fy-modal-panel { max-height: 92vh; border-radius: 11px; }
+    .all-fy-modal-header { padding: 12px 14px; }
+    .all-fy-modal-body { max-height: calc(92vh - 58px); padding: 11px; }
+    .all-fy-table th, .all-fy-table td { padding: 7px 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .all-fy-modal, .all-fy-modal-panel { animation: none; }
+    .all-fy-open-button, .all-fy-close-button, .all-fy-table tbody tr, .all-fy-actions a { transition: none; }
+}
+
 /* Fixed Modal Styles - Theme Consistent */
 .modal-overlay {
     position: fixed;
@@ -461,6 +712,16 @@ function closeEditSupplierModal() {
     document.getElementById('editSupplierModal').style.display = 'none';
 }
 
+function openAllFyHistory() {
+    document.getElementById('allFyHistoryModal').style.display = 'flex';
+    document.querySelector('#allFyHistoryModal .all-fy-close-button').focus();
+}
+
+function closeAllFyHistory() {
+    document.getElementById('allFyHistoryModal').style.display = 'none';
+    document.querySelector('.all-fy-open-button').focus();
+}
+
 function saveSupplier() {
     const form = document.getElementById('editSupplierForm');
     const formData = new FormData(form);
@@ -488,16 +749,18 @@ function saveSupplier() {
 
 // Keyboard shortcut Ctrl+E for edit
 document.addEventListener('keydown', function(e) {
-    if (e.ctrlKey && e.key === 'e') {
+    if (e.ctrlKey && e.key.toLowerCase() === 'h' && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        openAllFyHistory();
+    } else if (e.key === 'Escape' && document.getElementById('allFyHistoryModal').style.display === 'flex') {
+        closeAllFyHistory();
+    } else if (e.ctrlKey && e.key.toLowerCase() === 'e') {
         e.preventDefault();
         openEditSupplierModal();
     }
 });
 </script>
 {% endblock %}
-
-
-
 
 
 

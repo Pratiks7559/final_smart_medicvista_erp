@@ -703,3 +703,227 @@
         -moz-osx-font-smoothing: grayscale;
     }
 }
+
+/* Compact visual system aligned with the customer detail page. */
+.supplier-detail-container {
+    max-width: 1320px;
+    padding: 14px;
+    color: #1b2533;
+}
+
+.supplier-detail-actions {
+    gap: 7px;
+    margin-bottom: 12px;
+}
+
+.supplier-detail-edit-btn,
+.supplier-detail-delete-btn,
+.supplier-detail-back-btn {
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: .82rem;
+    font-weight: 600;
+}
+
+.supplier-detail-edit-btn { background: #0f6e8c; }
+.supplier-detail-edit-btn:hover { background: #0b566f; }
+.supplier-detail-delete-btn { background: #fff; color: #b42318; border-color: #cbd5e1; }
+.supplier-detail-delete-btn:hover { background: #b42318; color: #fff; }
+.supplier-detail-back-btn { background: #fff; color: #1b2533; }
+.supplier-detail-back-btn:hover { background: #f3f5f8; color: #1b2533; }
+
+.supplier-detail-wrapper {
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.supplier-detail-info-card,
+.supplier-detail-legal-card,
+.supplier-detail-bank-card,
+.supplier-detail-financial-card,
+.supplier-detail-history-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 1px 3px rgba(16, 24, 40, .07);
+}
+
+.supplier-detail-card-header {
+    padding: 9px 13px;
+    border-bottom-color: #e2e8f0;
+    background: #f8fafc !important;
+}
+
+.supplier-detail-card-title {
+    font-size: .92rem;
+    font-weight: 700;
+}
+
+.supplier-detail-card-body {
+    padding: 13px;
+}
+
+.supplier-detail-name {
+    margin-bottom: 4px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -.01em;
+}
+
+.supplier-detail-type {
+    display: inline-block;
+    margin-bottom: 12px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: #e6f2f6;
+    color: #0b566f !important;
+    font-size: .74rem;
+    font-weight: 700;
+    font-style: normal;
+}
+
+.supplier-detail-info-item,
+.supplier-detail-legal-item,
+.supplier-detail-bank-item {
+    gap: 6px;
+    padding: 7px 0;
+    border-bottom-color: #e9eef3;
+    font-size: .83rem;
+}
+
+.supplier-detail-info-item i,
+.supplier-detail-legal-item i,
+.supplier-detail-bank-item i {
+    width: 16px;
+    margin-right: 0 !important;
+    color: #0f6e8c;
+    text-align: center;
+}
+
+.supplier-detail-info-label {
+    min-width: 104px;
+    font-size: .8rem;
+}
+
+.supplier-detail-info-value,
+.supplier-detail-info-strong {
+    font-size: .82rem;
+}
+
+.supplier-detail-address {
+    margin-top: 2px;
+    color: #64748b !important;
+    font-size: .8rem;
+    line-height: 1.4;
+}
+
+.supplier-detail-financial-stats {
+    gap: 10px;
+}
+
+.supplier-detail-stat-item {
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #0f6e8c;
+    border-radius: 7px;
+    background: #f8fafc !important;
+}
+
+.supplier-detail-stat-item:nth-child(2) { border-left-color: #1b7f4b; }
+.supplier-detail-stat-item:nth-child(3) { border-left-color: #b42318; background: #fef3f2 !important; }
+
+.supplier-detail-stat-label {
+    margin-bottom: 5px;
+    font-size: .74rem;
+}
+
+.supplier-detail-stat-value {
+    font-size: 1.25rem;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+}
+
+.supplier-detail-total-purchase { color: #0f6e8c; }
+.supplier-detail-total-paid { color: #1b7f4b; }
+.supplier-detail-balance { color: #b42318; }
+
+.supplier-detail-history-header {
+    gap: 8px;
+    padding: 9px 13px;
+}
+
+.supplier-detail-new-invoice-btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: 6px;
+    background: #0f6e8c;
+    font-size: .8rem;
+    font-weight: 600;
+}
+
+.supplier-detail-new-invoice-btn:hover { background: #0b566f; }
+.supplier-detail-table-wrapper { overflow-x: auto; }
+.supplier-detail-history-table { margin-top: 0; }
+
+.supplier-detail-table-th {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #536176 !important;
+    font-size: .72rem;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+}
+
+.supplier-detail-table-td {
+    padding: 8px 10px;
+    border-bottom-color: #edf1f5;
+    font-size: .8rem;
+}
+
+.supplier-detail-table-row:hover { background: #f5fafc !important; }
+
+.supplier-detail-action-btn {
+    min-width: 29px;
+    min-height: 29px;
+    padding: 5px 7px;
+    margin-right: 3px;
+    border-radius: 6px;
+    font-size: .75rem;
+}
+
+.supplier-detail-view-btn { background: #0f6e8c; }
+.supplier-detail-view-btn:hover { background: #0b566f; }
+.supplier-detail-payment-btn { background: #eaf5f8; color: #0b566f; }
+.supplier-detail-payment-btn:hover { background: #d4eaf0; color: #0b566f; }
+.supplier-detail-empty-message { padding: 20px; color: #64748b; font-size: .84rem; }
+
+@media (max-width: 768px) {
+    .supplier-detail-container { padding: 10px; }
+    .supplier-detail-actions { flex-direction: row; }
+    .supplier-detail-edit-btn,
+    .supplier-detail-delete-btn,
+    .supplier-detail-back-btn { width: auto; min-height: 34px; }
+    .supplier-detail-wrapper { gap: 10px; }
+    .supplier-detail-info-item,
+    .supplier-detail-legal-item,
+    .supplier-detail-bank-item {
+        flex-direction: row;
+        align-items: baseline;
+    }
+    .supplier-detail-financial-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .supplier-detail-history-header { flex-direction: row; align-items: center; }
+    .supplier-detail-new-invoice-btn { width: auto; }
+}
+
+@media (max-width: 560px) {
+    .supplier-detail-container { padding: 8px; }
+    .supplier-detail-financial-stats { grid-template-columns: 1fr; gap: 7px; }
+    .supplier-detail-history-header { align-items: flex-start; flex-wrap: wrap; }
+    .supplier-detail-history-actions { flex-wrap: wrap; }
+    .supplier-detail-new-invoice-btn { width: auto; }
+    .supplier-detail-history-table { min-width: 600px; }
+}

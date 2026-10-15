@@ -57,13 +57,13 @@
                     </option>
                     {% endfor %}
                 </select>
-                <button onclick="exportPDF()" class="supplier-ledger-btn supplier-ledger-btn-pdf" id="exportPdfBtn" data-url="{% url 'export_supplier_ledger_pdf' supplier.supplierid %}{% if request.GET.start_date %}?start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}{% endif %}">
+                <button onclick="exportPDF()" class="supplier-ledger-btn supplier-ledger-btn-pdf" id="exportPdfBtn" data-url="{% url 'export_supplier_ledger_pdf' supplier.supplierid %}?start_date={{ start_date }}&end_date={{ end_date }}">
                     <i class="fas fa-file-pdf"></i> PDF <span class="shortcut-badge">Ctrl+Q</span>
                 </button>
-                <a href="{% url 'export_supplier_ledger_excel' supplier.supplierid %}{% if request.GET.start_date %}?start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}{% endif %}" class="supplier-ledger-btn supplier-ledger-btn-excel" id="exportExcelBtn">
+                <a href="{% url 'export_supplier_ledger_excel' supplier.supplierid %}?start_date={{ start_date }}&end_date={{ end_date }}" class="supplier-ledger-btn supplier-ledger-btn-excel" id="exportExcelBtn">
                     <i class="fas fa-file-excel"></i> Excel <span class="shortcut-badge">Ctrl+E</span>
                 </a>
-                <a href="{% url 'supplier_ledger_print' supplier.supplierid %}{% if request.GET.start_date %}?start_date={{ request.GET.start_date }}&end_date={{ request.GET.end_date }}{% endif %}" target="_blank" class="supplier-ledger-btn supplier-ledger-btn-print">
+                <a href="{% url 'supplier_ledger_print' supplier.supplierid %}?start_date={{ start_date }}&end_date={{ end_date }}" target="_blank" class="supplier-ledger-btn supplier-ledger-btn-print">
                     <i class="fas fa-print"></i> Print
                 </a>
                 <a href="{% url 'supplier_ledger' %}" class="supplier-ledger-btn supplier-ledger-btn-back">
@@ -78,11 +78,11 @@
         <form method="get" class="supplier-ledger-filter-form">
             <div class="supplier-ledger-filter-group">
                 <label class="supplier-ledger-filter-label">Start Date</label>
-                <input type="date" name="start_date" value="{{ request.GET.start_date }}" class="supplier-ledger-filter-input">
+                <input type="date" name="start_date" value="{{ start_date }}" class="supplier-ledger-filter-input">
             </div>
             <div class="supplier-ledger-filter-group">
                 <label class="supplier-ledger-filter-label">End Date</label>
-                <input type="date" name="end_date" value="{{ request.GET.end_date }}" class="supplier-ledger-filter-input">
+                <input type="date" name="end_date" value="{{ end_date }}" class="supplier-ledger-filter-input">
             </div>
             <button type="submit" class="supplier-ledger-filter-btn">
                 <i class="fas fa-filter"></i> Filter
@@ -94,17 +94,26 @@
     </div>
 
     <!-- Summary Cards -->
-    <div class="supplier-ledger-summary-grid">
+    <div class="supplier-ledger-period-note">
+        <i class="fas fa-calendar-alt"></i>
+        Statement period: {{ start_date|date:"d-m-Y" }} to {{ end_date|date:"d-m-Y" }}
+        <span>Opening balance is brought forward from all earlier ledger activity.</span>
+    </div>
+    <div class="supplier-ledger-summary-grid supplier-ledger-summary-grid-four">
+        <div class="supplier-ledger-summary-card supplier-ledger-card-opening">
+            <div class="supplier-ledger-summary-label">Opening Balance</div>
+            <div class="supplier-ledger-summary-value">₹{{ opening_balance|floatformat:2 }}</div>
+        </div>
         <div class="supplier-ledger-summary-card supplier-ledger-card-purchases">
-            <div class="supplier-ledger-summary-label">Total Purchases</div>
+            <div class="supplier-ledger-summary-label">Period Credit</div>
             <div class="supplier-ledger-summary-value">₹{{ total_credit|floatformat:2 }}</div>
         </div>
         <div class="supplier-ledger-summary-card supplier-ledger-card-paid">
-            <div class="supplier-ledger-summary-label">Total Paid</div>
+            <div class="supplier-ledger-summary-label">Period Debit</div>
             <div class="supplier-ledger-summary-value">₹{{ total_debit|floatformat:2 }}</div>
         </div>
         <div class="supplier-ledger-summary-card {% if closing_balance > 0 %}supplier-ledger-card-balance-due{% else %}supplier-ledger-card-balance-credit{% endif %}">
-            <div class="supplier-ledger-summary-label">Balance Due</div>
+            <div class="supplier-ledger-summary-label">Closing Balance</div>
             <div class="supplier-ledger-summary-value">₹{{ closing_balance|floatformat:2 }}</div>
         </div>
     </div>
@@ -166,6 +175,11 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <tr class="supplier-ledger-opening-row">
+                        <td>{{ start_date|date:"d-m-Y" }}</td>
+                        <td colspan="4"><strong>Opening Balance</strong></td>
+                        <td class="text-right"><strong>₹{{ opening_balance|floatformat:2 }}</strong></td>
+                    </tr>
                     {% if transactions %}
                         {% for trans in transactions %}
                         <tr>
@@ -212,10 +226,9 @@
                         </tr>
                     {% endif %}
                 </tbody>
-                {% if transactions %}
                 <tfoot>
                     <tr>
-                        <td colspan="3">TOTAL</td>
+                        <td colspan="3">PERIOD TOTAL / CLOSING BALANCE</td>
                         <td class="text-right supplier-ledger-amount-debit">₹{{ total_debit|floatformat:2 }}</td>
                         <td class="text-right supplier-ledger-amount-credit">₹{{ total_credit|floatformat:2 }}</td>
                         <td class="text-right {% if closing_balance > 0 %}supplier-ledger-balance-positive{% else %}supplier-ledger-balance-negative{% endif %}">
@@ -223,7 +236,6 @@
                         </td>
                     </tr>
                 </tfoot>
-                {% endif %}
             </table>
         </div>
     </div>
@@ -267,6 +279,11 @@
             </tr>
         </thead>
         <tbody>
+            <tr style="font-weight:bold;background:#f0f0f0;">
+                <td class="text-center">{{ start_date|date:"d-m-Y" }}</td>
+                <td colspan="4">Opening Balance</td>
+                <td class="text-right">₹{{ opening_balance|floatformat:2 }}</td>
+            </tr>
             {% if transactions %}
                 {% for trans in transactions %}
                 <tr>
@@ -288,22 +305,21 @@
                 </tr>
             {% endif %}
         </tbody>
-        {% if transactions %}
         <tfoot>
             <tr style="font-weight: bold; background-color: #f0f0f0;">
-                <td colspan="3" class="text-center">TOTAL</td>
+                <td colspan="3" class="text-center">PERIOD TOTAL / CLOSING BALANCE</td>
                 <td class="text-right">₹{{ total_debit|floatformat:2 }}</td>
                 <td class="text-right">₹{{ total_credit|floatformat:2 }}</td>
                 <td class="text-right">₹{{ closing_balance|floatformat:2 }}</td>
             </tr>
         </tfoot>
-        {% endif %}
     </table>
 
     <!-- Print Summary -->
     <div class="print-summary">
-        <div>Total Purchases: ₹{{ total_credit|floatformat:2 }}</div>
-        <div>Total Paid: ₹{{ total_debit|floatformat:2 }}</div>
+        <div>Opening Balance: ₹{{ opening_balance|floatformat:2 }}</div>
+        <div>Period Credit: ₹{{ total_credit|floatformat:2 }}</div>
+        <div>Period Debit: ₹{{ total_debit|floatformat:2 }}</div>
         <div>Closing Balance: ₹{{ closing_balance|floatformat:2 }}</div>
     </div>
 

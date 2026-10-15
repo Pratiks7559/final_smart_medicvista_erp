@@ -78,11 +78,11 @@
         <form method="get" class="ledger-filter-form">
             <div class="ledger-filter-group">
                 <label class="ledger-filter-label">Start Date</label>
-                <input type="date" name="start_date" value="{{ request.GET.start_date }}" class="ledger-filter-input">
+                <input type="date" name="start_date" value="{{ start_date }}" class="ledger-filter-input">
             </div>
             <div class="ledger-filter-group">
                 <label class="ledger-filter-label">End Date</label>
-                <input type="date" name="end_date" value="{{ request.GET.end_date }}" class="ledger-filter-input">
+                <input type="date" name="end_date" value="{{ end_date }}" class="ledger-filter-input">
             </div>
             <button type="submit" class="ledger-filter-btn">
                 <i class="fas fa-filter"></i> Filter
@@ -94,17 +94,26 @@
     </div>
 
     <!-- Summary Cards -->
-    <div class="ledger-summary-grid">
+    <div class="ledger-period-note">
+        <i class="fas fa-calendar-alt"></i>
+        Statement period: {{ start_date|date:"d-m-Y" }} to {{ end_date|date:"d-m-Y" }}
+        <span>Opening balance is brought forward from all earlier ledger activity.</span>
+    </div>
+    <div class="ledger-summary-grid ledger-summary-grid-four">
+        <div class="ledger-summary-card ledger-card-opening">
+            <div class="ledger-summary-label">Opening Balance</div>
+            <div class="ledger-summary-value">₹{{ opening_balance|floatformat:2 }}</div>
+        </div>
         <div class="ledger-summary-card ledger-card-sales">
-            <div class="ledger-summary-label">Total Sales</div>
+            <div class="ledger-summary-label">Period Debit</div>
             <div class="ledger-summary-value">₹{{ total_debit|floatformat:2 }}</div>
         </div>
         <div class="ledger-summary-card ledger-card-received">
-            <div class="ledger-summary-label">Total Received</div>
+            <div class="ledger-summary-label">Period Credit</div>
             <div class="ledger-summary-value">₹{{ total_credit|floatformat:2 }}</div>
         </div>
         <div class="ledger-summary-card {% if closing_balance > 0 %}ledger-card-balance-due{% else %}ledger-card-balance-credit{% endif %}">
-            <div class="ledger-summary-label">Balance Due</div>
+            <div class="ledger-summary-label">Closing Balance</div>
             <div class="ledger-summary-value">₹{{ closing_balance|floatformat:2 }}</div>
         </div>
     </div>
@@ -166,6 +175,11 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <tr class="ledger-opening-row">
+                        <td>{{ start_date|date:"d-m-Y" }}</td>
+                        <td colspan="4"><strong>Opening Balance</strong></td>
+                        <td class="text-right"><strong>₹{{ opening_balance|floatformat:2 }}</strong></td>
+                    </tr>
                     {% if transactions %}
                         {% for trans in transactions %}
                         <tr>
@@ -212,10 +226,9 @@
                         </tr>
                     {% endif %}
                 </tbody>
-                {% if transactions %}
                 <tfoot>
                     <tr>
-                        <td colspan="3">TOTAL</td>
+                        <td colspan="3">PERIOD TOTAL / CLOSING BALANCE</td>
                         <td class="text-right ledger-amount-debit">₹{{ total_debit|floatformat:2 }}</td>
                         <td class="text-right ledger-amount-credit">₹{{ total_credit|floatformat:2 }}</td>
                         <td class="text-right {% if closing_balance > 0 %}ledger-balance-positive{% else %}ledger-balance-negative{% endif %}">
@@ -223,7 +236,6 @@
                         </td>
                     </tr>
                 </tfoot>
-                {% endif %}
             </table>
         </div>
     </div>
@@ -266,6 +278,11 @@
             </tr>
         </thead>
         <tbody>
+            <tr style="font-weight:bold;background:#f0f0f0;">
+                <td class="text-center">{{ start_date|date:"d-m-Y" }}</td>
+                <td colspan="4">Opening Balance</td>
+                <td class="text-right">₹{{ opening_balance|floatformat:2 }}</td>
+            </tr>
             {% if transactions %}
                 {% for trans in transactions %}
                 <tr>
@@ -287,22 +304,21 @@
                 </tr>
             {% endif %}
         </tbody>
-        {% if transactions %}
         <tfoot>
             <tr style="font-weight: bold; background-color: #f0f0f0;">
-                <td colspan="3" class="text-center">TOTAL</td>
+                <td colspan="3" class="text-center">PERIOD TOTAL / CLOSING BALANCE</td>
                 <td class="text-right">₹{{ total_debit|floatformat:2 }}</td>
                 <td class="text-right">₹{{ total_credit|floatformat:2 }}</td>
                 <td class="text-right">₹{{ closing_balance|floatformat:2 }}</td>
             </tr>
         </tfoot>
-        {% endif %}
     </table>
 
     <!-- Print Summary -->
     <div class="print-summary">
-        <div>Total Sales: ₹{{ total_debit|floatformat:2 }}</div>
-        <div>Total Received: ₹{{ total_credit|floatformat:2 }}</div>
+        <div>Opening Balance: ₹{{ opening_balance|floatformat:2 }}</div>
+        <div>Period Debit: ₹{{ total_debit|floatformat:2 }}</div>
+        <div>Period Credit: ₹{{ total_credit|floatformat:2 }}</div>
         <div>Closing Balance: ₹{{ closing_balance|floatformat:2 }}</div>
     </div>
 

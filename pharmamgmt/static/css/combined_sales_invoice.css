@@ -987,6 +987,13 @@
     box-shadow: 0 0 0 3px var(--cm-mint-ring);
 }
 
+.payment-hint {
+    flex-basis: 100%;
+    color: var(--cm-ink-3);
+    font-size: .68rem;
+    text-align: right;
+}
+
 .totals-actual {
     display: block;
     margin-top: 6px;

@@ -34,6 +34,7 @@
         <p>Contact: {{ pharmacy.proprietorcontact|default:"Contact Number" }} | Email: {{ pharmacy.proprietoremail|default:"Email" }}</p>
         <p>Website: {{ pharmacy.pharmaweburl|default:"Website" }}</p>
         <h2 style="margin-top: 15px; text-decoration: underline;">SUPPLIER LEDGER</h2>
+        <p>Period: {{ start_date|date:"d-m-Y" }} to {{ end_date|date:"d-m-Y" }}</p>
     </div>
 
     <div class="print-ledger-info">
@@ -61,6 +62,11 @@
             </tr>
         </thead>
         <tbody>
+            <tr style="font-weight:bold;background:#f0f0f0;">
+                <td class="text-center">{{ start_date|date:"d-m-Y" }}</td>
+                <td colspan="4">Opening Balance</td>
+                <td class="text-right">₹{{ opening_balance|floatformat:2 }}</td>
+            </tr>
             {% if transactions %}
                 {% for trans in transactions %}
                 <tr>
@@ -82,21 +88,20 @@
                 </tr>
             {% endif %}
         </tbody>
-        {% if transactions %}
         <tfoot>
             <tr style="font-weight: bold; background-color: #f0f0f0;">
-                <td colspan="3" class="text-center">TOTAL</td>
+                <td colspan="3" class="text-center">PERIOD TOTAL / CLOSING BALANCE</td>
                 <td class="text-right">₹{{ total_debit|floatformat:2 }}</td>
                 <td class="text-right">₹{{ total_credit|floatformat:2 }}</td>
                 <td class="text-right">₹{{ closing_balance|floatformat:2 }}</td>
             </tr>
         </tfoot>
-        {% endif %}
     </table>
 
     <div class="print-summary">
-        <div>Total Purchases: ₹{{ total_credit|floatformat:2 }}</div>
-        <div>Total Paid: ₹{{ total_debit|floatformat:2 }}</div>
+        <div>Opening Balance: ₹{{ opening_balance|floatformat:2 }}</div>
+        <div>Period Credit: ₹{{ total_credit|floatformat:2 }}</div>
+        <div>Period Debit: ₹{{ total_debit|floatformat:2 }}</div>
         <div>Closing Balance: ₹{{ closing_balance|floatformat:2 }}</div>
     </div>
 

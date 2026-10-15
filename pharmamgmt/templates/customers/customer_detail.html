@@ -112,9 +112,14 @@
         <div class="customer-detail-sales-card">
             <div class="customer-detail-card-header">
                 <h5 class="customer-detail-card-title">Sales History</h5>
-                <a href="{% url 'add_sales_invoice_with_products' %}" class="customer-detail-new-invoice-btn">
-                    <i class="fas fa-plus me-1"></i> New Invoice
-                </a>
+                <div class="customer-detail-history-actions">
+                    <button type="button" class="all-fy-open-button" onclick="openAllFyHistory()">
+                        <i class="fas fa-calendar-alt"></i> All FY Details <kbd>Ctrl+H</kbd>
+                    </button>
+                    <a href="{% url 'add_sales_invoice_with_products' %}" class="customer-detail-new-invoice-btn">
+                        <i class="fas fa-plus me-1"></i> New Invoice
+                    </a>
+                </div>
             </div>
             <div class="customer-detail-card-body">
                 <div class="customer-detail-sales-table-wrapper">
@@ -161,6 +166,63 @@
             </div>
         </div>
     </div>
+</div>
+
+<div id="allFyHistoryModal" class="all-fy-modal" style="display: none;"
+     role="dialog" aria-modal="true" aria-labelledby="allFyHistoryTitle">
+    <div class="all-fy-modal-backdrop" onclick="closeAllFyHistory()"></div>
+    <section class="all-fy-modal-panel">
+        <header class="all-fy-modal-header">
+            <div>
+                <h2 id="allFyHistoryTitle">All Financial Year Sales History</h2>
+                <p>{{ customer.customer_name }}</p>
+            </div>
+            <button type="button" class="all-fy-close-button" onclick="closeAllFyHistory()"
+                    aria-label="Close sales history">&times;</button>
+        </header>
+        <div class="all-fy-modal-body">
+            {% for group in all_fy_groups %}
+            <section class="all-fy-year-section">
+                <h3>Financial Year {{ group.year }}</h3>
+                <div class="all-fy-table-scroll">
+                    <table class="all-fy-table">
+                        <thead>
+                            <tr><th>Invoice #</th><th>Date</th><th>Amount</th><th>Paid</th><th>Balance</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for row in group.invoices %}
+                            <tr>
+                                <td>{{ row.invoice.sales_invoice_no }}</td>
+                                <td>{{ row.invoice.sales_invoice_date|date:"d M Y" }}</td>
+                                <td>{{ row.amount|currency }}</td>
+                                <td>{{ row.paid|currency }}</td>
+                                <td class="{% if row.balance > 0 %}all-fy-balance-due{% else %}all-fy-balance-paid{% endif %}">
+                                    {{ row.balance|currency }}
+                                </td>
+                                <td class="all-fy-actions">
+                                    <a href="{% url 'sales_invoice_detail' pk=row.invoice.sales_invoice_no %}" aria-label="View invoice {{ row.invoice.sales_invoice_no }}">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if row.balance > 0 %}
+                                    <a href="{% url 'add_sales_payment' invoice_id=row.invoice.sales_invoice_no %}" aria-label="Record payment for invoice {{ row.invoice.sales_invoice_no }}">
+                                        <i class="fas fa-money-bill-wave"></i>
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr><th>FY Total</th><td></td><th>{{ group.total_amount|currency }}</th><th>{{ group.total_paid|currency }}</th><th>{{ group.balance|currency }}</th><td></td></tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </section>
+            {% empty %}
+            <p class="all-fy-empty">No sales history is available for this customer.</p>
+            {% endfor %}
+        </div>
+    </section>
 </div>
 
 <!-- Edit Customer Modal -->
@@ -241,6 +303,195 @@
 </div>
 
 <style>
+.customer-detail-history-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.all-fy-open-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid #bae6fd;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    color: #075985;
+    cursor: pointer;
+    font-size: .82rem;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(7, 89, 133, .08);
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.all-fy-open-button > i {
+    display: grid;
+    place-items: center;
+    width: 23px;
+    height: 23px;
+    border-radius: 7px;
+    background: #fff;
+    color: #0284c7;
+}
+
+.all-fy-open-button:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+    box-shadow: 0 7px 16px rgba(7, 89, 133, .16);
+}
+
+.all-fy-open-button:focus-visible,
+.all-fy-close-button:focus-visible,
+.all-fy-actions a:focus-visible {
+    outline: 3px solid rgba(14, 165, 233, .35);
+    outline-offset: 3px;
+}
+
+.all-fy-open-button kbd {
+    padding: 2px 6px;
+    border: 1px solid #bae6fd;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, .8);
+    color: #075985;
+    font-family: inherit;
+    font-size: .67rem;
+    font-weight: 700;
+}
+
+.all-fy-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(12px, 3vw, 32px);
+    animation: all-fy-fade-in .18s ease-out;
+}
+
+.all-fy-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, .62);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+}
+
+.all-fy-modal-panel {
+    position: relative;
+    width: min(100%, 1120px);
+    max-height: min(90vh, 900px);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .7);
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 28px 90px rgba(15, 23, 42, .32), 0 4px 14px rgba(15, 23, 42, .12);
+    animation: all-fy-modal-rise .24s cubic-bezier(.2, .8, .2, 1);
+}
+
+.all-fy-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 22px 26px;
+    border-bottom: 1px solid #e1edf1;
+    background:
+        radial-gradient(circle at 0 0, rgba(14, 165, 233, .13), transparent 45%),
+        linear-gradient(135deg, #fff 0%, #f6fbfd 100%);
+}
+
+.all-fy-modal-header h2 { margin: 0; color: #102a36; font-size: clamp(1.05rem, 2vw, 1.35rem); font-weight: 800; letter-spacing: -.025em; }
+.all-fy-modal-header p { margin: 5px 0 0; color: #617985; font-size: .9rem; }
+.all-fy-close-button {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 38px;
+    height: 38px;
+    border: 1px solid #dce9ee;
+    border-radius: 11px;
+    background: #fff;
+    color: #506875;
+    font-size: 25px;
+    line-height: 1;
+    cursor: pointer;
+    transition: transform .16s ease, background .16s ease, color .16s ease;
+}
+.all-fy-close-button:hover { transform: rotate(90deg); background: #effaff; color: #0369a1; }
+.all-fy-modal-body { max-height: calc(min(90vh, 900px) - 88px); overflow: auto; padding: 22px 26px 26px; background: #f7fafc; }
+.all-fy-year-section {
+    overflow: hidden;
+    border: 1px solid #e1e9ed;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, .045);
+}
+.all-fy-year-section + .all-fy-year-section { margin-top: 18px; }
+.all-fy-year-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    padding: 13px 16px;
+    border-bottom: 1px solid #e5eef2;
+    background: linear-gradient(90deg, #f0f9ff, #fbfdfe);
+    color: #075985;
+    font-size: .96rem;
+    font-weight: 800;
+}
+.all-fy-year-section h3::before { content: ""; width: 4px; height: 19px; border-radius: 9px; background: #0ea5e9; }
+.all-fy-table-scroll { overflow-x: auto; }
+.all-fy-table { width: 100%; border-collapse: separate; border-spacing: 0; white-space: nowrap; }
+.all-fy-table th, .all-fy-table td { padding: 11px 14px; border-bottom: 1px solid #edf1f3; text-align: left; }
+.all-fy-table th { color: #53656e; font-size: .72rem; font-weight: 800; letter-spacing: .055em; text-transform: uppercase; }
+.all-fy-table thead { background: #fbfdfe; }
+.all-fy-table tbody tr { transition: background .14s ease; }
+.all-fy-table tbody tr:hover { background: #f3faff; }
+.all-fy-table tbody td { color: #33444c; font-size: .86rem; }
+.all-fy-table tfoot { background: #f6fafc; }
+.all-fy-table tfoot th, .all-fy-table tfoot td { border-bottom: 0; color: #183b4b; font-weight: 800; }
+.all-fy-balance-due { color: #b42318 !important; font-weight: 700; }
+.all-fy-balance-paid { color: #15803d !important; font-weight: 700; }
+.all-fy-actions { display: flex; align-items: center; gap: 8px; }
+.all-fy-actions a {
+    display: grid;
+    place-items: center;
+    width: 31px;
+    height: 31px;
+    border: 1px solid #d8edf6;
+    border-radius: 8px;
+    background: #f1faff;
+    color: #087ba9;
+    text-decoration: none;
+    transition: transform .15s ease, background .15s ease;
+}
+.all-fy-actions a:hover { transform: translateY(-1px); background: #e0f2fe; }
+.all-fy-empty { margin: 0; padding: 30px; border: 1px dashed #c9d9e0; border-radius: 14px; background: #fff; color: #617985; text-align: center; }
+
+@keyframes all-fy-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes all-fy-modal-rise { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+@media (max-width: 640px) {
+    .customer-detail-history-actions { width: 100%; }
+    .all-fy-open-button { flex: 1; }
+    .all-fy-modal { padding: 10px; }
+    .all-fy-modal-panel { max-height: 94vh; border-radius: 14px; }
+    .all-fy-modal-header { padding: 17px 18px; }
+    .all-fy-modal-body { max-height: calc(94vh - 74px); padding: 14px; }
+    .all-fy-table th, .all-fy-table td { padding: 9px 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .all-fy-modal, .all-fy-modal-panel { animation: none; }
+    .all-fy-open-button, .all-fy-close-button, .all-fy-table tbody tr, .all-fy-actions a { transition: none; }
+}
+
 .custom-modal {
     position: fixed;
     top: 0;
@@ -412,6 +663,16 @@ function closeEditCustomerModal() {
     document.getElementById('editCustomerModal').style.display = 'none';
 }
 
+function openAllFyHistory() {
+    document.getElementById('allFyHistoryModal').style.display = 'flex';
+    document.querySelector('#allFyHistoryModal .all-fy-close-button').focus();
+}
+
+function closeAllFyHistory() {
+    document.getElementById('allFyHistoryModal').style.display = 'none';
+    document.querySelector('.all-fy-open-button').focus();
+}
+
 document.getElementById('editCustomerForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -435,6 +696,15 @@ document.getElementById('editCustomerForm').addEventListener('submit', function(
         console.error('Error:', error);
         alert('Error updating customer');
     });
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key.toLowerCase() === 'h' && !e.altKey && !e.shiftKey) {
+        e.preventDefault();
+        openAllFyHistory();
+    } else if (e.key === 'Escape' && document.getElementById('allFyHistoryModal').style.display === 'flex') {
+        closeAllFyHistory();
+    }
 });
 </script>
 

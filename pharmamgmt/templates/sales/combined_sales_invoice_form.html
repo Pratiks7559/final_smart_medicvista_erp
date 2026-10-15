@@ -185,7 +185,8 @@
                                                         </div>
                                                         <input type="hidden" name="initial_payment_mode" id="initialPaymentMode" value="credit">
                                                         <label class="initial-payment-amount-label" for="initialPaymentAmount">Amount</label>
-                                                        <input type="number" name="initial_payment_amount" id="initialPaymentAmount" min="0" step="0.01" value="0.00" required aria-label="Payment amount">
+                                                        <input type="number" name="initial_payment_amount" id="initialPaymentAmount" min="0" step="0.01" value="0.00" readonly required aria-label="Payment amount">
+                                                        <small id="initialPaymentHint" class="payment-hint">Credit invoice — no payment recorded.</small>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1332,6 +1333,25 @@ function selectInitialPaymentMode(mode, selectedButton) {
         button.classList.toggle('is-selected', isSelected);
         button.setAttribute('aria-pressed', String(isSelected));
     });
+    const invoiceTotal = parseFloat(document.getElementById('salesInvoiceTotal')?.textContent || '0') || 0;
+    syncInitialPaymentAmount(invoiceTotal);
+}
+
+function syncInitialPaymentAmount(total) {
+    const paymentAmountInput = document.getElementById('initialPaymentAmount');
+    const paymentMode = document.getElementById('initialPaymentMode')?.value?.toLowerCase();
+    if (paymentAmountInput) {
+        paymentAmountInput.value = paymentMode === 'cash'
+            ? Math.max(0, total).toFixed(2)
+            : '0.00';
+        paymentAmountInput.readOnly = true;
+    }
+    const hint = document.getElementById('initialPaymentHint');
+    if (hint) {
+        hint.textContent = paymentMode === 'cash'
+            ? 'Cash invoice — full invoice total will be recorded as paid.'
+            : 'Credit invoice — no payment will be recorded.';
+    }
 }
 
 function calculateGrandTotal() {
@@ -1393,10 +1413,7 @@ function calculateGrandTotal() {
     if (grandTotalEl) grandTotalEl.textContent = productsTotal.toFixed(2);
     const invoiceTotalEl = document.getElementById('salesInvoiceTotal');
     if (invoiceTotalEl) invoiceTotalEl.textContent = roundedTotal.toFixed(2);
-    const paymentAmountEl = document.getElementById('initialPaymentAmount');
-    if (paymentAmountEl && paymentAmountEl.dataset.userEdited !== 'true') {
-        paymentAmountEl.value = roundedTotal.toFixed(2);
-    }
+    syncInitialPaymentAmount(roundedTotal);
     const actualEl = document.getElementById('actualTotal');
     if (actualEl) actualEl.textContent = rawTotal.toFixed(2);
 
@@ -3081,12 +3098,7 @@ document.addEventListener('keydown', function(e) {
 // Initialize page with single product row and current date
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Page loaded, initializing...');
-    const paymentAmountInput = document.getElementById('initialPaymentAmount');
-    if (paymentAmountInput) {
-        paymentAmountInput.addEventListener('input', function() {
-            this.dataset.userEdited = 'true';
-        });
-    }
+    syncInitialPaymentAmount(0);
     
     // Initialize product cache
     window.initializeProductCache();
@@ -3182,4 +3194,3 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 {% endblock %}
-

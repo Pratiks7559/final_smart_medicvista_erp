@@ -933,6 +933,13 @@
     box-shadow: 0 0 0 3px var(--pp-blue-ring);
 }
 
+.ci-payment-hint {
+    flex-basis: 100%;
+    color: var(--pp-ink-3);
+    font-size: .68rem;
+    text-align: right;
+}
+
 /* Recalculate button */
 .ci-grand-total-display .btn-outline-primary,
 .ci-grand-total-display button[onclick*="forceChallanTotalCalculation"] {

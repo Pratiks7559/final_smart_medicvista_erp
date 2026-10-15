@@ -34,7 +34,12 @@
 .supplier-ledger-clear-btn:hover{background:#e5e7eb;color:var(--sl-text);text-decoration:none}
 
 /* Summary cards */
+.supplier-ledger-period-note{display:flex;align-items:center;gap:.45rem;margin:0 0 .55rem;color:var(--sl-muted);font-size:.78rem;font-weight:700}
+.supplier-ledger-period-note span{margin-left:auto;font-weight:500}
 .supplier-ledger-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:.75rem}
+.supplier-ledger-summary-grid-four{grid-template-columns:repeat(4,1fr)}
+.supplier-ledger-card-opening{background:linear-gradient(135deg,#475569,#334155)}
+.supplier-ledger-opening-row{background:#f1f5f9;font-weight:700}
 .supplier-ledger-summary-card{border-radius:var(--sl-radius);padding:.875rem 1rem;color:#fff;position:relative;overflow:hidden}
 .supplier-ledger-summary-label{font-size:.7rem;font-weight:700;opacity:.9;text-transform:uppercase;letter-spacing:.4px;margin-bottom:.3rem}
 .supplier-ledger-summary-value{font-size:1.35rem;font-weight:800;line-height:1}
@@ -81,7 +86,9 @@
 
 /* Responsive */
 @media(max-width:768px){
-  .supplier-ledger-summary-grid{grid-template-columns:1fr}
+  .supplier-ledger-summary-grid,.supplier-ledger-summary-grid-four{grid-template-columns:1fr}
+  .supplier-ledger-period-note{align-items:flex-start;flex-direction:column}
+  .supplier-ledger-period-note span{margin-left:0}
   .supplier-ledger-header-content{flex-direction:column;align-items:stretch}
   .supplier-ledger-actions{flex-wrap:wrap}
   .supplier-ledger-filter-form{flex-direction:column}

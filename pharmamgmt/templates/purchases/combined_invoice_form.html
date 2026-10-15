@@ -178,7 +178,8 @@
                                                         </div>
                                                         <input type="hidden" name="initial_payment_mode" id="initialPaymentMode" value="Credit">
                                                         <label for="initialPaymentAmount">Amount</label>
-                                                        <input type="number" name="initial_payment_amount" id="initialPaymentAmount" min="0" step="0.01" value="0.00" required aria-label="Payment amount">
+                                                        <input type="number" name="initial_payment_amount" id="initialPaymentAmount" min="0" step="0.01" value="0.00" readonly required aria-label="Payment amount">
+                                                        <small id="initialPaymentHint" class="ci-payment-hint">Credit invoice — no payment recorded.</small>
                                                     </div>
                                                 </div>
                                             </td>
@@ -1260,8 +1261,18 @@ function calculateInvoiceTotal() {
 
 function syncInitialPaymentAmount(total) {
     const paymentAmountInput = document.getElementById('initialPaymentAmount');
-    if (paymentAmountInput && paymentAmountInput.dataset.userEdited !== 'true') {
-        paymentAmountInput.value = Math.max(0, total).toFixed(2);
+    const paymentMode = document.getElementById('initialPaymentMode')?.value?.toLowerCase();
+    if (paymentAmountInput) {
+        paymentAmountInput.value = paymentMode === 'cash'
+            ? Math.max(0, total).toFixed(2)
+            : '0.00';
+        paymentAmountInput.readOnly = true;
+    }
+    const hint = document.getElementById('initialPaymentHint');
+    if (hint) {
+        hint.textContent = paymentMode === 'cash'
+            ? 'Cash invoice — full invoice total will be recorded as paid.'
+            : 'Credit invoice — no payment will be recorded.';
     }
 }
 
@@ -1272,6 +1283,9 @@ function selectInitialPaymentMode(mode, selectedButton) {
         button.classList.toggle('is-selected', isSelected);
         button.setAttribute('aria-pressed', String(isSelected));
     });
+    const invoiceTotalInput = document.querySelector('input[name*="invoice_total"]') ||
+                              document.querySelector('#id_invoice_total');
+    syncInitialPaymentAmount(parseFloat(invoiceTotalInput?.value || '0') || 0);
 }
 
 // Preserve partially typed MM-YYYY values; normalize only complete dates.
@@ -1533,12 +1547,6 @@ function duplicateLastProductRow() {
 // Enhanced date input handling
 document.addEventListener('DOMContentLoaded', function() {
     setCurrentDate();
-    const paymentAmountInput = document.getElementById('initialPaymentAmount');
-    if (paymentAmountInput) {
-        paymentAmountInput.addEventListener('input', function() {
-            this.dataset.userEdited = 'true';
-        });
-    }
     const invoiceDateField = document.getElementById('invoice_date');
     const invoiceDateError = document.getElementById('invoiceDateFyError');
     if (invoiceDateField) {

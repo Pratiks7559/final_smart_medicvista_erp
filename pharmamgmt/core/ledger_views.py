@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
 from django.utils import timezone
 from datetime import datetime
 from .models import (
@@ -8,16 +9,41 @@ from .models import (
     ReturnInvoiceMaster, Pharmacy_Details, SupplierAdvance, CustomerAdvance, AdvanceLedger
 )
 
-def get_financial_year_dates():
-    """Get current financial year start and end dates (April 1 to March 31)"""
-    today = datetime.now().date()
-    if today.month >= 4:  # April to December
-        fy_start = datetime(today.year, 4, 1).date()
-        fy_end = datetime(today.year + 1, 3, 31).date()
-    else:  # January to March
-        fy_start = datetime(today.year - 1, 4, 1).date()
-        fy_end = datetime(today.year, 3, 31).date()
+def get_financial_year_dates(financial_year=None):
+    """Get the selected/current financial year boundaries (April 1 to March 31)."""
+    if financial_year is None:
+        today = datetime.now().date()
+        financial_year = today.year if today.month >= 4 else today.year - 1
+    financial_year = int(financial_year)
+    fy_start = datetime(financial_year, 4, 1).date()
+    fy_end = datetime(financial_year + 1, 3, 31).date()
     return fy_start, fy_end
+
+
+def _sum_before(model, date_field, amount_field, start_date, **filters):
+    query = model.objects.filter(**filters, **{f'{date_field}__lt': start_date})
+    if amount_field not in {field.name for field in model._meta.concrete_fields}:
+        return sum(getattr(record, amount_field) or 0 for record in query)
+    return query.aggregate(total=Sum(amount_field))['total'] or 0
+
+
+def _customer_opening_balance(customer, start_date):
+    return (
+        _sum_before(SalesInvoiceMaster, 'sales_invoice_date', 'sales_invoice_total', start_date, customerid=customer)
+        - _sum_before(SalesInvoicePaid, 'sales_payment_date', 'sales_payment_amount', start_date, sales_ip_invoice_no__customerid=customer)
+        - _sum_before(ReturnSalesInvoiceMaster, 'return_sales_invoice_date', 'return_sales_invoice_total', start_date, return_sales_customerid=customer)
+        - _sum_before(AdvanceLedger, 'entry_date', 'amount', start_date, party_type='customer', customer=customer, entry_type='advance_in')
+    )
+
+
+def _supplier_opening_balance(supplier, start_date):
+    return (
+        _sum_before(InvoiceMaster, 'invoice_date', 'invoice_total', start_date, supplierid=supplier)
+        - _sum_before(InvoicePaid, 'payment_date', 'payment_amount', start_date, ip_invoiceid__supplierid=supplier)
+        - _sum_before(ReturnInvoiceMaster, 'returninvoice_date', 'returninvoice_total', start_date, returnsupplierid=supplier)
+        - _sum_before(AdvanceLedger, 'entry_date', 'amount', start_date, party_type='supplier', supplier=supplier, entry_type='advance_in')
+    )
+
 
 @login_required
 def ledger_selection(request):
@@ -44,9 +70,11 @@ def customer_ledger(request, customer_id=None):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
-    # If no date range provided, use current financial year
+    # Default to the same financial year selected for invoice entry.
     if not start_date or not end_date:
-        fy_start, fy_end = get_financial_year_dates()
+        fy_start, fy_end = get_financial_year_dates(
+            request.session.get('selected_year')
+        )
         start_date = str(fy_start)
         end_date = str(fy_end)
     
@@ -100,10 +128,25 @@ def customer_ledger(request, customer_id=None):
             'credit': ret.return_sales_invoice_total,
             'return_obj': ret
         })
-    
+
+    advance_entries = AdvanceLedger.objects.filter(
+        party_type='customer', customer=customer, entry_type='advance_in'
+    ).order_by('entry_date')
+    if start_date and end_date:
+        advance_entries = advance_entries.filter(entry_date__range=[start_date, end_date])
+    for entry in advance_entries:
+        transactions.append({
+            'date': entry.entry_date,
+            'type': 'Advance Received',
+            'reference': entry.invoice_ref or '-',
+            'debit': 0,
+            'credit': entry.amount,
+        })
+
     # Sort and calculate balance
     transactions.sort(key=lambda x: x['date'])
-    balance = 0
+    opening_balance = _customer_opening_balance(customer, start_date)
+    balance = opening_balance
     for trans in transactions:
         balance += trans['debit'] - trans['credit']
         trans['balance'] = balance
@@ -122,7 +165,9 @@ def customer_ledger(request, customer_id=None):
         'transactions': transactions,
         'total_debit': total_debit,
         'total_credit': total_credit,
+        'opening_balance': opening_balance,
         'closing_balance': balance,
+        'financial_year_label': f"{start_date[:4]}-{end_date[:4]}" if start_date and end_date else '',
         'customers': customers,
         'pharmacy': pharmacy,
         'current_date': timezone.now(),
@@ -145,9 +190,11 @@ def supplier_ledger(request, supplier_id=None):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
-    # If no date range provided, use current financial year
+    # Default to the same financial year selected for invoice entry.
     if not start_date or not end_date:
-        fy_start, fy_end = get_financial_year_dates()
+        fy_start, fy_end = get_financial_year_dates(
+            request.session.get('selected_year')
+        )
         start_date = str(fy_start)
         end_date = str(fy_end)
     
@@ -202,32 +249,26 @@ def supplier_ledger(request, supplier_id=None):
             'return_obj': ret
         })
 
-    # Advance Entries (advance_in = credit, adjusted = debit)
-    adv_entries = AdvanceLedger.objects.filter(party_type='supplier', supplier=supplier).order_by('entry_date')
+    # Advance receipts are additional credits; adjustments are already in payment rows.
+    adv_entries = AdvanceLedger.objects.filter(
+        party_type='supplier', supplier=supplier, entry_type='advance_in'
+    ).order_by('entry_date')
     if start_date and end_date:
         adv_entries = adv_entries.filter(entry_date__range=[start_date, end_date])
 
     for entry in adv_entries:
-        if entry.entry_type == 'advance_in':
-            transactions.append({
-                'date': entry.entry_date,
-                'type': 'Advance In',
-                'reference': entry.invoice_ref or '-',
-                'debit': 0,
-                'credit': entry.amount,
-            })
-        elif entry.entry_type == 'adjusted':
-            transactions.append({
-                'date': entry.entry_date,
-                'type': 'Advance Adjusted',
-                'reference': entry.invoice_ref or '-',
-                'debit': entry.amount,
-                'credit': 0,
-            })
+        transactions.append({
+            'date': entry.entry_date,
+            'type': 'Advance In',
+            'reference': entry.invoice_ref or '-',
+            'debit': entry.amount,
+            'credit': 0,
+        })
 
     # Sort and calculate balance
     transactions.sort(key=lambda x: x['date'])
-    balance = 0
+    opening_balance = _supplier_opening_balance(supplier, start_date)
+    balance = opening_balance
     for trans in transactions:
         balance += trans['credit'] - trans['debit']
         trans['balance'] = balance
@@ -246,7 +287,9 @@ def supplier_ledger(request, supplier_id=None):
         'transactions': transactions,
         'total_debit': total_debit,
         'total_credit': total_credit,
+        'opening_balance': opening_balance,
         'closing_balance': balance,
+        'financial_year_label': f"{start_date[:4]}-{end_date[:4]}" if start_date and end_date else '',
         'suppliers': suppliers,
         'pharmacy': pharmacy,
         'current_date': timezone.now(),
@@ -267,7 +310,9 @@ def customer_ledger_print(request, customer_id):
     
     # If no date range provided, use current financial year
     if not start_date or not end_date:
-        fy_start, fy_end = get_financial_year_dates()
+        fy_start, fy_end = get_financial_year_dates(
+            request.session.get('selected_year')
+        )
         start_date = str(fy_start)
         end_date = str(fy_end)
     
@@ -311,10 +356,24 @@ def customer_ledger_print(request, customer_id):
             'debit': 0,
             'credit': ret.return_sales_invoice_total
         })
-    
+
+    advance_entries = AdvanceLedger.objects.filter(
+        party_type='customer', customer=customer, entry_type='advance_in',
+        entry_date__range=[start_date, end_date]
+    ).order_by('entry_date')
+    for entry in advance_entries:
+        transactions.append({
+            'date': entry.entry_date,
+            'type': 'Advance Received',
+            'reference': entry.invoice_ref or '-',
+            'debit': 0,
+            'credit': entry.amount,
+        })
+
     # Sort and calculate balance
     transactions.sort(key=lambda x: x['date'])
-    balance = 0
+    opening_balance = _customer_opening_balance(customer, start_date)
+    balance = opening_balance
     for trans in transactions:
         balance += trans['debit'] - trans['credit']
         trans['balance'] = balance
@@ -332,7 +391,10 @@ def customer_ledger_print(request, customer_id):
         'transactions': transactions,
         'total_debit': total_debit,
         'total_credit': total_credit,
+        'opening_balance': opening_balance,
         'closing_balance': balance,
+        'start_date': start_date,
+        'end_date': end_date,
         'pharmacy': pharmacy
     }
     return render(request, 'ledger/customer_ledger_print.html', context)
@@ -346,7 +408,9 @@ def supplier_ledger_print(request, supplier_id):
     
     # If no date range provided, use current financial year
     if not start_date or not end_date:
-        fy_start, fy_end = get_financial_year_dates()
+        fy_start, fy_end = get_financial_year_dates(
+            request.session.get('selected_year')
+        )
         start_date = str(fy_start)
         end_date = str(fy_end)
     
@@ -390,10 +454,24 @@ def supplier_ledger_print(request, supplier_id):
             'debit': ret.returninvoice_total,
             'credit': 0
         })
-    
+
+    advance_entries = AdvanceLedger.objects.filter(
+        party_type='supplier', supplier=supplier, entry_type='advance_in',
+        entry_date__range=[start_date, end_date]
+    ).order_by('entry_date')
+    for entry in advance_entries:
+        transactions.append({
+            'date': entry.entry_date,
+            'type': 'Advance In',
+            'reference': entry.invoice_ref or '-',
+            'debit': entry.amount,
+            'credit': 0,
+        })
+
     # Sort and calculate balance
     transactions.sort(key=lambda x: x['date'])
-    balance = 0
+    opening_balance = _supplier_opening_balance(supplier, start_date)
+    balance = opening_balance
     for trans in transactions:
         balance += trans['credit'] - trans['debit']
         trans['balance'] = balance
@@ -411,7 +489,10 @@ def supplier_ledger_print(request, supplier_id):
         'transactions': transactions,
         'total_debit': total_debit,
         'total_credit': total_credit,
+        'opening_balance': opening_balance,
         'closing_balance': balance,
+        'start_date': start_date,
+        'end_date': end_date,
         'pharmacy': pharmacy
     }
     return render(request, 'ledger/supplier_ledger_print.html', context)
@@ -434,7 +515,9 @@ def export_supplier_ledger_pdf(request, supplier_id):
     
     # If no date range provided, use current financial year
     if not start_date or not end_date:
-        fy_start, fy_end = get_financial_year_dates()
+        fy_start, fy_end = get_financial_year_dates(
+            request.session.get('selected_year')
+        )
         start_date = str(fy_start)
         end_date = str(fy_end)
     
@@ -466,10 +549,32 @@ def export_supplier_ledger_pdf(request, supplier_id):
             'debit': payment.payment_amount,
             'credit': 0
         })
-    
+
+    returns = ReturnInvoiceMaster.objects.filter(
+        returnsupplierid=supplier, returninvoice_date__range=[start_date, end_date]
+    ).order_by('returninvoice_date')
+    for ret in returns:
+        transactions.append({
+            'date': ret.returninvoice_date, 'type': 'Purchase Return',
+            'reference': ret.returninvoiceid, 'debit': ret.returninvoice_total, 'credit': 0
+        })
+    advance_entries = AdvanceLedger.objects.filter(
+        party_type='supplier', supplier=supplier, entry_type='advance_in',
+        entry_date__range=[start_date, end_date]
+    ).order_by('entry_date')
+    for entry in advance_entries:
+        transactions.append({
+            'date': entry.entry_date,
+            'type': 'Advance In',
+            'reference': entry.invoice_ref or '-',
+            'debit': entry.amount,
+            'credit': 0,
+        })
+
     # Sort and calculate balance
     transactions.sort(key=lambda x: x['date'])
-    balance = 0
+    opening_balance = _supplier_opening_balance(supplier, start_date)
+    balance = opening_balance
     for trans in transactions:
         balance += trans['credit'] - trans['debit']
         trans['balance'] = balance
@@ -515,6 +620,7 @@ def export_supplier_ledger_pdf(request, supplier_id):
     
     # Table data
     data = [['Date', 'Type', 'Invoice No', 'Debit (Paid)', 'Credit (Purchase)', 'Balance']]
+    data.append([start_date, 'Opening Balance', '', '', '', f"₹{opening_balance:.2f}"])
     
     for trans in transactions:
         data.append([
@@ -527,7 +633,7 @@ def export_supplier_ledger_pdf(request, supplier_id):
         ])
     
     # Total row
-    data.append(['TOTAL', '', '', f"₹{total_debit:.2f}", f"₹{total_credit:.2f}", f"₹{balance:.2f}"])
+    data.append(['PERIOD TOTAL / CLOSING BALANCE', '', '', f"₹{total_debit:.2f}", f"₹{total_credit:.2f}", f"₹{balance:.2f}"])
     
     # Create table
     table = Table(data)
@@ -571,7 +677,9 @@ def export_supplier_ledger_excel(request, supplier_id):
     
     # If no date range provided, use current financial year
     if not start_date or not end_date:
-        fy_start, fy_end = get_financial_year_dates()
+        fy_start, fy_end = get_financial_year_dates(
+            request.session.get('selected_year')
+        )
         start_date = str(fy_start)
         end_date = str(fy_end)
     
@@ -603,10 +711,32 @@ def export_supplier_ledger_excel(request, supplier_id):
             'debit': payment.payment_amount,
             'credit': 0
         })
-    
+
+    returns = ReturnInvoiceMaster.objects.filter(
+        returnsupplierid=supplier, returninvoice_date__range=[start_date, end_date]
+    ).order_by('returninvoice_date')
+    for ret in returns:
+        transactions.append({
+            'date': ret.returninvoice_date, 'type': 'Purchase Return',
+            'reference': ret.returninvoiceid, 'debit': ret.returninvoice_total, 'credit': 0
+        })
+    advance_entries = AdvanceLedger.objects.filter(
+        party_type='supplier', supplier=supplier, entry_type='advance_in',
+        entry_date__range=[start_date, end_date]
+    ).order_by('entry_date')
+    for entry in advance_entries:
+        transactions.append({
+            'date': entry.entry_date,
+            'type': 'Advance In',
+            'reference': entry.invoice_ref or '-',
+            'debit': entry.amount,
+            'credit': 0,
+        })
+
     # Sort and calculate balance
     transactions.sort(key=lambda x: x['date'])
-    balance = 0
+    opening_balance = _supplier_opening_balance(supplier, start_date)
+    balance = opening_balance
     for trans in transactions:
         balance += trans['credit'] - trans['debit']
         trans['balance'] = balance
@@ -657,12 +787,22 @@ def export_supplier_ledger_excel(request, supplier_id):
     row_num += 1
     
     # Headers
+    ws[f'A{row_num}'] = f"Period: {start_date} to {end_date}"
+    ws.merge_cells(f'A{row_num}:F{row_num}')
+    row_num += 1
+
+    # Headers
     headers = ['Date', 'Type', 'Invoice No', 'Debit (Paid)', 'Credit (Purchase)', 'Balance']
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=row_num, column=col, value=header)
         cell.font = header_font
         cell.fill = header_fill
         cell.alignment = center_alignment
+    row_num += 1
+
+    ws.cell(row=row_num, column=1, value=start_date)
+    ws.cell(row=row_num, column=2, value='Opening Balance')
+    ws.cell(row=row_num, column=6, value=opening_balance)
     row_num += 1
     
     # Data
@@ -677,7 +817,7 @@ def export_supplier_ledger_excel(request, supplier_id):
     
     # Total row
     total_row = row_num
-    ws.cell(row=total_row, column=1, value="TOTAL").font = Font(bold=True)
+    ws.cell(row=total_row, column=1, value="PERIOD TOTAL / CLOSING BALANCE").font = Font(bold=True)
     ws.cell(row=total_row, column=4, value=total_debit).font = Font(bold=True)
     ws.cell(row=total_row, column=5, value=total_credit).font = Font(bold=True)
     ws.cell(row=total_row, column=6, value=balance).font = Font(bold=True)
@@ -722,7 +862,9 @@ def export_customer_ledger_pdf(request, customer_id):
     
     # If no date range provided, use current financial year
     if not start_date or not end_date:
-        fy_start, fy_end = get_financial_year_dates()
+        fy_start, fy_end = get_financial_year_dates(
+            request.session.get('selected_year')
+        )
         start_date = str(fy_start)
         end_date = str(fy_end)
     
@@ -767,9 +909,23 @@ def export_customer_ledger_pdf(request, customer_id):
             'credit': ret.return_sales_invoice_total
         })
 
+    advance_entries = AdvanceLedger.objects.filter(
+        party_type='customer', customer=customer, entry_type='advance_in',
+        entry_date__range=[start_date, end_date]
+    ).order_by('entry_date')
+    for entry in advance_entries:
+        transactions.append({
+            'date': entry.entry_date,
+            'type': 'Advance Received',
+            'reference': entry.invoice_ref or '-',
+            'debit': 0,
+            'credit': entry.amount,
+        })
+
     # Sort and calculate balance
     transactions.sort(key=lambda x: x['date'])
-    balance = 0
+    opening_balance = _customer_opening_balance(customer, start_date)
+    balance = opening_balance
     for trans in transactions:
         balance += trans['debit'] - trans['credit']
         trans['balance'] = balance
@@ -815,6 +971,7 @@ def export_customer_ledger_pdf(request, customer_id):
     
     # Table data
     data = [['Date', 'Type', 'Invoice No', 'Debit (Sales)', 'Credit (Received)', 'Balance']]
+    data.append([start_date, 'Opening Balance', '', '', '', f"₹{opening_balance:.2f}"])
     
     for trans in transactions:
         data.append([
@@ -827,7 +984,7 @@ def export_customer_ledger_pdf(request, customer_id):
         ])
     
     # Total row
-    data.append(['TOTAL', '', '', f"₹{total_debit:.2f}", f"₹{total_credit:.2f}", f"₹{balance:.2f}"])
+    data.append(['PERIOD TOTAL / CLOSING BALANCE', '', '', f"₹{total_debit:.2f}", f"₹{total_credit:.2f}", f"₹{balance:.2f}"])
     
     # Create table
     table = Table(data)
@@ -868,6 +1025,12 @@ def export_customer_ledger_excel(request, customer_id):
     customer = get_object_or_404(CustomerMaster, customerid=customer_id)
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
+    if not start_date or not end_date:
+        fy_start, fy_end = get_financial_year_dates(
+            request.session.get('selected_year')
+        )
+        start_date = str(fy_start)
+        end_date = str(fy_end)
     
     transactions = []
     
@@ -913,9 +1076,23 @@ def export_customer_ledger_excel(request, customer_id):
             'credit': ret.return_sales_invoice_total
         })
 
+    advance_entries = AdvanceLedger.objects.filter(
+        party_type='customer', customer=customer, entry_type='advance_in',
+        entry_date__range=[start_date, end_date]
+    ).order_by('entry_date')
+    for entry in advance_entries:
+        transactions.append({
+            'date': entry.entry_date,
+            'type': 'Advance Received',
+            'reference': entry.invoice_ref or '-',
+            'debit': 0,
+            'credit': entry.amount,
+        })
+
     # Sort and calculate balance
     transactions.sort(key=lambda x: x['date'])
-    balance = 0
+    opening_balance = _customer_opening_balance(customer, start_date)
+    balance = opening_balance
     for trans in transactions:
         balance += trans['debit'] - trans['credit']
         trans['balance'] = balance
@@ -979,6 +1156,11 @@ def export_customer_ledger_excel(request, customer_id):
         cell.fill = header_fill
         cell.alignment = center_alignment
     row_num += 1
+
+    ws.cell(row=row_num, column=1, value=start_date)
+    ws.cell(row=row_num, column=2, value='Opening Balance')
+    ws.cell(row=row_num, column=6, value=opening_balance)
+    row_num += 1
     
     # Data
     for trans in transactions:
@@ -992,7 +1174,7 @@ def export_customer_ledger_excel(request, customer_id):
     
     # Total row
     total_row = row_num
-    ws.cell(row=total_row, column=1, value="TOTAL").font = Font(bold=True)
+    ws.cell(row=total_row, column=1, value="PERIOD TOTAL / CLOSING BALANCE").font = Font(bold=True)
     ws.cell(row=total_row, column=4, value=total_debit).font = Font(bold=True)
     ws.cell(row=total_row, column=5, value=total_credit).font = Font(bold=True)
     ws.cell(row=total_row, column=6, value=balance).font = Font(bold=True)

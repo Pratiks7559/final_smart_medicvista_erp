@@ -3,7 +3,7 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count, F, Q, Func, Value, Avg, Case, When, FloatField, DecimalField
-from core.year_filter_utils import apply_year_filter
+from core.year_filter_utils import apply_year_filter, get_financial_year_label
 
 # Landing page view
 def landing_page(request):
@@ -998,8 +998,31 @@ def supplier_detail(request, pk):
     supplier = get_object_or_404(SupplierMaster, supplierid=pk)
     
     # Get invoices for this supplier filtered by selected financial year
-    invoices = InvoiceMaster.objects.filter(supplierid=pk).order_by('-invoice_date')
+    all_invoices = InvoiceMaster.objects.filter(supplierid=pk).order_by('-invoice_date')
+    invoices = all_invoices
     invoices = apply_year_filter(invoices, request, 'invoice_date')
+
+    all_fy_groups = {}
+    for invoice in all_invoices:
+        financial_year = get_financial_year_label(invoice.invoice_date)
+        group = all_fy_groups.setdefault(financial_year, {
+            'year': financial_year,
+            'invoices': [],
+            'total_amount': 0,
+            'total_paid': 0,
+            'balance': 0,
+        })
+        amount = invoice.invoice_total or 0
+        paid = invoice.invoice_paid or 0
+        group['invoices'].append({
+            'invoice': invoice,
+            'amount': amount,
+            'paid': paid,
+            'balance': amount - paid,
+        })
+        group['total_amount'] += amount
+        group['total_paid'] += paid
+        group['balance'] += amount - paid
     
     # Calculate total purchase and payment amounts
     total_purchase = invoices.aggregate(Sum('invoice_total'))['invoice_total__sum'] or 0
@@ -1009,6 +1032,7 @@ def supplier_detail(request, pk):
     context = {
         'supplier': supplier,
         'invoices': invoices,
+        'all_fy_groups': list(all_fy_groups.values()),
         'total_purchase': total_purchase,
         'total_paid': total_paid,
         'balance': balance,
@@ -1163,8 +1187,41 @@ def customer_detail(request, pk):
     customer = get_object_or_404(CustomerMaster, customerid=pk)
     
     # Get invoices for this customer filtered by selected financial year
-    invoices = SalesInvoiceMaster.objects.filter(customerid=pk).order_by('-sales_invoice_date')
+    all_invoices = SalesInvoiceMaster.objects.filter(customerid=pk).order_by('-sales_invoice_date')
+    invoices = all_invoices
     invoices = apply_year_filter(invoices, request, 'sales_invoice_date')
+
+    invoice_totals = {
+        row['sales_invoice_no']: row['total'] or 0
+        for row in SalesMaster.objects.filter(
+            sales_invoice_no__in=all_invoices.values('sales_invoice_no')
+        ).values('sales_invoice_no').annotate(total=Sum('sale_total_amount'))
+    }
+    all_fy_groups = {}
+    for invoice in all_invoices:
+        financial_year = get_financial_year_label(invoice.sales_invoice_date)
+        group = all_fy_groups.setdefault(financial_year, {
+            'year': financial_year,
+            'invoices': [],
+            'total_amount': 0,
+            'total_paid': 0,
+            'balance': 0,
+        })
+        amount = round(
+            invoice_totals.get(invoice.sales_invoice_no, 0)
+            + (invoice.sales_transport_charges or 0)
+            - (invoice.whole_discount_amount or 0)
+        )
+        paid = invoice.sales_invoice_paid or 0
+        group['invoices'].append({
+            'invoice': invoice,
+            'amount': amount,
+            'paid': paid,
+            'balance': amount - paid,
+        })
+        group['total_amount'] += amount
+        group['total_paid'] += paid
+        group['balance'] += amount - paid
     
     # Calculate total sales and payment amounts
     total_sales = 0
@@ -1187,6 +1244,7 @@ def customer_detail(request, pk):
     context = {
         'customer': customer,
         'invoices': invoices,
+        'all_fy_groups': list(all_fy_groups.values()),
         'total_sales': total_sales,
         'total_paid': total_paid,
         'balance': balance,
@@ -1289,7 +1347,9 @@ def edit_invoice(request, pk):
         with transaction.atomic():
             # Update invoice basic details
             invoice.invoice_no = request.POST.get('invoice_no')
-            invoice.invoice_date = request.POST.get('invoice_date')
+            invoice.invoice_date = datetime.strptime(
+                request.POST.get('invoice_date'), '%Y-%m-%d'
+            ).date()
             invoice.supplierid_id = request.POST.get('supplierid')
             invoice.scroll_no = request.POST.get('scroll_no') or ''
             invoice.transport_charges = float(request.POST.get('transport_charges', 0))
@@ -3040,18 +3100,6 @@ def add_sales_invoice_with_products(request):
                     messages.error(request, 'Select Cash or Credit as the payment mode.')
                     return redirect('add_sales_invoice_with_products')
 
-                try:
-                    initial_payment_amount = Decimal(
-                        request.POST.get('initial_payment_amount', '').strip()
-                    ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                except (InvalidOperation, TypeError, ValueError):
-                    messages.error(request, 'Enter a valid payment amount.')
-                    return redirect('add_sales_invoice_with_products')
-
-                if not initial_payment_amount.is_finite() or initial_payment_amount < 0:
-                    messages.error(request, 'Payment amount cannot be negative.')
-                    return redirect('add_sales_invoice_with_products')
-
                 # Create sales invoice
                 invoice = invoice_form.save(commit=False)
                 # Get series from form data
@@ -3344,44 +3392,25 @@ def add_sales_invoice_with_products(request):
                     invoice.whole_discount_amount = float(disc_amt)
                     invoice.save(update_fields=['whole_discount_amount'])
 
-                if initial_payment_amount > 0:
-                    from .models import CustomerAdvance, AdvanceLedger
-
-                    invoice_balance = max(
+                if payment_mode == 'cash':
+                    cash_payment_amount = max(
                         Decimal('0'),
-                        Decimal(str(invoice.sales_invoice_total or 0))
-                        - Decimal(str(invoice.sales_invoice_paid or 0)),
-                    )
-                    applied_payment = min(initial_payment_amount, invoice_balance)
-                    excess_payment = initial_payment_amount - applied_payment
+                        Decimal(str(invoice.sales_invoice_total or 0)),
+                    ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
                     with transaction.atomic():
-                        if applied_payment > 0:
+                        if cash_payment_amount > 0:
                             SalesInvoicePaid.objects.create(
                                 sales_ip_invoice_no=invoice,
                                 sales_payment_date=invoice.sales_invoice_date,
-                                sales_payment_amount=float(applied_payment),
-                                sales_payment_mode=payment_mode.title(),
+                                sales_payment_amount=float(cash_payment_amount),
+                                sales_payment_mode='Cash',
                                 sales_payment_ref_no='',
                             )
-                        if excess_payment > 0:
-                            CustomerAdvance.objects.create(
-                                customer=invoice.customerid,
-                                amount=float(excess_payment),
-                                receipt_date=invoice.sales_invoice_date,
-                                receipt_mode=payment_mode,
-                                reference_no='',
-                                narration=f'Advance from payment of Invoice {invoice.sales_invoice_no}',
-                            )
-                            AdvanceLedger.objects.create(
-                                party_type='customer',
-                                customer=invoice.customerid,
-                                entry_type='advance_in',
-                                amount=float(excess_payment),
-                                entry_date=invoice.sales_invoice_date,
-                                invoice_ref=invoice.sales_invoice_no,
-                                narration=f'Advance received with Invoice {invoice.sales_invoice_no}',
-                            )
+                    # An invoice with no payable balance is still fully paid.
+                    if cash_payment_amount == 0:
+                        invoice.sales_invoice_paid = 0
+                        invoice.save(update_fields=['sales_invoice_paid'])
 
                 # Success message based on whether products were added
                 if sales_created_count > 0:
@@ -3433,13 +3462,6 @@ def add_sales_invoice_with_products(request):
                 if moved_count > 0:
                     print(f"Moved {moved_count} customer challan entries to CustomerChallanMaster2")
                 
-                # Auto-adjust customer advance against this invoice
-                invoice.refresh_from_db()
-                adv_msg = _auto_adjust_customer_advance(invoice)
-                invoice.refresh_from_db()
-                if adv_msg:
-                    success_msg += f' {adv_msg}'
-
                 messages.success(request, success_msg)
                 # Redirect to invoice detail page after creating invoice
                 return redirect('sales_invoice_detail', pk=invoice.sales_invoice_no)

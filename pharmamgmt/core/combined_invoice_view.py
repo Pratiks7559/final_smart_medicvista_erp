@@ -67,7 +67,16 @@ def _normalize_purchase_expiry(value):
     return f'{month:02d}-{year:04d}'
 
 
-def _record_initial_supplier_payment(invoice, amount, payment_mode):
+def _record_initial_supplier_payment(invoice, payment_mode):
+    payment_mode = str(payment_mode or '').strip().lower()
+    if payment_mode == 'credit':
+        return Decimal('0.00'), Decimal('0.00')
+    if payment_mode != 'cash':
+        raise ValueError('Initial supplier payment mode must be Cash or Credit.')
+
+    amount = max(
+        Decimal('0'), Decimal(str(invoice.invoice_total or 0))
+    ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     invoice_balance = max(
         Decimal('0'),
         Decimal(str(invoice.invoice_total or 0))
@@ -81,16 +90,19 @@ def _record_initial_supplier_payment(invoice, amount, payment_mode):
             ip_invoiceid=invoice,
             payment_date=invoice.invoice_date,
             payment_amount=float(applied_amount),
-            payment_mode=payment_mode,
+            payment_mode='Cash',
             payment_ref_no='',
         )
+    elif amount == 0:
+        invoice.payment_status = 'paid'
+        invoice.save(update_fields=['payment_status'])
 
     if excess_amount > 0:
         SupplierAdvance.objects.create(
             supplier=invoice.supplierid,
             amount=float(excess_amount),
             payment_date=invoice.invoice_date,
-            payment_mode=payment_mode.lower(),
+            payment_mode='cash',
             reference_no='',
             narration=f'Advance from payment of Invoice {invoice.invoice_no}',
         )
@@ -152,19 +164,9 @@ def add_invoice_with_products(request):
                     'title': 'Add Invoice with Products',
                 })
 
-            payment_mode = request.POST.get('initial_payment_mode', 'Cash').strip().lower()
+            payment_mode = request.POST.get('initial_payment_mode', '').strip().lower()
             if payment_mode not in {'cash', 'credit'}:
                 messages.error(request, 'Select Cash or Credit as the payment mode.')
-                return redirect('add_invoice_with_products')
-            try:
-                initial_payment_amount = Decimal(
-                    request.POST.get('initial_payment_amount', '').strip()
-                ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            except (InvalidOperation, TypeError, ValueError):
-                messages.error(request, 'Enter a valid payment amount.')
-                return redirect('add_invoice_with_products')
-            if not initial_payment_amount.is_finite() or initial_payment_amount < 0:
-                messages.error(request, 'Payment amount cannot be negative.')
                 return redirect('add_invoice_with_products')
             
             # Process products data from JavaScript
@@ -470,14 +472,11 @@ def add_invoice_with_products(request):
 
                 applied_payment, excess_payment = _record_initial_supplier_payment(
                     invoice,
-                    initial_payment_amount,
-                    payment_mode.title(),
+                    payment_mode,
                 )
 
-                # Auto-adjust supplier advance against this invoice
-                invoice.refresh_from_db()
-                adv_msg = _auto_adjust_advance(invoice)
-                invoice.refresh_from_db()
+                # Credit must remain unpaid; Cash already pays the full invoice.
+                adv_msg = ''
 
                 # Success message based on whether products were added
                 if products_added > 0:
