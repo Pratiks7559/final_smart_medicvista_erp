@@ -164,7 +164,12 @@
     <div class="products-section">
         <div class="products-card">
             <div class="products-header">
-                <h5 class="products-title">Invoice Products</h5>
+                <div>
+                    <h5 class="products-title">Invoice Products</h5>
+                    <small class="text-muted">
+                        {{ unique_product_count }} unique products · {{ sales_line_count }} batch lines
+                    </small>
+                </div>
 
             </div>
             <div class="products-body">

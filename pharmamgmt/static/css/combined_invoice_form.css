@@ -710,6 +710,13 @@
     table-layout: fixed;
 }
 
+.ci-main-form input.ci-total-tax-input {
+    display: inline-block;
+    width: 130px;
+    padding: 4px 8px;
+    text-align: right;
+}
+
 .ci-grand-total-display table tr td {
     padding: 5px 10px !important;
     color: var(--pp-ink-2) !important;

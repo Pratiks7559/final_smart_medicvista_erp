@@ -15,6 +15,9 @@ def add_product_api(request):
     try:
         # Get form data
         form = ProductForm(request.POST, request.FILES)
+        if request.POST.get('optional_product_details') == 'true':
+            for field_name in ('product_salt', 'product_hsn', 'product_hsn_percent'):
+                form.fields[field_name].required = False
         
         if form.is_valid():
             product = form.save()

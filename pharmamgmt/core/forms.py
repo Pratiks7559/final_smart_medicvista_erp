@@ -166,9 +166,14 @@ class CustomerForm(forms.ModelForm):
 class InvoiceForm(forms.ModelForm):
     invoice_no = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
     invoice_date = forms.CharField(widget=DateInput())
-    supplierid = forms.ModelChoiceField(queryset=SupplierMaster.objects.all(), widget=forms.Select(attrs={'class': 'form-control'}))
+    supplierid = forms.ModelChoiceField(queryset=SupplierMaster.objects.all().order_by('supplier_name'), widget=forms.Select(attrs={'class': 'form-control'}))
     transport_charges = forms.FloatField(widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}), initial=0)
     invoice_total = forms.FloatField(widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}))
+    total_tax = forms.FloatField(
+        min_value=0,
+        required=False,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+    )
     
     def clean_invoice_date(self):
         from datetime import datetime
@@ -230,7 +235,7 @@ class InvoiceForm(forms.ModelForm):
     
     class Meta:
         model = InvoiceMaster
-        fields = ['invoice_no', 'invoice_date', 'supplierid', 'transport_charges', 'invoice_total']
+        fields = ['invoice_no', 'invoice_date', 'supplierid', 'transport_charges', 'invoice_total', 'total_tax']
 
 class InvoicePaymentForm(forms.ModelForm):
     payment_date = forms.DateField(widget=DateInput(attrs={'class': 'form-control'}))

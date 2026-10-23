@@ -115,6 +115,7 @@ class InvoiceMaster(models.Model):
     invoice_total=models.FloatField(null=False, blank=False)
     invoice_paid=models.FloatField(null=False, blank=False, default=0)
     whole_discount_amount=models.FloatField(default=0.0)
+    total_tax=models.FloatField(null=True, blank=True, default=None)
     payment_status=models.CharField(max_length=20, choices=[
         ('pending', 'Pending'),
         ('partial', 'Partially Paid'),
@@ -485,6 +486,7 @@ class Challan1(models.Model):
     challan_date = models.DateField(default=timezone.now)
     supplier = models.ForeignKey(SupplierMaster, on_delete=models.CASCADE)
     challan_total = models.FloatField(default=0.0)
+    total_tax = models.FloatField(null=True, blank=True, default=None)
     transport_charges = models.FloatField(default=0.0)
     challan_paid = models.FloatField(default=0.0)
     whole_discount_amount = models.FloatField(default=0.0)

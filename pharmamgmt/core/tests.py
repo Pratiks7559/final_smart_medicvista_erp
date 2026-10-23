@@ -111,6 +111,19 @@ class CustomerLedgerSalesTotalTests(SimpleTestCase):
         self.assertEqual(context['total_debit'], 675)
 
 
+class SalesInvoiceLineCountTests(SimpleTestCase):
+    def test_counts_distinct_products_separately_from_batch_lines(self):
+        sales = [
+            MagicMock(productid_id=255),
+            MagicMock(productid_id=45),
+            MagicMock(productid_id=254),
+            MagicMock(productid_id=254),
+            MagicMock(productid_id=254),
+        ]
+
+        self.assertEqual(views._sales_line_counts(sales), (5, 3))
+
+
 class SupplierLedgerPurchaseTests(SimpleTestCase):
     def test_unpaid_supplier_invoice_appears_in_selected_financial_year(self):
         request = RequestFactory().get('/ledger/supplier/1/')

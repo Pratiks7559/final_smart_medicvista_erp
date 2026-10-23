@@ -4,8 +4,6 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/invoice_detail.css' %}">
-
-{% include 'components/add_product_dialog.html' %}
 {% endblock %}
 
 {% block page_actions %}
@@ -248,6 +246,11 @@
                                 <td class="tfoot-value">₹<span id="detailGST">{{ purchases|total_gst }}</span></td>
                                 <td colspan="4"></td>
                             </tr>
+                            <tr>
+                                <td colspan="10" class="tfoot-label">Total Tax:</td>
+                                <td class="tfoot-value">₹{{ edit_total_tax|floatformat:2 }}</td>
+                                <td colspan="4"></td>
+                            </tr>
                             <tr class="tfoot-divider-row">
                                 <td colspan="10" class="tfoot-label">Sum of Products:</td>
                                 <td class="tfoot-value">{{ purchases_total|currency }}</td>
@@ -258,15 +261,13 @@
                                 <td class="tfoot-value">{{ invoice.transport_charges|currency }}</td>
                                 <td colspan="4"></td>
                             </tr>
-                            {% with products_plus_transport=purchases_total|add:invoice.transport_charges %}
-                            {% if invoice.invoice_total < products_plus_transport %}
+                            {% if edit_whole_discount > 0.01 %}
                             <tr class="tfoot-discount-row">
                                 <td colspan="10" class="tfoot-label">Whole Invoice Discount:</td>
                                 <td class="tfoot-value">- ₹<span id="wholeDiscDetailDisplay">0.00</span></td>
                                 <td colspan="4"></td>
                             </tr>
                             {% endif %}
-                            {% endwith %}
                             <tr class="grand-total-row">
                                 <td colspan="10" class="tfoot-label">Invoice Total:</td>
                                 <td class="tfoot-value">₹{{ invoice.invoice_total|floatformat:0 }}</td>
@@ -345,13 +346,21 @@
                     </div>
                 </div>
 
-                <h4 class="modal-section-title">Products</h4>
-                <div id="productsContainer">
+                <div class="edit-products-heading">
+                    <h4 class="modal-section-title">Products</h4>
+                    <span id="productLoadStatus" role="status" aria-live="polite">
+                        {{ purchases|length }} product{{ purchases|length|pluralize }}
+                    </span>
+                </div>
+                <div id="productsContainer" aria-busy="false">
                     <!-- Existing products will be loaded here -->
                 </div>
 
-                <button type="button" onclick="addNewProduct()" class="btn btn-secondary">
+                <button id="addEditProductButton" type="button" onclick="addNewProduct()" class="btn btn-secondary">
                     <i class="fas fa-plus"></i> Add New Product
+                </button>
+                <button id="createEditProductButton" type="button" onclick="openProductDialogFromInvoiceEdit()" class="btn btn-secondary">
+                    <i class="fas fa-box-open"></i> Create Product
                 </button>
 
                 <div class="invoice-total-display">
@@ -370,7 +379,27 @@
                     </div>
 
                     <div class="total-row">
-                        <span class="total-row-label">Products Total:</span>
+                        <span class="total-row-label">Taxable Amount:</span>
+                        <span id="editTaxableAmount" class="total-row-value">₹0.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span class="total-row-label">Total CGST:</span>
+                        <span id="editTotalCGST" class="total-row-value">₹0.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span class="total-row-label">Total SGST:</span>
+                        <span id="editTotalSGST" class="total-row-value">₹0.00</span>
+                    </div>
+                    <div class="total-row edit-total-tax-row">
+                        <label class="total-row-label" for="editTotalTax">Total Tax:</label>
+                        <span class="edit-total-tax-input-wrap">₹
+                            <input type="number" id="editTotalTax" name="total_tax" min="0" step="0.01"
+                                   value="{{ edit_total_tax|floatformat:2 }}"
+                                   data-user-edited="{{ edit_total_tax_is_manual|yesno:'true,false' }}" required>
+                        </span>
+                    </div>
+                    <div class="total-row">
+                        <span class="total-row-label">Products Total (including tax):</span>
                         <span id="productsTotal" class="total-row-value total-row-value--products">₹0.00</span>
                     </div>
                     <div class="total-row">
@@ -395,11 +424,40 @@
         </div>
     </div>
 </div>
+{% include 'components/add_product_dialog.html' with optional_product_details=True %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
 let productCounter = 0;
+const existingInvoiceProducts = [];
+let invoiceProductsRenderIndex = 0;
+let invoiceProductsRenderFrame = null;
+let invoiceProductsLoaded = false;
+const pendingInvoiceProducts = [];
+
+{% for purchase in purchases %}
+existingInvoiceProducts.push({
+    productid: {{ purchase.productid.productid }},
+    product_name: '{{ purchase.product_name|escapejs }}',
+    product_batch_no: '{{ purchase.product_batch_no|escapejs }}',
+    product_expiry: formatExpiryToMMYYYY('{{ purchase.product_expiry }}'),
+    product_MRP: {{ purchase.product_MRP }},
+    product_purchase_rate: {{ purchase.product_purchase_rate }},
+    product_quantity: {{ purchase.product_quantity }},
+    product_free_qty: {{ purchase.product_free_qty|default:0 }},
+    product_scheme: {{ purchase.product_scheme|default:0 }},
+    product_discount_got: {{ purchase.product_discount_got }},
+    purchase_calculation_mode: '{{ purchase.purchase_calculation_mode }}',
+    CGST: {{ purchase.CGST }},
+    SGST: {{ purchase.SGST }},
+    source_challan_no: '{{ purchase.source_challan_no|escapejs }}',
+    source_challan_date: '{{ purchase.source_challan_date|date:"Y-m-d" }}',
+    rate_A: {{ purchase.rate_a|default:0 }},
+    rate_B: {{ purchase.rate_b|default:0 }},
+    rate_C: {{ purchase.rate_c|default:0 }}
+});
+{% endfor %}
 
 /* ------------------------------------------------------------------
    Product cache (used by quick search)
@@ -407,15 +465,23 @@ let productCounter = 0;
 window.productCache = [];
 
 window.refreshProductCache = function (newProduct) {
-    console.log('Refreshing product cache with new product:', newProduct);
     if (newProduct && newProduct.id) {
         window.productCache.push({
             id: newProduct.id,
             name: newProduct.name,
             company: newProduct.company
         });
-        console.log('✓ Product added to cache. Total products:', window.productCache.length);
     }
+};
+
+window.onInvoiceProductCreated = function (product) {
+    if (!isEditModalOpen()) return;
+    if (!invoiceProductsLoaded) {
+        pendingInvoiceProducts.push({ productid: product.id });
+        return;
+    }
+    addProductRow({ productid: product.id });
+    updateInvoiceTotal();
 };
 
 window.initializeProductCache = function () {
@@ -441,16 +507,8 @@ function openEditInvoiceModal() {
     document.body.classList.add('modal-open');
     loadExistingProducts();
 
-    // Autofill whole discount if it was applied when invoice was saved.
-    // Must run AFTER loadExistingProducts() so updateInvoiceTotal() recalculates with the right discount.
-    var productsTotal = {{ purchases_total|default:0 }};
-    var transport = {{ invoice.transport_charges|default:0 }};
-    var invoiceTotal = {{ invoice.invoice_total|default:0 }};
-    var savedWholeDisc = (productsTotal + transport) - invoiceTotal;
-    if (savedWholeDisc > 0.01) {
-        document.getElementById('editWholeDiscountAmount').value = savedWholeDisc.toFixed(2);
-        updateInvoiceTotal();
-    }
+    document.getElementById('editWholeDiscountAmount').value =
+        '{{ edit_whole_discount|floatformat:2 }}';
 
     // Transport charges listener (guard against duplicates)
     const transportInput = document.getElementById('transport_charges');
@@ -461,6 +519,10 @@ function openEditInvoiceModal() {
 }
 
 function closeEditInvoiceModal() {
+    if (invoiceProductsRenderFrame !== null) {
+        cancelAnimationFrame(invoiceProductsRenderFrame);
+        invoiceProductsRenderFrame = null;
+    }
     document.getElementById('editInvoiceModal').classList.remove('is-open');
     document.body.classList.remove('modal-open');
 }
@@ -473,30 +535,66 @@ function isEditModalOpen() {
 function loadExistingProducts() {
     const container = document.getElementById('productsContainer');
     if (!container) return;
+    if (invoiceProductsRenderFrame !== null) return;
 
-    container.innerHTML = '';
+    if (invoiceProductsLoaded) {
+        updateInvoiceTotal();
+        return;
+    }
 
-    {% for purchase in purchases %}
-    addProductRow({
-        productid: {{ purchase.productid.productid }},
-        product_name: '{{ purchase.product_name|escapejs }}',
-        product_batch_no: '{{ purchase.product_batch_no|escapejs }}',
-        product_expiry: formatExpiryToMMYYYY('{{ purchase.product_expiry }}'),
-        product_MRP: {{ purchase.product_MRP }},
-        product_purchase_rate: {{ purchase.product_purchase_rate }},
-        product_quantity: {{ purchase.product_quantity }},
-        product_free_qty: {{ purchase.product_free_qty|default:0 }},
-        product_discount_got: {{ purchase.product_discount_got }},
-        purchase_calculation_mode: '{{ purchase.purchase_calculation_mode }}',
-        CGST: {{ purchase.CGST }},
-        SGST: {{ purchase.SGST }},
-        rate_A: {{ purchase.rate_a|default:0 }},
-        rate_B: {{ purchase.rate_b|default:0 }},
-        rate_C: {{ purchase.rate_c|default:0 }}
-    });
-    {% endfor %}
+    const status = document.getElementById('productLoadStatus');
+    const addButton = document.getElementById('addEditProductButton');
+    const createButton = document.getElementById('createEditProductButton');
+    const updateButton = document.querySelector('#editInvoiceForm button[type="submit"]');
+    const batchSize = 25;
+    container.setAttribute('aria-busy', 'true');
+    container.classList.add('is-loading');
+    if (addButton) addButton.disabled = true;
+    if (createButton) createButton.disabled = true;
+    if (updateButton) updateButton.disabled = true;
 
-    updateInvoiceTotal();
+    const renderChunk = () => {
+        invoiceProductsRenderFrame = null;
+        const fragment = document.createDocumentFragment();
+        const nextIndex = Math.min(
+            invoiceProductsRenderIndex + batchSize,
+            existingInvoiceProducts.length
+        );
+        while (invoiceProductsRenderIndex < nextIndex) {
+            addProductRow(existingInvoiceProducts[invoiceProductsRenderIndex], fragment);
+            invoiceProductsRenderIndex += 1;
+        }
+        container.appendChild(fragment);
+
+        if (status) {
+            status.textContent = `Loading products ${invoiceProductsRenderIndex} of ${existingInvoiceProducts.length}...`;
+        }
+
+        if (invoiceProductsRenderIndex < existingInvoiceProducts.length) {
+            invoiceProductsRenderFrame = requestAnimationFrame(renderChunk);
+            return;
+        }
+
+        const pendingProductCount = pendingInvoiceProducts.length;
+        pendingInvoiceProducts.splice(0).forEach(product => addProductRow(product));
+        invoiceProductsLoaded = true;
+        container.setAttribute('aria-busy', 'false');
+        container.classList.remove('is-loading');
+        if (addButton) addButton.disabled = false;
+        if (createButton) createButton.disabled = false;
+        if (updateButton) updateButton.disabled = false;
+        if (status) {
+            const productCount = existingInvoiceProducts.length + pendingProductCount;
+            status.textContent = `${productCount} product${productCount === 1 ? '' : 's'}`;
+        }
+        updateInvoiceTotal();
+    };
+
+    if (existingInvoiceProducts.length === 0) {
+        renderChunk();
+    } else {
+        invoiceProductsRenderFrame = requestAnimationFrame(renderChunk);
+    }
 }
 
 function formatExpiryToMMYYYY(dateStr) {
@@ -521,7 +619,10 @@ function formatExpiryToMMYYYY(dateStr) {
 ------------------------------------------------------------------ */
 function updateInvoiceTotal() {
     let productsTotal = 0;
-    const productRows = document.querySelectorAll('.product-row');
+    let taxableProductsTotal = 0;
+    let totalCGST = 0;
+    let totalSGST = 0;
+    const productRows = document.querySelectorAll('#productsContainer .product-row');
 
     productRows.forEach(row => {
         const rateInput = row.querySelector('input[name*="[purchase_rate]"]');
@@ -542,12 +643,24 @@ function updateInvoiceTotal() {
             const baseAmount = rate * qty;
             const discountAmt = calcMode === 'percentage' ? (baseAmount * discount / 100) : discount;
             const afterDiscount = baseAmount - discountAmt;
-            const gstAmount = (afterDiscount * (cgst + sgst)) / 100;
+            const cgstAmount = afterDiscount * cgst / 100;
+            const sgstAmount = afterDiscount * sgst / 100;
 
-            productsTotal += afterDiscount + gstAmount;
+            taxableProductsTotal += afterDiscount;
+            totalCGST += cgstAmount;
+            totalSGST += sgstAmount;
         }
     });
 
+    const calculatedTax = totalCGST + totalSGST;
+    const totalTaxInput = document.getElementById('editTotalTax');
+    if (totalTaxInput && totalTaxInput.dataset.userEdited !== 'true') {
+        totalTaxInput.value = calculatedTax.toFixed(2);
+    }
+    const totalTax = totalTaxInput
+        ? Math.max(0, parseFloat(totalTaxInput.value) || 0)
+        : calculatedTax;
+    productsTotal = taxableProductsTotal + totalTax;
     const transportCharges = parseFloat(document.getElementById('transport_charges')?.value) || 0;
 
     // Whole invoice discount
@@ -576,6 +689,9 @@ function updateInvoiceTotal() {
     const roundedTotal = Math.round(rawTotal);
     const roundoffAmount = roundedTotal - rawTotal;
 
+    document.getElementById('editTaxableAmount').textContent = '₹' + taxableProductsTotal.toFixed(2);
+    document.getElementById('editTotalCGST').textContent = '₹' + totalCGST.toFixed(2);
+    document.getElementById('editTotalSGST').textContent = '₹' + totalSGST.toFixed(2);
     document.getElementById('productsTotal').textContent = '₹' + productsTotal.toFixed(2);
     document.getElementById('transportChargesDisplay').textContent = '₹' + transportCharges.toFixed(2);
 
@@ -592,20 +708,31 @@ function updateInvoiceTotal() {
    Product rows inside edit modal
 ------------------------------------------------------------------ */
 function addNewProduct() {
+    if (!invoiceProductsLoaded) return;
     addProductRow({});
 }
 
-function addProductRow(data = {}) {
-    const container = document.getElementById('productsContainer');
+function openProductDialogFromInvoiceEdit() {
+    if (!isEditModalOpen()) {
+        openEditInvoiceModal();
+    }
+    if (!invoiceProductsLoaded) return;
+    openProductDialog();
+}
+
+function addProductRow(data = {}, targetContainer = document.getElementById('productsContainer')) {
+    const container = targetContainer;
+    if (!container) return;
     const productId = `product_${productCounter++}`;
 
     const productRow = document.createElement('div');
     productRow.className = 'product-row';
 
     let productOptions = '<option value="">Select Product</option>';
-    {% for product in products %}
-    productOptions += `<option value="{{ product.productid }}" ${data.productid == {{ product.productid }} ? 'selected' : ''}>{{ product.product_name|escapejs }} - {{ product.product_company|escapejs }}</option>`;
-    {% endfor %}
+    window.productCache.forEach(product => {
+        const selected = String(data.productid || '') === String(product.id) ? ' selected' : '';
+        productOptions += `<option value="${escapeHtml(product.id)}"${selected}>${escapeHtml(product.name)} - ${escapeHtml(product.company)}</option>`;
+    });
 
     productRow.innerHTML = `
         <div class="product-grid">
@@ -640,23 +767,29 @@ function addProductRow(data = {}) {
                 <input type="number" name="products[${productId}][free_qty]" value="${data.product_free_qty || '0'}" step="0.01">
             </div>
             <div class="form-group">
+                <label>Scheme:</label>
+                <input type="number" name="products[${productId}][scheme]" value="${data.product_scheme !== undefined ? data.product_scheme : '0'}" step="0.01">
+            </div>
+            <input type="hidden" name="products[${productId}][source_challan_no]" value="${escapeHtml(data.source_challan_no || '')}">
+            <input type="hidden" name="products[${productId}][source_challan_date]" value="${escapeHtml(data.source_challan_date || '')}">
+            <div class="form-group">
                 <label>Disc Type:</label>
-                <select name="products[${productId}][calculation_mode]" onchange="updateInvoiceTotal()">
+                <select name="products[${productId}][calculation_mode]">
                     <option value="flat" ${(data.purchase_calculation_mode || 'flat') === 'flat' ? 'selected' : ''}>&#8377; Flat</option>
                     <option value="percentage" ${data.purchase_calculation_mode === 'percentage' ? 'selected' : ''}>% Percent</option>
                 </select>
             </div>
             <div class="form-group">
                 <label>Discount:</label>
-                <input type="number" name="products[${productId}][discount]" value="${data.product_discount_got !== undefined ? data.product_discount_got : ''}" step="0.01" min="0" placeholder="0" oninput="updateInvoiceTotal()">
+                <input type="number" name="products[${productId}][discount]" value="${data.product_discount_got !== undefined ? data.product_discount_got : ''}" step="0.01" min="0" placeholder="0">
             </div>
             <div class="form-group">
                 <label>CGST %:</label>
-                <input type="number" name="products[${productId}][cgst]" value="${data.CGST || '2.5'}" step="0.01">
+                <input type="number" name="products[${productId}][cgst]" value="${data.CGST !== undefined ? data.CGST : '2.5'}" step="0.01">
             </div>
             <div class="form-group">
                 <label>SGST %:</label>
-                <input type="number" name="products[${productId}][sgst]" value="${data.SGST || '2.5'}" step="0.01">
+                <input type="number" name="products[${productId}][sgst]" value="${data.SGST !== undefined ? data.SGST : '2.5'}" step="0.01">
             </div>
             <div class="form-group">
                 <label>Rate A:</label>
@@ -680,30 +813,6 @@ function addProductRow(data = {}) {
 
     container.appendChild(productRow);
 
-    // Real-time calculation
-    productRow.querySelectorAll('input[type="number"]').forEach(input => {
-        input.addEventListener('input', updateInvoiceTotal);
-    });
-
-    // Expiry formatting
-    const expiryInput = productRow.querySelector(`input[name="products[${productId}][expiry]"]`);
-    if (expiryInput) {
-        expiryInput.addEventListener('input', function (e) {
-            let value = e.target.value.replace(/[^0-9]/g, '');
-            if (value.length >= 2) {
-                value = value.substring(0, 2) + '-' + value.substring(2, 6);
-            }
-            e.target.value = value;
-        });
-
-        expiryInput.addEventListener('blur', function (e) {
-            const value = e.target.value;
-            if (value && !/^(0[1-9]|1[0-2])-[0-9]{4}$/.test(value)) {
-                alert('Please enter expiry in MM-YYYY format (e.g., 12-2024)');
-                e.target.focus();
-            }
-        });
-    }
 }
 
 function removeProduct(button) {
@@ -716,6 +825,44 @@ function removeProduct(button) {
 ------------------------------------------------------------------ */
 document.addEventListener('DOMContentLoaded', function () {
     window.initializeProductCache();
+    const productsContainer = document.getElementById('productsContainer');
+    if (productsContainer) {
+        productsContainer.addEventListener('input', function (event) {
+            if (event.target.matches('input[type="number"]')) {
+                updateInvoiceTotal();
+            }
+            if (event.target.matches('input[name*="[expiry]"]')) {
+                let value = event.target.value.replace(/[^0-9]/g, '');
+                if (value.length >= 2) {
+                    value = value.substring(0, 2) + '-' + value.substring(2, 6);
+                }
+                event.target.value = value;
+            }
+        });
+        productsContainer.addEventListener('change', function (event) {
+            if (event.target.matches('select[name*="[calculation_mode]"]')) {
+                updateInvoiceTotal();
+            }
+        });
+        productsContainer.addEventListener('focusout', function (event) {
+            if (event.target.matches('input[name*="[expiry]"]')) {
+                const value = event.target.value;
+                if (value && !/^(0[1-9]|1[0-2])-[0-9]{4}$/.test(value)) {
+                    alert('Please enter expiry in MM-YYYY format (e.g., 12-2024)');
+                    event.target.focus();
+                }
+            }
+        });
+    }
+
+    const editTotalTaxInput = document.getElementById('editTotalTax');
+    if (editTotalTaxInput) {
+        editTotalTaxInput.addEventListener('input', function () {
+            editTotalTaxInput.dataset.userEdited = 'true';
+            updateInvoiceTotal();
+        });
+        editTotalTaxInput.addEventListener('change', updateInvoiceTotal);
+    }
 
     // Payment progress bar width (data-driven)
     const fill = document.querySelector('.payment-progress-fill');
@@ -728,8 +875,13 @@ document.addEventListener('DOMContentLoaded', function () {
     if (editForm) {
         editForm.addEventListener('submit', function (e) {
             e.preventDefault();
+        if (!invoiceProductsLoaded) {
+            const status = document.getElementById('productLoadStatus');
+            if (status) status.textContent = 'Please wait until all invoice products finish loading.';
+            return;
+        }
 
-            const formData = new FormData(this);
+        const formData = new FormData(this);
             const products = [];
             const productRows = document.querySelectorAll('.product-row');
 
@@ -741,6 +893,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 const rateInput = row.querySelector('input[name*="[purchase_rate]"]');
                 const qtyInput = row.querySelector('input[name*="[quantity]"]');
                 const freeQtyInput = row.querySelector('input[name*="[free_qty]"]');
+                const schemeInput = row.querySelector('input[name*="[scheme]"]');
+                const sourceChallanNoInput = row.querySelector('input[name*="[source_challan_no]"]');
+                const sourceChallanDateInput = row.querySelector('input[name*="[source_challan_date]"]');
                 const discountInput = row.querySelector('input[name*="[discount]"]');
                 const calcModeSelect = row.querySelector('select[name*="[calculation_mode]"]');
                 const cgstInput = row.querySelector('input[name*="[cgst]"]');
@@ -758,6 +913,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         purchase_rate: rateInput ? parseFloat(rateInput.value) || 0 : 0,
                         quantity: qtyInput ? parseFloat(qtyInput.value) || 0 : 0,
                         free_qty: freeQtyInput ? parseFloat(freeQtyInput.value) || 0 : 0,
+                        scheme: schemeInput ? parseFloat(schemeInput.value) || 0 : 0,
+                        source_challan_no: sourceChallanNoInput ? sourceChallanNoInput.value : '',
+                        source_challan_date: sourceChallanDateInput ? sourceChallanDateInput.value : '',
                         discount: discountInput ? parseFloat(discountInput.value) || 0 : 0,
                         calculation_mode: calcModeSelect ? calcModeSelect.value : 'flat',
                         cgst: cgstInput ? parseFloat(cgstInput.value) || 0 : 0,
@@ -1634,13 +1792,9 @@ function calculateDetailTotals() {
     document.getElementById('detailGST').textContent      = totalGST.toFixed(2);
 
     // invoice_total already has the whole-invoice discount applied
-    var productsTotal = {{ purchases_total|default:0 }};
-    var transport = {{ invoice.transport_charges|default:0 }};
-    var invoiceTotal = {{ invoice.invoice_total|default:0 }};
-    var wholeDisc = (productsTotal + transport) - invoiceTotal;
     var wholeDiscEl = document.getElementById('wholeDiscDetailDisplay');
     if (wholeDiscEl) {
-        wholeDiscEl.textContent = wholeDisc > 0.01 ? wholeDisc.toFixed(2) : '0.00';
+        wholeDiscEl.textContent = '{{ edit_whole_discount|floatformat:2 }}';
     }
 }
 

@@ -8,6 +8,9 @@
         <div class="product-dialog-body">
             <form id="addProductForm" class="product-dialog-form" enctype="multipart/form-data">
                 {% csrf_token %}
+                {% if optional_product_details %}
+                <input type="hidden" name="optional_product_details" value="true">
+                {% endif %}
                 <div class="product-form-row">
                     <div class="product-form-col">
                         <label class="product-form-label">Product Name*</label>
@@ -26,7 +29,7 @@
                     </div>
                     <div class="product-form-col">
                         <label class="product-form-label">Salt Composition*</label>
-                        <input type="text" name="product_salt" class="product-form-input" required>
+                        <input type="text" name="product_salt" class="product-form-input" {% if not optional_product_details %}required{% endif %}>
                     </div>
                 </div>
                 
@@ -47,14 +50,14 @@
                     </div>
                     <div class="product-form-col">
                         <label class="product-form-label">HSN Code*</label>
-                        <input type="text" name="product_hsn" class="product-form-input" placeholder="e.g., 30049099" required>
+                        <input type="text" name="product_hsn" class="product-form-input" placeholder="e.g., 30049099" {% if not optional_product_details %}required{% endif %}>
                     </div>
                 </div>
                 
                 <div class="product-form-row">
                     <div class="product-form-col">
                         <label class="product-form-label">HSN Tax %*</label>
-                        <input type="text" name="product_hsn_percent" class="product-form-input" placeholder="e.g., 12" required>
+                        <input type="text" name="product_hsn_percent" class="product-form-input" placeholder="e.g., 12" {% if not optional_product_details %}required{% endif %}>
                     </div>
                     <div class="product-form-col">
                         <label class="product-form-label">Product Barcode</label>
@@ -284,6 +287,9 @@ function saveProduct() {
             // This ensures the new product appears in search immediately
             if (typeof window.refreshProductCache === 'function') {
                 window.refreshProductCache(data.product);
+            }
+            if (typeof window.onInvoiceProductCreated === 'function') {
+                window.onInvoiceProductCreated(data.product);
             }
             
             closeProductDialog();

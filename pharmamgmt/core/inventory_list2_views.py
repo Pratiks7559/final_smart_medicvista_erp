@@ -1,18 +1,213 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Sum, Count, Max, F, Case, When, DecimalField, Value
+from django.db.models import Q, Sum, Count, Max
 from django.core.paginator import Paginator
-from django.db import connection
 from django.http import JsonResponse, HttpResponse
 from .models import (
     InventoryTransaction, ProductMaster, Pharmacy_Details, SaleRateMaster,
-    InvoiceMaster, PurchaseMaster, SalesMaster, ReturnPurchaseMaster,
+    PurchaseMaster, SalesMaster, ReturnPurchaseMaster,
     ReturnSalesMaster, SupplierChallanMaster, CustomerChallanMaster,
     StockIssueDetail,
 )
-from .year_filter_utils import get_financial_year_dates, get_current_financial_year
 from decimal import Decimal
-import time
+
+
+def _date_range_filters(start_date, end_date):
+    filters = {}
+    if start_date:
+        filters['__gte'] = start_date
+    if end_date:
+        filters['__lte'] = end_date
+    return filters
+
+
+def _filter_inventory_transactions_by_source_date(queryset, start_date=None, end_date=None):
+    """Filter movements by the date on their originating business document."""
+    if not start_date and not end_date:
+        return queryset
+
+    date_filters = _date_range_filters(start_date, end_date)
+    source_ids = (
+        ('PURCHASE', PurchaseMaster.objects.filter(
+            **{f'product_invoiceid__invoice_date{suffix}': value for suffix, value in date_filters.items()},
+        ).values('purchaseid')),
+        ('SALE', SalesMaster.objects.filter(
+            **{f'sales_invoice_no__sales_invoice_date{suffix}': value for suffix, value in date_filters.items()},
+        ).values('id')),
+        ('PURCHASE_RETURN', ReturnPurchaseMaster.objects.filter(
+            **{f'returninvoiceid__returninvoice_date{suffix}': value for suffix, value in date_filters.items()},
+        ).values('returnpurchaseid')),
+        ('SALES_RETURN', ReturnSalesMaster.objects.filter(
+            **{f'return_sales_invoice_no__return_sales_invoice_date{suffix}': value for suffix, value in date_filters.items()},
+        ).values('return_sales_id')),
+        ('SUPPLIER_CHALLAN', SupplierChallanMaster.objects.filter(
+            **{f'product_challan_id__challan_date{suffix}': value for suffix, value in date_filters.items()},
+        ).values('challan_id')),
+        ('CUSTOMER_CHALLAN', CustomerChallanMaster.objects.filter(
+            **{f'customer_challan_id__customer_challan_date{suffix}': value for suffix, value in date_filters.items()},
+        ).values('customer_challan_master_id')),
+        ('STOCK_ISSUE', StockIssueDetail.objects.filter(
+            **{f'issue__issue_date{suffix}': value for suffix, value in date_filters.items()},
+        ).values('detail_id')),
+    )
+
+    source_filter = Q(pk__in=[])
+    for transaction_type, reference_ids in source_ids:
+        source_filter |= Q(transaction_type=transaction_type, reference_id__in=reference_ids)
+    return queryset.filter(source_filter)
+
+
+def _get_inventory_transaction_source_dates(transactions):
+    transactions_by_type = {}
+    for transaction in transactions:
+        transactions_by_type.setdefault(transaction.transaction_type, set()).add(transaction.reference_id)
+
+    date_maps = {
+        'PURCHASE': dict(PurchaseMaster.objects.filter(
+            purchaseid__in=transactions_by_type.get('PURCHASE', set())
+        ).values_list('purchaseid', 'product_invoiceid__invoice_date')),
+        'SALE': dict(SalesMaster.objects.filter(
+            id__in=transactions_by_type.get('SALE', set())
+        ).values_list('id', 'sales_invoice_no__sales_invoice_date')),
+        'PURCHASE_RETURN': dict(ReturnPurchaseMaster.objects.filter(
+            returnpurchaseid__in=transactions_by_type.get('PURCHASE_RETURN', set())
+        ).values_list('returnpurchaseid', 'returninvoiceid__returninvoice_date')),
+        'SALES_RETURN': dict(ReturnSalesMaster.objects.filter(
+            return_sales_id__in=transactions_by_type.get('SALES_RETURN', set())
+        ).values_list('return_sales_id', 'return_sales_invoice_no__return_sales_invoice_date')),
+        'SUPPLIER_CHALLAN': dict(SupplierChallanMaster.objects.filter(
+            challan_id__in=transactions_by_type.get('SUPPLIER_CHALLAN', set())
+        ).values_list('challan_id', 'product_challan_id__challan_date')),
+        'CUSTOMER_CHALLAN': dict(CustomerChallanMaster.objects.filter(
+            customer_challan_master_id__in=transactions_by_type.get('CUSTOMER_CHALLAN', set())
+        ).values_list('customer_challan_master_id', 'customer_challan_id__customer_challan_date')),
+        'STOCK_ISSUE': dict(StockIssueDetail.objects.filter(
+            detail_id__in=transactions_by_type.get('STOCK_ISSUE', set())
+        ).values_list('detail_id', 'issue__issue_date')),
+    }
+    return {
+        transaction.transaction_id: date_maps.get(transaction.transaction_type, {}).get(
+            transaction.reference_id,
+            transaction.transaction_date.date(),
+        )
+        for transaction in transactions
+    }
+
+
+def _build_inventory2_data(search_query='', stock_filter='all', start_date=None, end_date=None):
+    transactions = _filter_inventory_transactions_by_source_date(
+        InventoryTransaction.objects.all(), start_date, end_date
+    )
+    stock_summary = transactions.values(
+        'product_id',
+        'product__product_name',
+        'product__product_company',
+        'product__product_packing',
+        'product__product_salt',
+        'product__product_category',
+    ).annotate(
+        total_stock=Sum('quantity'),
+        total_free=Sum('free_quantity'),
+        batch_count=Count('batch_no', distinct=True),
+    ).order_by('product__product_name')
+
+    if search_query:
+        stock_summary = stock_summary.filter(
+            Q(product__product_name__icontains=search_query)
+            | Q(product__product_company__icontains=search_query)
+            | Q(product__product_salt__icontains=search_query)
+            | Q(product__product_category__icontains=search_query)
+        )
+
+    stock_data = list(stock_summary)
+    product_ids = [item['product_id'] for item in stock_data]
+    products = ProductMaster.objects.in_bulk(product_ids)
+    all_batches = transactions.filter(product_id__in=product_ids).values(
+        'product_id', 'batch_no'
+    ).annotate(
+        stock=Sum('quantity'),
+        free_stock=Sum('free_quantity'),
+        mrp=Max('mrp'),
+        expiry_date=Max('expiry_date'),
+    ).order_by('product_id', 'expiry_date', 'batch_no')
+    batches_by_product = {}
+    for batch in all_batches:
+        batches_by_product.setdefault(batch['product_id'], []).append(batch)
+
+    product_rates = SaleRateMaster.objects.filter(
+        productid_id__in=product_ids
+    ).values('productid_id', 'product_batch_no', 'rate_A', 'rate_B', 'rate_C')
+    rates_lookup = {
+        (rate['productid_id'], rate['product_batch_no']): {
+            'rate_A': rate['rate_A'],
+            'rate_B': rate['rate_B'],
+            'rate_C': rate['rate_C'],
+        }
+        for rate in product_rates
+    }
+
+    inventory_data = []
+    for item in stock_data:
+        product_id = item['product_id']
+        batches_info = []
+        total_stock = 0
+        stock_value = 0
+
+        for batch in batches_by_product.get(product_id, []):
+            quantity = batch['stock'] or 0
+            free_quantity = batch['free_stock'] or 0
+            batch_stock = quantity + free_quantity
+            total_stock += batch_stock
+            stock_value += quantity * (batch['mrp'] or 0)
+            batches_info.append({
+                'batch_no': batch['batch_no'],
+                'expiry': batch['expiry_date'],
+                'stock': batch_stock,
+                'qty': quantity,
+                'free_qty': free_quantity,
+                'mrp': batch['mrp'] or 0,
+                'rates': rates_lookup.get(
+                    (product_id, batch['batch_no']),
+                    {'rate_A': 0, 'rate_B': 0, 'rate_C': 0},
+                ),
+            })
+
+        if start_date or end_date:
+            if total_stock < 0:
+                status = 'Net Outflow'
+            elif total_stock == 0:
+                status = 'No Net Movement'
+            elif total_stock < 10:
+                status = 'Low Net Inflow'
+            else:
+                status = 'Net Inflow'
+        elif total_stock <= 0:
+            status = 'Out of Stock'
+        elif total_stock < 10:
+            status = 'Low Stock'
+        else:
+            status = 'In Stock'
+
+        if stock_filter == 'in_stock' and total_stock < 10:
+            continue
+        if stock_filter == 'low_stock' and not 0 < total_stock < 10:
+            continue
+        if stock_filter == 'out_of_stock' and total_stock > 0:
+            continue
+
+        inventory_data.append({
+            'product': products[product_id],
+            'product_name': item['product__product_name'],
+            'company': item['product__product_company'],
+            'packing': item['product__product_packing'],
+            'category': item['product__product_category'] or 'N/A',
+            'total_stock': total_stock,
+            'stock_value': stock_value,
+            'batch_count': item['batch_count'],
+            'status': status,
+            'batches_info': batches_info,
+        })
+    return inventory_data
 
 
 @login_required
@@ -25,161 +220,16 @@ def inventory_list2(request):
     # Get filter parameters
     search_query = request.GET.get('search', '').strip()
     stock_filter = request.GET.get('stock_filter', 'all')
-    page_number = request.GET.get('page', 1)
-
-    # Financial Year filter via Purchase Invoice date
-    selected_year = request.session.get('selected_year', get_current_financial_year())
-    fy_start, fy_end = get_financial_year_dates(selected_year)
-
-    # Get product_ids whose purchase invoice date OR challan date falls in selected FY
-    fy_invoice_ids = list(
-        InvoiceMaster.objects.filter(
-            invoice_date__gte=fy_start,
-            invoice_date__lte=fy_end
-        ).values_list('invoiceid', flat=True)
+    from .inventory_date_filters import get_inventory_date_range
+    start_date, end_date, valid_range = get_inventory_date_range(
+        request, start_param='start_date', end_param='end_date'
     )
-    purchase_pids = set(
-        PurchaseMaster.objects.filter(
-            product_invoiceid__in=fy_invoice_ids
-        ).values_list('productid_id', flat=True)
-    )
-    from .models import SupplierChallanMaster
-    challan_pids = set(
-        SupplierChallanMaster.objects.filter(
-            product_challan_id__challan_date__gte=fy_start,
-            product_challan_id__challan_date__lte=fy_end
-        ).values_list('product_id_id', flat=True)
-    )
-    fy_product_ids = list(purchase_pids | challan_pids)
-
-    # OPTIMIZED: Single aggregated query - only FY products, cumulative stock
-    stock_summary = InventoryTransaction.objects.select_related(
-        'product'
-    ).filter(
-        product_id__in=fy_product_ids
-    ).values(
-        'product_id',
-        'product__product_name',
-        'product__product_company',
-        'product__product_packing',
-        'product__product_salt',
-        'product__product_category'
-    ).annotate(
-        total_stock=Sum('quantity'),
-        total_free=Sum('free_quantity'),
-        batch_count=Count('batch_no', distinct=True),
-        avg_mrp=Max('mrp')
-    )
-    
-    # Apply search filter
-    if search_query:
-        stock_summary = stock_summary.filter(
-            Q(product__product_name__icontains=search_query) |
-            Q(product__product_company__icontains=search_query) |
-            Q(product__product_salt__icontains=search_query) |
-            Q(product__product_category__icontains=search_query)
-        )
-    
-    # Convert to list for processing
-    stock_data = list(stock_summary)
-    
-    # OPTIMIZATION: Bulk fetch all product IDs
-    product_ids = [item['product_id'] for item in stock_data]
-    
-    # OPTIMIZATION: Prefetch all batches in one query (no FY filter - cumulative stock)
-    all_batches = InventoryTransaction.objects.filter(
-        product_id__in=product_ids
-    ).values(
-        'product_id', 'batch_no', 'expiry_date'
-    ).annotate(
-        stock=Sum('quantity'),
-        free_stock=Sum('free_quantity'),
-        mrp=Max('mrp')
-    ).order_by('product_id', 'expiry_date', 'batch_no')
-    
-    # OPTIMIZATION: Prefetch all rates in one query
-    all_rates = SaleRateMaster.objects.filter(
-        productid_id__in=product_ids
-    ).select_related('productid').values(
-        'productid_id', 'product_batch_no', 'rate_A', 'rate_B', 'rate_C'
-    )
-    
-    # Create lookup dictionaries for O(1) access
-    batches_by_product = {}
-    for batch in all_batches:
-        pid = batch['product_id']
-        if pid not in batches_by_product:
-            batches_by_product[pid] = []
-        batches_by_product[pid].append(batch)
-    
-    rates_lookup = {}
-    for rate in all_rates:
-        key = f"{rate['productid_id']}_{rate['product_batch_no']}"
-        rates_lookup[key] = {
-            'rate_A': rate['rate_A'],
-            'rate_B': rate['rate_B'],
-            'rate_C': rate['rate_C']
-        }
-    
-    # Process inventory data
-    inventory_data = []
-    summary_stats = {'in_stock': 0, 'low_stock': 0, 'out_of_stock': 0, 'total_value': 0}
-    
-    for item in stock_data:
-        product_id = item['product_id']
-        batches = batches_by_product.get(product_id, [])
-        
-        batches_info = []
-        total_stock = 0
-        stock_value = 0
-        
-        for batch in batches:
-            batch_stock = (batch['stock'] or 0) + (batch['free_stock'] or 0)
-            total_stock += batch_stock
-            stock_value += (batch['stock'] or 0) * (batch['mrp'] or 0)
-            
-            # Get rates from lookup
-            rate_key = f"{product_id}_{batch['batch_no']}"
-            rates = rates_lookup.get(rate_key, {'rate_A': 0, 'rate_B': 0, 'rate_C': 0})
-            
-            batches_info.append({
-                'batch_no': batch['batch_no'],
-                'expiry': batch['expiry_date'],
-                'stock': batch_stock,
-                'qty': batch['stock'] or 0,
-                'free_qty': batch['free_stock'] or 0,
-                'mrp': batch['mrp'] or 0,
-                'rates': rates
-            })
-        
-        # Determine status
-        if total_stock <= 0:
-            status = 'Out of Stock'
-            summary_stats['out_of_stock'] += 1
-        elif total_stock < 10:
-            status = 'Low Stock'
-            summary_stats['low_stock'] += 1
-        else:
-            status = 'In Stock'
-            summary_stats['in_stock'] += 1
-        
-        summary_stats['total_value'] += stock_value
-        
-        # Apply stock filter
-        if stock_filter == 'in_stock' and total_stock < 10:
-            continue
-        elif stock_filter == 'low_stock' and (total_stock <= 0 or total_stock >= 10):
-            continue
-        elif stock_filter == 'out_of_stock' and total_stock > 0:
-            continue
-        
-        inventory_data.append({
-            'product': ProductMaster.objects.get(productid=product_id),
-            'total_stock': total_stock,
-            'stock_value': stock_value,
-            'status': status,
-            'batches_info': batches_info
-        })
+    inventory_data = _build_inventory2_data(
+        search_query,
+        stock_filter,
+        start_date,
+        end_date,
+    ) if valid_range else []
     
     # Manual pagination
     offset = int(request.GET.get('offset', 0))
@@ -193,16 +243,20 @@ def inventory_list2(request):
     next_offset = end if has_more else None
     
     # Page statistics
-    page_total_value = sum(item['stock_value'] for item in inventory_slice)
-    page_low_stock = sum(1 for item in inventory_slice if item['status'] == 'Low Stock')
-    page_out_of_stock = sum(1 for item in inventory_slice if item['status'] == 'Out of Stock')
+    total_value = sum(item['stock_value'] for item in inventory_data)
+    total_low_stock = sum(1 for item in inventory_data if item['status'] == 'Low Stock')
+    total_out_of_stock = sum(1 for item in inventory_data if item['status'] == 'Out of Stock')
     
     # Check if AJAX request
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         from django.http import JsonResponse
         from django.template.loader import render_to_string
         
-        html = render_to_string('inventory/inventory_rows.html', {'inventory_data': inventory_slice})
+        html = render_to_string('inventory/inventory_rows.html', {
+            'inventory_data': inventory_slice,
+            'start_date': start_date,
+            'end_date': end_date,
+        })
         
         return JsonResponse({
             'success': True,
@@ -210,26 +264,23 @@ def inventory_list2(request):
             'has_more': has_more,
             'next_offset': next_offset,
             'total_count': total_count,
-            'batch_stats': {
-                'total_value': page_total_value,
-                'low_stock': page_low_stock,
-                'out_of_stock': page_out_of_stock
-            }
         })
     
     context = {
         'inventory_data': inventory_slice,
         'search_query': search_query,
+        'stock_filter': stock_filter,
+        'start_date': start_date,
+        'end_date': end_date,
+        'period_filtered': bool(start_date or end_date),
         'total_products': total_count,
-        'page_total_value': page_total_value,
-        'page_low_stock': page_low_stock,
-        'page_out_of_stock': page_out_of_stock,
+        'page_total_value': total_value,
+        'page_low_stock': total_low_stock,
+        'page_out_of_stock': total_out_of_stock,
         'has_more': has_more,
         'next_offset': next_offset,
         'pharmacy': Pharmacy_Details.objects.first(),
         'title': 'Inventory List 2 (Real-time)',
-        'selected_year': selected_year,
-        'fy_label': f'{selected_year}-{str(selected_year + 1)[2:]}',
     }
     
     return render(request, 'inventory/inventory_list2.html', context)
@@ -272,148 +323,56 @@ def inventory_batches(request, product_id):
 @login_required
 def inventory_transaction_history(request, product_id):
     """View transaction history for a product with pagination"""
-    
+
     product = get_object_or_404(ProductMaster, productid=product_id)
     batch_no = request.GET.get('batch_no', '')
-    
-    # Get transactions
+    from .inventory_date_filters import get_inventory_date_range
+    start_date, end_date, valid_range = get_inventory_date_range(
+        request, start_param='start_date', end_param='end_date'
+    )
+
     transactions = InventoryTransaction.objects.filter(product=product)
-    
     if batch_no:
         transactions = transactions.filter(batch_no=batch_no)
+    if valid_range:
+        transactions = _filter_inventory_transactions_by_source_date(
+            transactions, start_date, end_date
+        )
+    else:
+        transactions = transactions.none()
 
-    # Apply the selected financial year using the source document date.
-    selected_year = request.session.get('selected_year', get_current_financial_year())
-    fy_start, fy_end = get_financial_year_dates(selected_year)
-    purchase_ids = PurchaseMaster.objects.filter(
-        productid=product,
-        product_invoiceid__invoice_date__range=(fy_start, fy_end),
-    ).values_list('purchaseid', flat=True)
-    sale_ids = SalesMaster.objects.filter(
-        productid=product,
-        sales_invoice_no__sales_invoice_date__range=(fy_start, fy_end),
-    ).values_list('id', flat=True)
-    purchase_return_ids = ReturnPurchaseMaster.objects.filter(
-        returnproductid=product,
-        returninvoiceid__returninvoice_date__range=(fy_start, fy_end),
-    ).values_list('returnpurchaseid', flat=True)
-    sales_return_ids = ReturnSalesMaster.objects.filter(
-        return_productid=product,
-        return_sales_invoice_no__return_sales_invoice_date__range=(fy_start, fy_end),
-    ).values_list('return_sales_id', flat=True)
-    supplier_challan_ids = SupplierChallanMaster.objects.filter(
-        product_id=product,
-        product_challan_id__challan_date__range=(fy_start, fy_end),
-    ).values_list('challan_id', flat=True)
-    customer_challan_ids = CustomerChallanMaster.objects.filter(
-        product_id=product,
-        customer_challan_id__customer_challan_date__range=(fy_start, fy_end),
-    ).values_list('customer_challan_master_id', flat=True)
-    stock_issue_ids = StockIssueDetail.objects.filter(
-        product=product,
-        issue__issue_date__range=(fy_start, fy_end),
-    ).values_list('detail_id', flat=True)
-
-    transactions = transactions.filter(
-        Q(transaction_type='PURCHASE', reference_id__in=purchase_ids)
-        | Q(transaction_type='SALE', reference_id__in=sale_ids)
-        | Q(transaction_type='PURCHASE_RETURN', reference_id__in=purchase_return_ids)
-        | Q(transaction_type='SALES_RETURN', reference_id__in=sales_return_ids)
-        | Q(transaction_type='SUPPLIER_CHALLAN', reference_id__in=supplier_challan_ids)
-        | Q(transaction_type='CUSTOMER_CHALLAN', reference_id__in=customer_challan_ids)
-        | Q(transaction_type='STOCK_ISSUE', reference_id__in=stock_issue_ids)
+    all_transactions = list(transactions.select_related('created_by'))
+    source_dates = _get_inventory_transaction_source_dates(all_transactions)
+    all_transactions.sort(
+        key=lambda txn: (source_dates[txn.transaction_id], txn.transaction_id)
     )
-    
-    transactions = transactions.select_related('created_by').order_by('-transaction_date')
-    
-    # Pagination - 15 rows per page
-    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-    
-    paginator = Paginator(transactions, 15)  # 15 transactions per page
-    page_number = request.GET.get('page', 1)
-    
-    try:
-        page_obj = paginator.get_page(page_number)
-    except PageNotAnInteger:
-        page_obj = paginator.get_page(1)
-    except EmptyPage:
-        page_obj = paginator.get_page(paginator.num_pages)
-    
-    # Calculate running balance for current page
-    transaction_list = []
-    
-    if page_obj:
-        # Get all transactions in chronological order for balance calculation
-        all_txns = list(InventoryTransaction.objects.filter(
-            product=product
-        ).order_by('created_at', 'transaction_id'))
+    balance_lookup = {}
+    running_balance = Decimal('0')
+    for txn in all_transactions:
+        running_balance += Decimal(str(txn.quantity)) + Decimal(str(txn.free_quantity))
+        balance_lookup[txn.transaction_id] = running_balance
 
-        all_txns = [txn for txn in all_txns if txn.transaction_id in
-                    set(transactions.values_list('transaction_id', flat=True))]
-        
-        if batch_no:
-            all_txns = [t for t in all_txns if t.batch_no == batch_no]
-        
-        # Create balance lookup
-        balance_lookup = {}
-        running_balance = Decimal('0')
-        
-        for txn in all_txns:
-            running_balance += Decimal(str(txn.quantity))
-            balance_lookup[txn.transaction_id] = running_balance
-        
-        # Add balance to current page transactions
-        page_transactions = list(page_obj)
-        reference_ids = {}
-        for txn in page_transactions:
-            reference_ids.setdefault(txn.transaction_type, set()).add(txn.reference_id)
+    # Display newest source-document dates first while retaining chronological balances.
+    display_transactions = list(reversed(all_transactions))
+    paginator = Paginator(display_transactions, 15)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+    transaction_list = [{
+        'transaction': txn,
+        'transaction_display_date': source_dates[txn.transaction_id],
+        'balance': balance_lookup[txn.transaction_id],
+    } for txn in page_obj]
 
-        invoice_dates = dict(PurchaseMaster.objects.filter(
-            purchaseid__in=reference_ids.get('PURCHASE', set())
-        ).values_list('purchaseid', 'product_invoiceid__invoice_date'))
-        sale_dates = dict(SalesMaster.objects.filter(
-            id__in=reference_ids.get('SALE', set())
-        ).values_list('id', 'sales_invoice_no__sales_invoice_date'))
-        purchase_return_dates = dict(ReturnPurchaseMaster.objects.filter(
-            returnpurchaseid__in=reference_ids.get('PURCHASE_RETURN', set())
-        ).values_list('returnpurchaseid', 'returninvoiceid__returninvoice_date'))
-        sales_return_dates = dict(ReturnSalesMaster.objects.filter(
-            return_sales_id__in=reference_ids.get('SALES_RETURN', set())
-        ).values_list('return_sales_id', 'return_sales_invoice_no__return_sales_invoice_date'))
-        supplier_challan_dates = dict(SupplierChallanMaster.objects.filter(
-            challan_id__in=reference_ids.get('SUPPLIER_CHALLAN', set())
-        ).values_list('challan_id', 'product_challan_id__challan_date'))
-        customer_challan_dates = dict(CustomerChallanMaster.objects.filter(
-            customer_challan_master_id__in=reference_ids.get('CUSTOMER_CHALLAN', set())
-        ).values_list('customer_challan_master_id', 'customer_challan_id__customer_challan_date'))
-        stock_issue_dates = dict(StockIssueDetail.objects.filter(
-            detail_id__in=reference_ids.get('STOCK_ISSUE', set())
-        ).values_list('detail_id', 'issue__issue_date'))
-
-        source_dates = {
-            'PURCHASE': invoice_dates,
-            'SALE': sale_dates,
-            'PURCHASE_RETURN': purchase_return_dates,
-            'SALES_RETURN': sales_return_dates,
-            'SUPPLIER_CHALLAN': supplier_challan_dates,
-            'CUSTOMER_CHALLAN': customer_challan_dates,
-            'STOCK_ISSUE': stock_issue_dates,
-        }
-        for txn in page_obj:
-            transaction_list.append({
-                'transaction': txn,
-                'transaction_display_date': source_dates.get(
-                    txn.transaction_type, {}
-                ).get(txn.reference_id, txn.transaction_date),
-                'balance': balance_lookup.get(txn.transaction_id, 0)
-            })
-    
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
     context = {
         'product': product,
         'batch_no': batch_no,
         'transactions': transaction_list,
         'page_obj': page_obj,
         'paginator': paginator,
+        'start_date': start_date,
+        'end_date': end_date,
+        'query_without_page': query_params.urlencode(),
         'title': f'Transaction History - {product.product_name}'
     }
     
@@ -478,84 +437,18 @@ def export_inventory2_pdf(request):
         styles = getSampleStyleSheet()
         story = []
         
-        # Get search query
         search_query = request.GET.get('search', '').strip()
         stock_filter = request.GET.get('stock_filter', 'all')
-
-        # FY filter via invoice date
-        selected_year = request.session.get('selected_year', get_current_financial_year())
-        fy_start, fy_end = get_financial_year_dates(selected_year)
-        fy_label = f'{selected_year}-{str(selected_year + 1)[2:]}'
-        fy_invoice_ids = list(InvoiceMaster.objects.filter(
-            invoice_date__gte=fy_start, invoice_date__lte=fy_end
-        ).values_list('invoiceid', flat=True))
-        fy_product_ids = list(PurchaseMaster.objects.filter(
-            product_invoiceid__in=fy_invoice_ids
-        ).values_list('productid_id', flat=True).distinct())
-        
-        # Get inventory data using same logic as main view
-        stock_summary = InventoryTransaction.objects.filter(
-            product_id__in=fy_product_ids
-        ).values(
-            'product_id',
-            'product__product_name',
-            'product__product_company',
-            'product__product_packing',
-            'product__product_category'
-        ).annotate(
-            total_stock=Sum('quantity'),
-            total_free=Sum('free_quantity'),
-            batch_count=Count('batch_no', distinct=True),
-            avg_mrp=Max('mrp')
-        ).filter(Q(total_stock__gt=0) | Q(total_free__gt=0))
-        
-        if search_query:
-            stock_summary = stock_summary.filter(
-                Q(product__product_name__icontains=search_query) |
-                Q(product__product_company__icontains=search_query) |
-                Q(product__product_salt__icontains=search_query)
-            )
-        
-        stock_data = list(stock_summary)
-        
-        # Process inventory data
-        inventory_data = []
-        total_value = 0
-        
-        for item in stock_data:
-            batches = InventoryTransaction.objects.filter(
-                product_id=item['product_id']
-            ).values('batch_no', 'expiry_date', 'mrp').annotate(
-                stock=Sum('quantity'),
-                free_stock=Sum('free_quantity')
-            ).filter(Q(stock__gt=0) | Q(free_stock__gt=0))
-            
-            total_stock = 0
-            stock_value = 0
-            
-            for batch in batches:
-                batch_stock = (batch['stock'] or 0) + (batch['free_stock'] or 0)
-                total_stock += batch_stock
-                stock_value += (batch['stock'] or 0) * (batch['mrp'] or 0)
-            
-            # Apply stock filter
-            if stock_filter == 'in_stock' and total_stock < 10:
-                continue
-            elif stock_filter == 'low_stock' and (total_stock <= 0 or total_stock >= 10):
-                continue
-            elif stock_filter == 'out_of_stock' and total_stock > 0:
-                continue
-            
-            inventory_data.append({
-                'product_name': item['product__product_name'],
-                'company': item['product__product_company'],
-                'packing': item['product__product_packing'],
-                'category': item['product__product_category'] or 'N/A',
-                'total_stock': total_stock,
-                'stock_value': stock_value,
-                'batch_count': item['batch_count']
-            })
-            total_value += stock_value
+        from .inventory_date_filters import get_inventory_date_range
+        start_date, end_date, valid_range = get_inventory_date_range(
+            request, start_param='start_date', end_param='end_date'
+        )
+        if not valid_range:
+            return HttpResponse('Invalid date range.', status=400)
+        inventory_data = _build_inventory2_data(
+            search_query, stock_filter, start_date, end_date
+        )
+        total_value = sum(item['stock_value'] for item in inventory_data)
         
         # Pharmacy header
         try:
@@ -582,8 +475,13 @@ def export_inventory2_pdf(request):
         # Title
         title_style = styles['Heading1']
         title_style.alignment = 1
-        title = Paragraph(f"INVENTORY REPORT - FY {fy_label}", title_style)
+        title = Paragraph("ALL PRODUCTS INVENTORY MOVEMENT REPORT", title_style)
         story.append(title)
+        period_text = (
+            f"Movement period: {start_date or 'No lower bound'} to {end_date or 'No upper bound'}"
+            if start_date or end_date else 'All available transaction dates'
+        )
+        story.append(Paragraph(period_text, styles['Normal']))
         
         # Date
         date_style = styles['Normal']
@@ -598,7 +496,7 @@ def export_inventory2_pdf(request):
         low_stock = sum(1 for item in inventory_data if 0 < item['total_stock'] < 10)
         
         summary_data = [
-            ['Total Products', 'Total Value', 'Out of Stock', 'Low Stock'],
+            ['Total Products', 'Net Movement Value', 'Net Outflow/Zero', 'Low Net Inflow'],
             [str(total_products), f"₹{total_value:,.2f}", str(out_of_stock), str(low_stock)]
         ]
         
@@ -614,7 +512,7 @@ def export_inventory2_pdf(request):
         story.append(Spacer(1, 0.3*inch))
         
         # Inventory table
-        table_data = [['Product Name', 'Company', 'Packing', 'Category', 'Batches', 'Stock', 'Value']]
+        table_data = [['Product Name', 'Company', 'Packing', 'Category', 'Batches', 'Net Stock', 'Net Value']]
         
         for item in inventory_data:
             table_data.append([
@@ -623,8 +521,8 @@ def export_inventory2_pdf(request):
                 item['packing'][:10] + '...' if len(item['packing']) > 10 else item['packing'],
                 item['category'][:10] + '...' if len(item['category']) > 10 else item['category'],
                 str(item['batch_count']),
-                str(int(item['total_stock'])),
-                f"₹{item['stock_value']:.0f}"
+                str(item['total_stock']),
+                f"₹{item['stock_value']:.2f}"
             ])
         
         inventory_table = Table(table_data, repeatRows=1)
@@ -664,84 +562,18 @@ def export_inventory2_excel(request):
     import io
     
     try:
-        # Get search query
         search_query = request.GET.get('search', '').strip()
         stock_filter = request.GET.get('stock_filter', 'all')
-
-        # FY filter via invoice date
-        selected_year = request.session.get('selected_year', get_current_financial_year())
-        fy_start, fy_end = get_financial_year_dates(selected_year)
-        fy_label = f'{selected_year}-{str(selected_year + 1)[2:]}'
-        fy_invoice_ids = list(InvoiceMaster.objects.filter(
-            invoice_date__gte=fy_start, invoice_date__lte=fy_end
-        ).values_list('invoiceid', flat=True))
-        fy_product_ids = list(PurchaseMaster.objects.filter(
-            product_invoiceid__in=fy_invoice_ids
-        ).values_list('productid_id', flat=True).distinct())
-        
-        # Get inventory data
-        stock_summary = InventoryTransaction.objects.filter(
-            product_id__in=fy_product_ids
-        ).values(
-            'product_id',
-            'product__product_name',
-            'product__product_company',
-            'product__product_packing',
-            'product__product_category'
-        ).annotate(
-            total_stock=Sum('quantity'),
-            total_free=Sum('free_quantity'),
-            batch_count=Count('batch_no', distinct=True),
-            avg_mrp=Max('mrp')
-        ).filter(Q(total_stock__gt=0) | Q(total_free__gt=0))
-        
-        if search_query:
-            stock_summary = stock_summary.filter(
-                Q(product__product_name__icontains=search_query) |
-                Q(product__product_company__icontains=search_query) |
-                Q(product__product_salt__icontains=search_query)
-            )
-        
-        stock_data = list(stock_summary)
-        
-        # Process data
-        inventory_data = []
-        total_value = 0
-        
-        for item in stock_data:
-            batches = InventoryTransaction.objects.filter(
-                product_id=item['product_id']
-            ).values('batch_no', 'expiry_date', 'mrp').annotate(
-                stock=Sum('quantity'),
-                free_stock=Sum('free_quantity')
-            ).filter(Q(stock__gt=0) | Q(free_stock__gt=0))
-            
-            total_stock = 0
-            stock_value = 0
-            
-            for batch in batches:
-                batch_stock = (batch['stock'] or 0) + (batch['free_stock'] or 0)
-                total_stock += batch_stock
-                stock_value += (batch['stock'] or 0) * (batch['mrp'] or 0)
-            
-            # Apply stock filter
-            if stock_filter == 'in_stock' and total_stock < 10:
-                continue
-            elif stock_filter == 'low_stock' and (total_stock <= 0 or total_stock >= 10):
-                continue
-            elif stock_filter == 'out_of_stock' and total_stock > 0:
-                continue
-            
-            inventory_data.append({
-                'product_name': item['product__product_name'],
-                'company': item['product__product_company'],
-                'packing': item['product__product_packing'],
-                'category': item['product__product_category'] or 'N/A',
-                'total_stock': total_stock,
-                'stock_value': stock_value,
-                'batch_count': item['batch_count']
-            })
-            total_value += stock_value
+        from .inventory_date_filters import get_inventory_date_range
+        start_date, end_date, valid_range = get_inventory_date_range(
+            request, start_param='start_date', end_param='end_date'
+        )
+        if not valid_range:
+            return HttpResponse('Invalid date range.', status=400)
+        inventory_data = _build_inventory2_data(
+            search_query, stock_filter, start_date, end_date
+        )
+        total_value = sum(item['stock_value'] for item in inventory_data)
         
         # Create workbook
         wb = openpyxl.Workbook()
@@ -778,21 +610,29 @@ def export_inventory2_excel(request):
             current_row = 1
         
         # Title
-        ws[f'A{current_row}'] = f"INVENTORY REPORT - FY {fy_label}"
+        ws[f'A{current_row}'] = "ALL PRODUCTS INVENTORY MOVEMENT REPORT"
         ws[f'A{current_row}'].font = Font(bold=True, size=14)
         ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
+        ws.merge_cells(f'A{current_row}:G{current_row}')
+        current_row += 2
+
+        period_text = (
+            f"Movement period: {start_date or 'No lower bound'} to {end_date or 'No upper bound'}"
+            if start_date or end_date else 'All available transaction dates'
+        )
+        ws[f'A{current_row}'] = period_text
         ws.merge_cells(f'A{current_row}:G{current_row}')
         current_row += 2
         
         # Summary
         ws[f'A{current_row}'] = "Total Products"
         ws[f'B{current_row}'] = len(inventory_data)
-        ws[f'C{current_row}'] = "Total Value"
+        ws[f'C{current_row}'] = "Net Movement Value"
         ws[f'D{current_row}'] = f"₹{total_value:,.2f}"
         current_row += 2
         
         # Headers
-        headers = ['Product Name', 'Company', 'Packing', 'Category', 'Batches', 'Stock', 'Value']
+        headers = ['Product Name', 'Company', 'Packing', 'Category', 'Batches', 'Net Stock', 'Net Value']
         for col_num, header in enumerate(headers, 1):
             cell = ws.cell(row=current_row, column=col_num)
             cell.value = header
@@ -810,8 +650,8 @@ def export_inventory2_excel(request):
             ws.cell(row=current_row, column=3, value=item['packing']).border = border
             ws.cell(row=current_row, column=4, value=item['category']).border = border
             ws.cell(row=current_row, column=5, value=item['batch_count']).border = border
-            ws.cell(row=current_row, column=6, value=int(item['total_stock'])).border = border
-            ws.cell(row=current_row, column=7, value=f"₹{item['stock_value']:.2f}").border = border
+            ws.cell(row=current_row, column=6, value=float(item['total_stock'])).border = border
+            ws.cell(row=current_row, column=7, value=float(item['stock_value'])).border = border
             current_row += 1
         
         # Adjust column widths

@@ -22,10 +22,10 @@
                 <a href="{% url 'inventory_list' %}" class="export-btn classic-view-btn">
                     <i class="fas fa-list"></i> Classic View
                 </a>
-                <a href="/export/inventory2/pdf/{% if search_query %}?search={{ search_query }}{% endif %}{% if stock_filter and stock_filter != 'all' %}{% if search_query %}&{% else %}?{% endif %}stock_filter={{ stock_filter }}{% endif %}" class="export-btn export-pdf">
+                <a href="{% url 'export_inventory2_pdf' %}?{% if search_query %}search={{ search_query|urlencode }}&{% endif %}{% if stock_filter and stock_filter != 'all' %}stock_filter={{ stock_filter }}&{% endif %}{% if start_date %}start_date={{ start_date|date:'Y-m-d' }}&{% endif %}{% if end_date %}end_date={{ end_date|date:'Y-m-d' }}{% endif %}" class="export-btn export-pdf">
                     <i class="fas fa-file-pdf"></i> PDF(Ctrl+Q)
                 </a>
-                <a href="/export/inventory2/excel/{% if search_query %}?search={{ search_query }}{% endif %}{% if stock_filter and stock_filter != 'all' %}{% if search_query %}&{% else %}?{% endif %}stock_filter={{ stock_filter }}{% endif %}" class="export-btn export-excel">
+                <a href="{% url 'export_inventory2_excel' %}?{% if search_query %}search={{ search_query|urlencode }}&{% endif %}{% if stock_filter and stock_filter != 'all' %}stock_filter={{ stock_filter }}&{% endif %}{% if start_date %}start_date={{ start_date|date:'Y-m-d' }}&{% endif %}{% if end_date %}end_date={{ end_date|date:'Y-m-d' }}{% endif %}" class="export-btn export-excel">
                     <i class="fas fa-file-csv"></i> Excel(Ctrl+E)
                 </a>
             </div>
@@ -54,7 +54,7 @@
                 <div class="card-body">
                     <div class="card-content">
                         <div class="card-text-section">
-                            <div class="card-label">Total Inventory Value</div>
+                            <div class="card-label">Net Movement Value</div>
                             <div class="card-value">₹{{ page_total_value|floatformat:2 }}</div>
                         </div>
                         <div class="card-icon-section">
@@ -69,7 +69,7 @@
                 <div class="card-body">
                     <div class="card-content">
                         <div class="card-text-section">
-                            <div class="card-label">Low Stock Items</div>
+                            <div class="card-label">{% if period_filtered %}Low Net Inflow{% else %}Low Stock Items{% endif %}</div>
                             <div class="card-value">{{ page_low_stock }}</div>
                         </div>
                         <div class="card-icon-section">
@@ -84,7 +84,7 @@
                 <div class="card-body">
                     <div class="card-content">
                         <div class="card-text-section">
-                            <div class="card-label">Out of Stock Items</div>
+                            <div class="card-label">{% if period_filtered %}Net Outflow / No Movement{% else %}Out of Stock Items{% endif %}</div>
                             <div class="card-value">{{ page_out_of_stock }}</div>
                         </div>
                         <div class="card-icon-section">
@@ -98,7 +98,8 @@
 
     <div class="inventory-table-section">
         <div class="table-header">
-            <h6 class="table-title">All Products Inventory (Real-time) &nbsp;<span class="inventory-fy-badge">FY {{ fy_label }}</span></h6>
+            <h6 class="table-title">All Products Inventory — Net Movement</h6>
+            <small class="text-muted">The optional date range filters transaction dates and shows the net movement within that period. Financial-year filters do not apply.</small>
             <div class="search-section no-print">
                 <form action="{% url 'inventory_list2' %}" method="GET" class="search-form" id="searchForm">
                     <div class="search-input-group">
@@ -123,9 +124,9 @@
                     <div class="stock-filter-wrap">
                         <select name="stock_filter" class="search-input stock-filter-select" onchange="this.form.submit()">
                             <option value="all" {% if stock_filter == 'all' %}selected{% endif %}>All Products</option>
-                            <option value="in_stock" {% if stock_filter == 'in_stock' %}selected{% endif %}>In Stock</option>
-                            <option value="low_stock" {% if stock_filter == 'low_stock' %}selected{% endif %}>Low Stock</option>
-                            <option value="out_of_stock" {% if stock_filter == 'out_of_stock' %}selected{% endif %}>Out of Stock</option>
+                            <option value="in_stock" {% if stock_filter == 'in_stock' %}selected{% endif %}>{% if period_filtered %}Net Inflow 10+{% else %}In Stock{% endif %}</option>
+                            <option value="low_stock" {% if stock_filter == 'low_stock' %}selected{% endif %}>{% if period_filtered %}Net Inflow 1-9{% else %}Low Stock{% endif %}</option>
+                            <option value="out_of_stock" {% if stock_filter == 'out_of_stock' %}selected{% endif %}>{% if period_filtered %}Net Outflow/Zero{% else %}Out of Stock{% endif %}</option>
                         </select>
                     </div>
                 </form>
@@ -142,11 +143,11 @@
                             <th class="th-company">Company</th>
                             <th class="th-packing">Packing</th>
                             <th class="th-category">Category</th>
-                            <th class="th-batch">Batches & Stock</th>
+                            <th class="th-batch">{% if period_filtered %}Batches & Net Movement{% else %}Batches & Stock{% endif %}</th>
                             <th class="th-expiry">Expiry Dates</th>
                             <th class="th-rates">Batch Rates (A/B/C)</th>
-                            <th class="th-value">Stock Value</th>
-                            <th class="th-status">Status</th>
+                            <th class="th-value">Net Movement Value</th>
+                            <th class="th-status">{% if period_filtered %}Movement Status{% else %}Status{% endif %}</th>
                             <th class="th-actions no-print">Actions</th>
                         </tr>
                     </thead>
@@ -168,7 +169,7 @@
                                             <div class="batch-item">
                                                 <strong>{{ batch.batch_no }}</strong>
                                                 <span class="batch-stock {% if batch.stock <= 0 %}text-danger{% elif batch.stock <= 10 %}text-warning{% else %}text-success{% endif %}">
-                                                    ({{ batch.stock|floatformat:0 }})
+                                                    ({{ batch.stock|floatformat:2 }})
                                                 </span>
                                                 {% if batch.expiry %}
                                                     <br><small class="text-muted">Exp: {{ batch.expiry|expiry_mmyyyy }}</small>
@@ -238,7 +239,7 @@
                                     <a href="{% url 'update_product' item.product.productid %}" class="action-btn edit-btn" title="Edit Product">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <a href="{% url 'inventory_transaction_history' item.product.productid %}" class="action-btn transaction-history-btn" title="Transaction History">
+                                    <a href="{% url 'inventory_transaction_history' item.product.productid %}{% if start_date or end_date %}?{% if start_date %}start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}{% if start_date %}&{% endif %}end_date={{ end_date|date:'Y-m-d' }}{% endif %}{% endif %}" class="action-btn transaction-history-btn" title="Transaction History">
                                         <i class="fas fa-history"></i>
                                     </a>
                                 </div>
@@ -248,7 +249,7 @@
                     </tbody>
                     <tfoot class="table-foot">
                         <tr class="total-row">
-                            <td colspan="8" class="total-label">Total Inventory Value:</td>
+                            <td colspan="8" class="total-label">{% if period_filtered %}Net Movement Value{% else %}Total Inventory Value{% endif %}:</td>
                             <td class="total-value">₹{{ page_total_value|floatformat:2 }}</td>
                             <td colspan="2"></td>
                         </tr>
@@ -261,7 +262,9 @@
                 <button id="loadMoreBtn" class="load-more-btn"
                         data-next-offset="{{ next_offset }}"
                         data-search="{{ search_query }}"
-                        data-stock-filter="{{ stock_filter }}">
+                        data-stock-filter="{{ stock_filter }}"
+                        data-start-date="{{ start_date|date:'Y-m-d' }}"
+                        data-end-date="{{ end_date|date:'Y-m-d' }}">
                     <i class="fas fa-plus-circle"></i> Load More Products (50)
                 </button>
                 <div class="load-more-info load-more-summary">
@@ -476,7 +479,13 @@ $(document).ready(function() {
         $.ajax({
             url: window.location.pathname,
             method: 'GET',
-            data: { offset: nextOffset, search: searchQuery, stock_filter: stockFilter },
+            data: {
+                offset: nextOffset,
+                search: searchQuery,
+                stock_filter: stockFilter,
+                start_date: btn.data('start-date'),
+                end_date: btn.data('end-date')
+            },
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             success: function(response) {
                 if (response.success) {

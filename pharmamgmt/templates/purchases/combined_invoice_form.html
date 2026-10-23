@@ -48,7 +48,7 @@
                                         <div class="ci-supplier-controls-wrapper">
                                             <div class="ci-supplier-select-wrapper">
                                                 {{ invoice_form.supplierid }}
-                                                <button type="button" class="ci-add-supplier-btn" 
+                                                <button type="button" class="ci-add-supplier-btn"
                                                 onclick="openSupplierDialog()">
                                                     <i class="fas fa-plus"></i> Add Supplier
                                                 </button>
@@ -148,6 +148,12 @@
                                         <tr>
                                             <td style="padding:4px 12px;color:#555;">Total SGST:</td>
                                             <td style="padding:4px 12px;text-align:right;font-weight:600;">₹<span id="totalSGST">0.00</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:4px 12px;color:#555;"><label for="totalTaxAmount" style="margin:0;">Total Tax:</label></td>
+                                            <td style="padding:4px 12px;text-align:right;">
+                                                ₹ <input type="number" name="total_tax" id="totalTaxAmount" class="form-control ci-total-tax-input" min="0" step="0.01" value="0.00" required>
+                                            </td>
                                         </tr>
                                         <tr id="wholeDiscountRow">
                                             <td colspan="2" style="padding:4px 12px;color:#c62828;">
@@ -1219,6 +1225,16 @@ function calculateInvoiceTotal() {
     if (el('totalCGST'))       el('totalCGST').textContent       = totalCGST.toFixed(2);
     if (el('totalSGST'))       el('totalSGST').textContent       = totalSGST.toFixed(2);
 
+    const totalTaxInput = el('totalTaxAmount');
+    const calculatedTax = totalCGST + totalSGST;
+    if (totalTaxInput && totalTaxInput.dataset.userEdited !== 'true') {
+        totalTaxInput.value = calculatedTax.toFixed(2);
+    }
+    const totalTax = totalTaxInput
+        ? Math.max(0, parseFloat(totalTaxInput.value) || 0)
+        : calculatedTax;
+    const productsTotalWithSelectedTax = productsTotal - calculatedTax + totalTax;
+
     const transportCharges = parseFloat(document.querySelector('input[name*="transport_charges"]')?.value) || 0;
 
     // Whole invoice discount
@@ -1228,18 +1244,18 @@ function calculateInvoiceTotal() {
     let wholeDisc = 0;
     if (wholeDiscVal > 0) {
         wholeDisc = wholeDiscType === 'percentage'
-            ? Math.min(productsTotal * wholeDiscVal / 100, productsTotal)
-            : Math.min(wholeDiscVal, productsTotal);
+            ? Math.min(productsTotalWithSelectedTax * wholeDiscVal / 100, productsTotalWithSelectedTax)
+            : Math.min(wholeDiscVal, productsTotalWithSelectedTax);
     }
     if (el('wholeDiscountAmountHidden')) el('wholeDiscountAmountHidden').value = wholeDisc.toFixed(2);
     if (el('wholeDiscountTypeHidden')) el('wholeDiscountTypeHidden').value = wholeDiscType;
     if (el('wholeDiscountDeducted'))     el('wholeDiscountDeducted').textContent = wholeDisc.toFixed(2);
 
-    const rawTotal = productsTotal + transportCharges - wholeDisc;
+    const rawTotal = productsTotalWithSelectedTax + transportCharges - wholeDisc;
     const roundedTotal = Math.round(rawTotal);
     const roundoffAmount = roundedTotal - rawTotal;
 
-    let calculationText = productsTotal.toFixed(2);
+    let calculationText = productsTotalWithSelectedTax.toFixed(2);
     if (transportCharges > 0) calculationText += ` + ${transportCharges.toFixed(2)}`;
     if (wholeDisc > 0) calculationText += ` − ${wholeDisc.toFixed(2)} (whole discount)`;
     if (Math.abs(roundoffAmount) > 0.001) {
@@ -1912,7 +1928,13 @@ function quickSearchProducts(event) {
     });
     
     if (filtered.length === 0) {
-        resultsDiv.innerHTML = '<div class="no-results">No products starting with "' + originalSearchTerm + '" found</div>';
+        resultsDiv.innerHTML = `
+            <div class="no-results">
+                <div>No matching products found</div>
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="openProductDialogFromQuickSearch()">
+                    <i class="fas fa-plus-circle"></i> Create New Product
+                </button>
+            </div>`;
         return;
     }
     
@@ -1924,6 +1946,30 @@ function quickSearchProducts(event) {
         </div>
     `).join('');
 }
+
+function openProductDialogFromQuickSearch() {
+    const searchInput = document.getElementById('quickProductInput');
+    const productNameInput = document.querySelector('#addProductForm input[name="product_name"]');
+    const productDialog = document.getElementById('addProductDialog');
+
+    openProductDialog();
+    if (productDialog) {
+        productDialog.style.zIndex = '10001';
+    }
+    if (searchInput && productNameInput) {
+        productNameInput.value = searchInput.value.trim();
+    }
+}
+
+window.onInvoiceProductCreated = function() {
+    window.setTimeout(() => {
+        const searchInput = document.getElementById('quickProductInput');
+        if (searchInput) {
+            quickSearchProducts({ target: searchInput, key: '' });
+            searchInput.focus();
+        }
+    }, 0);
+};
 
 function navigateResults(direction) {
     const items = document.querySelectorAll('.quick-result-item');
@@ -2165,6 +2211,14 @@ function onDiscTypeChange(rowIndex) {
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize product cache
     window.initializeProductCache();
+
+    const supplierDropdown = document.querySelector('select[name*="supplierid"]');
+    if (supplierDropdown) {
+        sortSupplierOptions(supplierDropdown);
+        if (!{{ invoice_form.is_bound|yesno:"true,false" }}) {
+            supplierDropdown.value = '';
+        }
+    }
     
     // Check if URL has openProductDialog parameter
     const urlParams = new URLSearchParams(window.location.search);
@@ -2188,32 +2242,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 500);
     }
     
-    /* SELECT2 FOR SUPPLIER - COMMENTED OUT
-    // Initialize Select2 for supplier dropdown
-    $('select[name*="supplierid"]').select2({
-        placeholder: 'Search supplier...',
-        allowClear: true,
-        width: '100%'
-    }).on('select2:open', function() {
-        // Auto-focus on search input when dropdown opens
-        setTimeout(() => {
-            document.querySelector('.select2-search__field').focus();
-        }, 50);
-    }).on('select2:select', function(e) {
-        // Enable pull challan button when supplier is selected
-        const pullChallanBtn = document.getElementById('pullChallanBtn');
-        if (pullChallanBtn) {
-            pullChallanBtn.disabled = false;
-        }
-    }).on('select2:clear', function(e) {
-        // Disable pull challan button when supplier is cleared
-        const pullChallanBtn = document.getElementById('pullChallanBtn');
-        if (pullChallanBtn) {
-            pullChallanBtn.disabled = true;
-        }
-    });
-    */
-    
     // Don't add default product row - user will add manually
     
     // Add event listener for transport charges
@@ -2221,6 +2249,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (transportInput) {
         transportInput.addEventListener('input', calculateInvoiceTotal);
         transportInput.addEventListener('change', calculateInvoiceTotal);
+    }
+
+    const totalTaxInput = document.getElementById('totalTaxAmount');
+    if (totalTaxInput) {
+        totalTaxInput.addEventListener('input', function() {
+            totalTaxInput.dataset.userEdited = 'true';
+            calculateInvoiceTotal();
+        });
+        totalTaxInput.addEventListener('change', calculateInvoiceTotal);
     }
     
     // Add global event listener for all numeric inputs that affect totals
@@ -2260,10 +2297,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Add event listener for supplier dropdown change (non-Select2 version)
-    const supplierSelect = document.querySelector('select[name*="supplierid"]');
-    if (supplierSelect) {
-        supplierSelect.addEventListener('change', function() {
+    // Update the challan button when the supplier changes.
+    const supplierSelectForChallans = document.querySelector('select[name*="supplierid"]');
+    if (supplierSelectForChallans) {
+        supplierSelectForChallans.addEventListener('change', function() {
             const pullChallanBtn = document.getElementById('pullChallanBtn');
             if (pullChallanBtn) {
                 pullChallanBtn.disabled = !this.value;
@@ -2462,6 +2499,21 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Supplier Dialog Functions
+function sortSupplierOptions(select) {
+    const placeholder = Array.from(select.options).filter(option => option.value === '');
+    const suppliers = Array.from(select.options).filter(option => option.value !== '');
+    suppliers.sort((first, second) =>
+        first.textContent.trim().localeCompare(second.textContent.trim(), undefined, {
+            sensitivity: 'base',
+            numeric: true
+        })
+    );
+
+    const options = document.createDocumentFragment();
+    [...placeholder, ...suppliers].forEach(option => options.appendChild(option));
+    select.appendChild(options);
+}
+
 function openSupplierDialog() {
     document.getElementById('supplierDialog').style.display = 'flex';
     // Focus on first input
@@ -2516,8 +2568,10 @@ function saveSupplier() {
                 const newOption = document.createElement('option');
                 newOption.value = data.supplier_id;
                 newOption.textContent = data.supplier_name;
-                newOption.selected = true;
                 supplierSelect.appendChild(newOption);
+                sortSupplierOptions(supplierSelect);
+                supplierSelect.value = String(data.supplier_id);
+                supplierSelect.dispatchEvent(new Event('change', { bubbles: true }));
             }
             
             // Close dialog
@@ -2780,6 +2834,12 @@ function pullSelectedChallans() {
     .then(response => response.json())
     .then(data => {
         if (data.success && data.products) {
+            const totalTaxInput = document.getElementById('totalTaxAmount');
+            if (totalTaxInput && data.total_tax !== undefined) {
+                totalTaxInput.value = (parseFloat(totalTaxInput.value) || 0) + (parseFloat(data.total_tax) || 0);
+                totalTaxInput.dataset.userEdited = 'true';
+            }
+
             // Add products from challans to regular products section
             data.products.forEach(product => {
                 addProductRowFromChallan(product);
@@ -2877,8 +2937,8 @@ function addProductRowFromChallan(product) {
                 <input type="number" class="discount" step="any" placeholder="% disc" min="0" max="100" value="${String(product.discount_percentage ?? product.discount ?? '0')}" onchange="calculateRowTotal(${productRowIndex})" style="width:100%;">
             </div>
         </td>
-        <td><input type="number" class="cgst-rate" step="any" placeholder="CGST %" min="0" max="50" value="${String(product.cgst || '2.5')}" onchange="calculateRowTotal(${productRowIndex})"></td>
-        <td><input type="number" class="sgst-rate" step="any" placeholder="SGST %" min="0" max="50" value="${String(product.sgst || '2.5')}" onchange="calculateRowTotal(${productRowIndex})"></td>
+        <td><input type="number" class="cgst-rate" step="any" placeholder="CGST %" min="0" max="50" value="${String(product.cgst ?? '2.5')}" onchange="calculateRowTotal(${productRowIndex})"></td>
+        <td><input type="number" class="sgst-rate" step="any" placeholder="SGST %" min="0" max="50" value="${String(product.sgst ?? '2.5')}" onchange="calculateRowTotal(${productRowIndex})"></td>
         <td><input type="number" class="rate-a" step="any" placeholder="Rate A" min="0" value="${String(product.rate_a || '')}"></td>
         <td><input type="number" class="rate-b" step="any" placeholder="Rate B" min="0" value="${String(product.rate_b || '')}"></td>
         <td><input type="number" class="rate-c" step="any" placeholder="Rate C" min="0" value="${String(product.rate_c || '')}"></td>
@@ -3003,5 +3063,5 @@ function forceChallanTotalCalculation() {
 </div>
 
 
-{% include 'components/add_product_dialog.html' %}
+{% include 'components/add_product_dialog.html' with optional_product_details=True %}
 {% endblock %}

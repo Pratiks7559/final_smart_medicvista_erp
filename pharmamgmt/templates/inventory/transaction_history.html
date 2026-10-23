@@ -19,6 +19,28 @@
     margin-bottom: 30px;
 }
 
+.txn-date-filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    margin: 0 0 12px;
+}
+
+.txn-date-filter-form label {
+    display: grid;
+    gap: 4px;
+    color: #374151;
+    font-size: 13px;
+}
+
+.txn-date-filter-form input {
+    min-height: 38px;
+    padding: 6px 9px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+}
+
 .txn-title {
     font-size: 28px;
     font-weight: 700;
@@ -234,10 +256,25 @@
             <br><strong>Batch:</strong> {{ batch_no }}
             {% endif %}
         </div>
-        <a href="{% url 'inventory_list2' %}" class="txn-back-btn">
+        <a href="{% url 'inventory_list2' %}{% if start_date or end_date %}?{% if start_date %}start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}{% if start_date %}&{% endif %}end_date={{ end_date|date:'Y-m-d' }}{% endif %}{% endif %}" class="txn-back-btn">
             <i class="fas fa-arrow-left"></i> Back to Inventory
         </a>
     </div>
+
+    <form method="get" class="txn-date-filter-form">
+        {% if batch_no %}<input type="hidden" name="batch_no" value="{{ batch_no }}">{% endif %}
+        <label>From <input type="date" name="start_date" value="{{ start_date|date:'Y-m-d' }}"></label>
+        <label>To <input type="date" name="end_date" value="{{ end_date|date:'Y-m-d' }}"></label>
+        <button type="submit" class="pagination-btn">Filter history</button>
+        <a href="{% url 'inventory_transaction_history' product.productid %}{% if batch_no %}?batch_no={{ batch_no|urlencode }}{% endif %}" class="pagination-btn">Reset</a>
+    </form>
+    <p class="text-muted">
+        {% if start_date or end_date %}
+            Showing movements from {{ start_date|default:"beginning" }} to {{ end_date|default:"no upper date" }}. The running balance starts at zero for this period and includes paid plus free quantity.
+        {% else %}
+            Showing all available transaction history.
+        {% endif %}
+    </p>
 
     <div class="txn-table-container">
         {% if transactions %}
@@ -307,7 +344,7 @@
                     <td>₹{{ item.transaction.rate|floatformat:2 }}</td>
                     <td>₹{{ item.transaction.total_value|floatformat:2 }}</td>
                     <td>
-                        <span class="txn-balance">{{ item.balance|floatformat:0 }}</span>
+                        <span class="txn-balance">{{ item.balance|floatformat:2 }}</span>
                     </td>
                     <td style="font-size: 12px; color: #6b7280;">
                         {{ item.transaction.remarks|default:"-" }}
@@ -326,10 +363,10 @@
             
             <!-- Previous Button -->
             {% if page_obj.has_previous %}
-            <a href="?page=1{% if batch_no %}&batch_no={{ batch_no }}{% endif %}" class="pagination-btn">
+            <a href="?{% if query_without_page %}{{ query_without_page }}&{% endif %}page=1" class="pagination-btn">
                 <i class="fas fa-angle-double-left"></i> First
             </a>
-            <a href="?page={{ page_obj.previous_page_number }}{% if batch_no %}&batch_no={{ batch_no }}{% endif %}" class="pagination-btn">
+            <a href="?{% if query_without_page %}{{ query_without_page }}&{% endif %}page={{ page_obj.previous_page_number }}" class="pagination-btn">
                 <i class="fas fa-angle-left"></i> Previous
             </a>
             {% else %}
@@ -347,17 +384,17 @@
                     {% if page_obj.number == num %}
                     <span class="pagination-btn active">{{ num }}</span>
                     {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                    <a href="?page={{ num }}{% if batch_no %}&batch_no={{ batch_no }}{% endif %}" class="pagination-btn">{{ num }}</a>
+                    <a href="?{% if query_without_page %}{{ query_without_page }}&{% endif %}page={{ num }}" class="pagination-btn">{{ num }}</a>
                     {% endif %}
                 {% endfor %}
             </div>
             
             <!-- Next Button -->
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if batch_no %}&batch_no={{ batch_no }}{% endif %}" class="pagination-btn">
+            <a href="?{% if query_without_page %}{{ query_without_page }}&{% endif %}page={{ page_obj.next_page_number }}" class="pagination-btn">
                 Next <i class="fas fa-angle-right"></i>
             </a>
-            <a href="?page={{ paginator.num_pages }}{% if batch_no %}&batch_no={{ batch_no }}{% endif %}" class="pagination-btn">
+            <a href="?{% if query_without_page %}{{ query_without_page }}&{% endif %}page={{ paginator.num_pages }}" class="pagination-btn">
                 Last <i class="fas fa-angle-double-right"></i>
             </a>
             {% else %}

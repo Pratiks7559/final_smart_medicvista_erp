@@ -26,6 +26,7 @@ from datetime import datetime, timedelta
 import json
 import csv
 from django.db import transaction
+from decimal import Decimal
 
 from .models import (
     Web_User, Pharmacy_Details, ProductMaster, SupplierMaster, CustomerMaster,
@@ -1345,20 +1346,41 @@ def edit_invoice(request, pk):
     
     try:
         with transaction.atomic():
+            from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+
             # Update invoice basic details
-            invoice.invoice_no = request.POST.get('invoice_no')
+            invoice.invoice_no = (request.POST.get('invoice_no') or '').strip()
+            if not invoice.invoice_no:
+                raise ValueError('Invoice number is required.')
             invoice.invoice_date = datetime.strptime(
                 request.POST.get('invoice_date'), '%Y-%m-%d'
             ).date()
             invoice.supplierid_id = request.POST.get('supplierid')
             invoice.scroll_no = request.POST.get('scroll_no') or ''
-            invoice.transport_charges = float(request.POST.get('transport_charges', 0))
+            invoice.transport_charges = float(request.POST.get('transport_charges') or 0)
+            if invoice.transport_charges < 0:
+                raise ValueError('Transport charges cannot be negative.')
             
             # Process products data if provided
             products_data = request.POST.get('products_data')
             if products_data:
                 try:
                     products = json.loads(products_data)
+                    if not isinstance(products, list) or any(not isinstance(item, dict) for item in products):
+                        raise ValueError('Invalid products data.')
+
+                    submitted_tax = request.POST.get('total_tax')
+                    if submitted_tax not in (None, ''):
+                        total_tax = Decimal(submitted_tax)
+                    elif invoice.total_tax is not None:
+                        total_tax = Decimal(str(invoice.total_tax))
+                    else:
+                        total_tax = None
+                    if total_tax is not None and (not total_tax.is_finite() or total_tax < 0):
+                        raise ValueError('Total tax must be a valid non-negative amount.')
+
+                    taxable_products_total = Decimal('0')
+                    calculated_tax_total = Decimal('0')
                     
                     # Get existing products for this invoice
                     existing_products = list(PurchaseMaster.objects.filter(product_invoiceid=invoice))
@@ -1391,9 +1413,15 @@ def edit_invoice(request, pk):
                                 product_discount_got=float(product_data.get('discount', 0)),
                                 CGST=float(product_data.get('cgst', 0)),
                                 SGST=float(product_data.get('sgst', 0)),
+                                source_challan_no=(str(product_data.get('source_challan_no') or '').strip() or None),
                                 purchase_calculation_mode=product_data.get('calculation_mode', 'flat'),
                                 product_transportation_charges=0
                             )
+                            source_challan_date = str(product_data.get('source_challan_date') or '').strip()
+                            if source_challan_date:
+                                purchase.source_challan_date = datetime.strptime(
+                                    source_challan_date, '%Y-%m-%d'
+                                ).date()
                             
                             # Store rates in PurchaseMaster (fix for rates becoming 0.00)
                             purchase.rate_a = float(product_data.get('rate_A', 0) or product_data.get('rate_a', 0) or 0)
@@ -1417,6 +1445,8 @@ def edit_invoice(request, pk):
                             # Calculate GST amounts with proper precision
                             cgst_amount = discounted_amount * (Decimal(str(purchase.CGST)) / Decimal('100'))
                             sgst_amount = discounted_amount * (Decimal(str(purchase.SGST)) / Decimal('100'))
+                            taxable_products_total += discounted_amount
+                            calculated_tax_total += cgst_amount + sgst_amount
                             
                             # Total amount including GST with proper rounding (fix for proper total calculation)
                             total_with_gst = discounted_amount + cgst_amount + sgst_amount
@@ -1440,19 +1470,15 @@ def edit_invoice(request, pk):
                             )
                                 
                         except ProductMaster.DoesNotExist:
-                            continue
+                            raise ValueError(
+                                f"Product with ID {product_data.get('productid')} was not found."
+                            )
 
-                    # Recalculate invoice total (products + transport - whole discount) with proper precision
-                    from decimal import Decimal, ROUND_HALF_UP
-                    
-                    products_total = PurchaseMaster.objects.filter(product_invoiceid=invoice).aggregate(
-                        total=Sum('total_amount')
-                    )['total'] or 0
-                    
-                    # Use Decimal for precise calculation
-                    products_decimal = Decimal(str(products_total))
+                    if total_tax is None:
+                        total_tax = calculated_tax_total
+                    invoice.total_tax = float(total_tax)
+                    products_decimal = taxable_products_total + total_tax
                     transport_decimal = Decimal(str(invoice.transport_charges or 0))
-                    subtotal_decimal = products_decimal + transport_decimal
 
                     # Apply whole invoice discount if provided
                     whole_disc_val = Decimal(str(request.POST.get('whole_discount_amount', 0) or 0))
@@ -1462,19 +1488,25 @@ def edit_invoice(request, pk):
                             whole_disc_amt = (products_decimal * whole_disc_val / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                         else:
                             whole_disc_amt = min(whole_disc_val, products_decimal)
-                        total_decimal = subtotal_decimal - whole_disc_amt
                     else:
                         whole_disc_amt = Decimal('0')
-                        total_decimal = subtotal_decimal
 
-                    # Round to nearest integer (standard invoice rounding)
+                    total_decimal = products_decimal + transport_decimal - whole_disc_amt
                     invoice.invoice_total = float(total_decimal.quantize(Decimal('1'), rounding=ROUND_HALF_UP))
                     invoice.whole_discount_amount = float(whole_disc_amt)
                     
-                except json.JSONDecodeError:
-                    pass  # If products_data is invalid, just update basic fields
+                except (json.JSONDecodeError, InvalidOperation, TypeError) as exc:
+                    raise ValueError(f'Invalid invoice product or tax data: {exc}') from exc
         
         invoice.save()
+        invoice_balance = invoice.invoice_total - invoice.invoice_paid
+        if invoice_balance <= 0.01:
+            invoice.payment_status = 'paid'
+        elif invoice.invoice_paid > 0:
+            invoice.payment_status = 'partial'
+        else:
+            invoice.payment_status = 'pending'
+        invoice.save(update_fields=['payment_status'])
         
         messages.success(request, f'Invoice #{invoice.invoice_no} updated successfully!')
         
@@ -1517,12 +1549,50 @@ def invoice_detail(request, pk):
     
     # Calculate the sum of all purchase entries
     purchases_total = purchases.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+
+    taxable_products_total = Decimal('0')
+    calculated_tax_total = Decimal('0')
+    for purchase in purchases:
+        base_amount = Decimal(str(purchase.product_purchase_rate)) * Decimal(str(purchase.product_quantity))
+        discount = Decimal(str(purchase.product_discount_got or 0))
+        discount_amount = (
+            base_amount * discount / Decimal('100')
+            if purchase.purchase_calculation_mode == 'percentage'
+            else discount
+        )
+        taxable_amount = base_amount - discount_amount
+        taxable_products_total += taxable_amount
+        calculated_tax_total += taxable_amount * (
+            Decimal(str(purchase.CGST or 0)) + Decimal(str(purchase.SGST or 0))
+        ) / Decimal('100')
+
+    edit_total_tax = (
+        Decimal(str(invoice.total_tax))
+        if invoice.total_tax is not None
+        else calculated_tax_total
+    )
+    calculated_discount = max(
+        Decimal('0'),
+        taxable_products_total
+        + edit_total_tax
+        + Decimal(str(invoice.transport_charges or 0))
+        - Decimal(str(invoice.invoice_total or 0)),
+    )
+    edit_whole_discount = (
+        Decimal(str(invoice.whole_discount_amount))
+        if invoice.whole_discount_amount
+        else calculated_discount
+    )
     
     # Calculate the difference between invoice total and sum of purchases
     # Whole invoice discount is already baked into invoice.invoice_total,
     # so compare invoice_total directly against purchases_total + transport.
     # A negative difference means whole discount was applied — not a pending entry.
-    purchases_total_with_transport = purchases_total + (invoice.transport_charges or 0)
+    purchases_total_with_transport = (
+        purchases_total
+        + (invoice.transport_charges or 0)
+        + float(edit_total_tax - calculated_tax_total)
+    )
     invoice_pending = invoice.invoice_total - purchases_total_with_transport
     
     # Only flag as pending if products EXCEED invoice total (data entry error),
@@ -1545,6 +1615,9 @@ def invoice_detail(request, pk):
         'purchases': purchases,
         'payments': payments,
         'purchases_total': purchases_total,
+        'edit_total_tax': float(edit_total_tax),
+        'edit_total_tax_is_manual': abs(edit_total_tax - calculated_tax_total) > Decimal('0.005'),
+        'edit_whole_discount': float(edit_whole_discount),
         'invoice_pending': invoice_pending,
         'has_pending_entries': invoice_pending > 0.01,  # Only show when products are MISSING (positive gap), not when whole discount applied (negative gap)
         'challan_products': challan_products,
@@ -2386,6 +2459,7 @@ def sales_invoice_detail(request, pk):
     
     # Get all sales under this invoice
     sales = SalesMaster.objects.filter(sales_invoice_no=pk)
+    sales_line_count, unique_product_count = _sales_line_counts(sales)
     
     # Calculate products total
     from django.db.models import Sum
@@ -2425,6 +2499,8 @@ def sales_invoice_detail(request, pk):
     context = {
         'invoice': invoice,
         'sales': sales,
+        'sales_line_count': sales_line_count,
+        'unique_product_count': unique_product_count,
         'products_total': products_total,
         'bill_subtotal': round(bill_subtotal, 2),
         'bill_discount': round(bill_discount, 2),
@@ -2438,6 +2514,16 @@ def sales_invoice_detail(request, pk):
         'title': f'Sales Invoice #{invoice.sales_invoice_no}'
     }
     return render(request, 'sales/sales_invoice_detail.html', context)
+
+
+def _sales_line_counts(sales):
+    """Count invoice rows separately from distinct medicine products."""
+    product_ids = set()
+    line_count = 0
+    for sale in sales:
+        line_count += 1
+        product_ids.add(sale.productid_id)
+    return line_count, len(product_ids)
 
 
 @login_required
@@ -3414,7 +3500,14 @@ def add_sales_invoice_with_products(request):
 
                 # Success message based on whether products were added
                 if sales_created_count > 0:
-                    success_msg = f"Sales Invoice #{invoice.sales_invoice_no} with {sales_created_count} products added successfully!"
+                    unique_product_count = len({
+                        sale_obj.productid_id for sale_obj in sales_to_create
+                    })
+                    success_msg = (
+                        f"Sales Invoice #{invoice.sales_invoice_no} with "
+                        f"{unique_product_count} unique products across "
+                        f"{sales_created_count} batch lines added successfully!"
+                    )
                 else:
                     success_msg = f"Sales Invoice #{invoice.sales_invoice_no} created successfully (header only)!"
                 
@@ -6349,26 +6442,26 @@ def inventory_list(request):
 def batch_inventory_report(request):
     from django.core.paginator import Paginator
     from .fast_inventory import FastInventory
-    from .year_filter_utils import get_financial_year_dates, get_current_financial_year
+    from .inventory_date_filters import get_inventory_date_range
     
-    search_query = request.GET.get('search', '')
-    selected_year = request.session.get('selected_year', get_current_financial_year())
-    fy_start, fy_end = get_financial_year_dates(selected_year)
-    fy_product_ids = FastInventory.get_fy_product_ids(fy_start, fy_end)
+    search_query = request.GET.get('search', '').strip()
+    start_date, end_date, valid_range = get_inventory_date_range(request)
 
-    # Get grouped data: each item = one product with its batches list
-    all_grouped = FastInventory.get_batch_inventory_grouped(
-        search_query,
-        fy_product_ids=fy_product_ids,
-        fy_start=fy_start,
-        fy_end=fy_end,
-    )
+    all_grouped = []
+    if valid_range:
+        all_grouped = FastInventory.get_batch_inventory_grouped(
+            search_query,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
     # Pagination on products (not batches)
     paginator = Paginator(all_grouped, 50)
     page_number = request.GET.get('page')
     products_page = paginator.get_page(page_number)
     grouped_page = list(products_page)
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
 
     page_total_value = sum(p['total_value'] for p in grouped_page)
 
@@ -6377,8 +6470,9 @@ def batch_inventory_report(request):
         'products_page': products_page,
         'page_total_value': page_total_value,
         'search_query': search_query,
-        'selected_year': selected_year,
-        'fy_label': f'{selected_year}-{str(selected_year + 1)[2:]}',
+        'date_from': start_date,
+        'date_to': end_date,
+        'query_without_page': query_params.urlencode(),
         'title': 'Batch-wise Inventory Report'
     }
     return render(request, 'reports/batch_inventory_report.html', context)
@@ -6388,38 +6482,28 @@ def batch_inventory_report(request):
 @login_required
 def dateexpiry_inventory_report(request):
     from .fast_inventory import FastInventory
-    from .year_filter_utils import get_financial_year_dates, get_current_financial_year
+    from .inventory_date_filters import get_inventory_date_range
     
     search_query = request.GET.get('search', '')
-    expiry_from = request.GET.get('expiry_from', '')
-    expiry_to = request.GET.get('expiry_to', '')
-    
-    from datetime import date as date_type
-    selected_year = request.session.get('selected_year', get_current_financial_year())
-    fy_start, fy_end = get_financial_year_dates(selected_year)
-    start_date = None
-    end_date = None
-    try:
-        if expiry_from:
-            start_date = date_type.fromisoformat(expiry_from)
-        if expiry_to:
-            end_date = date_type.fromisoformat(expiry_to)
-    except ValueError:
-        pass
+    start_date, end_date, valid_range = get_inventory_date_range(
+        request,
+        legacy_start=('expiry_from',),
+        legacy_end=('expiry_to',),
+    )
 
-    start_date = max(start_date, fy_start) if start_date else fy_start
-    end_date = min(end_date, fy_end) if end_date else fy_end
-    if start_date > end_date:
-        expiry_data, total_value = [], 0
-    else:
+    if valid_range:
         expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(
             search_query, start_date=start_date, end_date=end_date
         )
+    else:
+        expiry_data, total_value = [], 0
     
     # Pagination - 50 entries per page
     paginator = Paginator(expiry_data, 50)
     page_number = request.GET.get('page')
     expiry_data_page = paginator.get_page(page_number)
+    query_params = request.GET.copy()
+    query_params.pop('page', None)
     
     # Get pharmacy details
     try:
@@ -6431,10 +6515,9 @@ def dateexpiry_inventory_report(request):
         'expiry_data': expiry_data_page,
         'total_value': total_value,
         'search_query': search_query,
-        'expiry_from': expiry_from,
-        'expiry_to': expiry_to,
-        'selected_year': selected_year,
-        'fy_label': f'{selected_year}-{str(selected_year + 1)[2:]}',
+        'date_from': start_date,
+        'date_to': end_date,
+        'query_without_page': query_params.urlencode(),
         'pharmacy': pharmacy,
         'title': 'Date-wise Inventory Report'
     }
@@ -12208,16 +12291,18 @@ def export_products_html(request):
 def inventory_search_suggestions(request):
     query = request.GET.get('q', '').strip()
     if len(query) < 2:
-        return JsonResponse({'suggestions': []})
+        return JsonResponse({'suggestions': [], 'products': []})
     
-    products = ProductMaster.objects.filter(
-        Q(product_name__istartswith=query) |
-        Q(product_company__istartswith=query) |
-        Q(product_salt__istartswith=query)
-    ).values('product_name', 'product_company')[:10]
+    products = list(ProductMaster.objects.filter(
+        Q(product_name__icontains=query) |
+        Q(product_company__icontains=query) |
+        Q(product_salt__icontains=query)
+    ).values('product_name', 'product_company', 'product_packing').order_by(
+        'product_name', 'product_company'
+    )[:10])
     
-    suggestions = [f"{p['product_name']} - {p['product_company']}" for p in products]
-    return JsonResponse({'suggestions': list(set(suggestions))})
+    suggestions = [f"{product['product_name']} - {product['product_company']}" for product in products]
+    return JsonResponse({'suggestions': suggestions, 'products': products})
 
 
 @login_required

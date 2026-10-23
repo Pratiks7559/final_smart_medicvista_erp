@@ -16,7 +16,7 @@
                     <div class="batch-item" style="margin-bottom: 5px; padding: 3px 6px; background: #f8f9fa; border-radius: 3px; font-size: 12px; border-left: 3px solid #007bff;">
                         <strong>{{ batch.batch_no }}</strong>
                         <span class="{% if batch.stock <= 0 %}text-danger{% elif batch.stock <= 10 %}text-warning{% else %}text-success{% endif %}" style="margin-left: 8px;">
-                            ({{ batch.stock|floatformat:0 }})
+                            ({{ batch.stock|floatformat:2 }})
                         </span>
                         {% if batch.expiry %}
                             <br><small class="text-muted">Exp: {{ batch.expiry|expiry_mmyyyy }}</small>
@@ -86,7 +86,7 @@
             <a href="{% url 'update_product' item.product.productid %}" class="action-btn edit-btn" title="Edit Product">
                 <i class="fas fa-edit"></i>
             </a>
-            <a href="{% url 'inventory_transaction_history' item.product.productid %}" class="action-btn" title="Transaction History" style="background:#6366f1; color:white; padding:4px 8px; border-radius:4px; font-size:11px;">
+            <a href="{% url 'inventory_transaction_history' item.product.productid %}{% if start_date or end_date %}?{% if start_date %}start_date={{ start_date|date:'Y-m-d' }}{% endif %}{% if end_date %}{% if start_date %}&{% endif %}end_date={{ end_date|date:'Y-m-d' }}{% endif %}{% endif %}" class="action-btn" title="Transaction History" style="background:#6366f1; color:white; padding:4px 8px; border-radius:4px; font-size:11px;">
                 <i class="fas fa-history"></i>
             </a>
         </div>

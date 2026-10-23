@@ -351,16 +351,15 @@ def export_batch_inventory_pdf(request):
     """Export batch-wise inventory report as PDF (Ctrl+Q)"""
     try:
         from .fast_inventory import FastInventory
+        from .inventory_date_filters import get_inventory_date_range
         search_query = request.GET.get('search', '')
-        selected_year = request.session.get('selected_year', get_current_financial_year())
-        fy_start, fy_end = get_financial_year_dates(selected_year)
-        fy_label = f'{selected_year}-{str(selected_year + 1)[2:]}'
-        fy_product_ids = FastInventory.get_fy_product_ids(fy_start, fy_end)
+        start_date, end_date, valid_range = get_inventory_date_range(request)
+        if not valid_range:
+            return HttpResponse('Invalid date range.', status=400)
         all_inventory_data = FastInventory.get_batch_inventory_data(
             search_query,
-            fy_product_ids=fy_product_ids,
-            fy_start=fy_start,
-            fy_end=fy_end,
+            start_date=start_date,
+            end_date=end_date,
         )
         
         # Create PDF buffer
@@ -404,7 +403,11 @@ def export_batch_inventory_pdf(request):
             story.append(Spacer(1, 0.1*inch))
         
         story.append(Paragraph("Batch-wise Inventory Report", title_style))
-        story.append(Paragraph(f"Financial Year: {fy_label}", date_style))
+        period_label = (
+            f"Period: {start_date or 'No lower bound'} to {end_date or 'No upper bound'}"
+            if start_date or end_date else 'All available transaction dates'
+        )
+        story.append(Paragraph(period_label, date_style))
         story.append(Paragraph(f"Generated on: {datetime.now().strftime('%d %B %Y at %H:%M')}", date_style))
         
         if search_query:
@@ -419,7 +422,7 @@ def export_batch_inventory_pdf(request):
         total_value = sum(item['value'] for item in all_inventory_data)
         
         summary_data = [
-            ['Total Products', 'Total Stock Qty', 'Total MRP Value', 'Total Inventory Value'],
+            ['Products', 'Net Stock Qty', 'Net MRP Value', 'Net Movement Value'],
             [str(total_products), str(int(total_stock)), f"₹{total_mrp:,.2f}", f"₹{total_value:,.2f}"]
         ]
         
@@ -444,7 +447,7 @@ def export_batch_inventory_pdf(request):
                 key = (item['product_name'], item['product_company'], item['product_packing'])
                 product_groups[key].append(item)
             
-            table_data = [['Product Name', 'Company', 'Packing', 'Batch No', 'Expiry', 'Stock Qty', 'Free Qty', 'MRP', 'Stock Value']]
+            table_data = [['Product Name', 'Company', 'Packing', 'Batch No', 'Expiry', 'Net Stock Qty', 'Net Free Qty', 'MRP', 'Net Stock Value']]
             
             for (prod_name, prod_company, prod_packing), batches in sorted(product_groups.items()):
                 for idx, item in enumerate(batches):
@@ -536,16 +539,15 @@ def export_batch_inventory_excel(request):
     """Export batch-wise inventory report as Excel (Ctrl+E)"""
     try:
         from .fast_inventory import FastInventory
+        from .inventory_date_filters import get_inventory_date_range
         search_query = request.GET.get('search', '')
-        selected_year = request.session.get('selected_year', get_current_financial_year())
-        fy_start, fy_end = get_financial_year_dates(selected_year)
-        fy_label = f'{selected_year}-{str(selected_year + 1)[2:]}'
-        fy_product_ids = FastInventory.get_fy_product_ids(fy_start, fy_end)
+        start_date, end_date, valid_range = get_inventory_date_range(request)
+        if not valid_range:
+            return HttpResponse('Invalid date range.', status=400)
         all_inventory_data = FastInventory.get_batch_inventory_data(
             search_query,
-            fy_product_ids=fy_product_ids,
-            fy_start=fy_start,
-            fy_end=fy_end,
+            start_date=start_date,
+            end_date=end_date,
         )
         
         # Create workbook
@@ -619,7 +621,10 @@ def export_batch_inventory_excel(request):
         current_row += 1
 
         ws.merge_cells(f'A{current_row}:H{current_row}')
-        ws[f'A{current_row}'] = f"Financial Year: {fy_label}"
+        ws[f'A{current_row}'] = (
+            f"Period: {start_date or 'No lower bound'} to {end_date or 'No upper bound'}"
+            if start_date or end_date else 'All available transaction dates'
+        )
         ws[f'A{current_row}'].font = info_font
         ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
         current_row += 1
@@ -645,7 +650,7 @@ def export_batch_inventory_excel(request):
         total_mrp = sum(item['mrp'] * item['stock'] for item in all_inventory_data)
         total_value = sum(item['value'] for item in all_inventory_data)
         
-        summary_headers = ['Total Products', 'Total Stock Qty', 'Total MRP Value', 'Total Inventory Value']
+        summary_headers = ['Products', 'Net Stock Qty', 'Net MRP Value', 'Net Movement Value']
         summary_values = [total_products, int(total_stock), f"₹{total_mrp:,.2f}", f"₹{total_value:,.2f}"]
         
         # Summary headers
@@ -667,7 +672,7 @@ def export_batch_inventory_excel(request):
         current_row += 2  # Empty row
         
         # Data table headers
-        headers = ['Product Name', 'Company', 'Packing', 'Batch No', 'Expiry', 'Stock Qty', 'Free Qty', 'MRP', 'Stock Value']
+        headers = ['Product Name', 'Company', 'Packing', 'Batch No', 'Expiry', 'Net Stock Qty', 'Net Free Qty', 'MRP', 'Net Stock Value']
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=current_row, column=col, value=header)
             cell.font = header_font
@@ -770,32 +775,19 @@ def export_dateexpiry_inventory_pdf(request):
     """Export date-wise inventory report as PDF (Ctrl+Q)"""
     try:
         from .fast_inventory import FastInventory
+        from .inventory_date_filters import get_inventory_date_range
         # Get search query and filters
         search_query = request.GET.get('search', '')
-        expiry_from = request.GET.get('expiry_from', '')
-        expiry_to = request.GET.get('expiry_to', '')
-        selected_year = request.session.get('selected_year', get_current_financial_year())
-        fy_start, fy_end = get_financial_year_dates(selected_year)
-        
-        # Get inventory data with date filter
-        from datetime import date as date_type
-        start_date = None
-        end_date = None
-        try:
-            if expiry_from:
-                start_date = date_type.fromisoformat(expiry_from)
-            if expiry_to:
-                end_date = date_type.fromisoformat(expiry_to)
-        except ValueError:
-            pass
-        start_date = max(start_date, fy_start) if start_date else fy_start
-        end_date = min(end_date, fy_end) if end_date else fy_end
-        if start_date > end_date:
-            expiry_data, total_value = [], 0
-        else:
-            expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(
-                search_query, start_date=start_date, end_date=end_date
-            )
+        start_date, end_date, valid_range = get_inventory_date_range(
+            request,
+            legacy_start=('expiry_from',),
+            legacy_end=('expiry_to',),
+        )
+        if not valid_range:
+            return HttpResponse('Invalid date range.', status=400)
+        expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(
+            search_query, start_date=start_date, end_date=end_date
+        )
         
         # Create PDF buffer
         buffer = io.BytesIO()
@@ -838,15 +830,12 @@ def export_dateexpiry_inventory_pdf(request):
             story.append(Spacer(1, 0.1*inch))
         
         story.append(Paragraph("Date-wise Inventory Report", title_style))
-        story.append(Paragraph(f"Financial Year: {selected_year}-{str(selected_year + 1)[2:]}", date_style))
+        period_label = (
+            f"Period: {start_date or 'No lower bound'} to {end_date or 'No upper bound'}"
+            if start_date or end_date else 'All available transaction dates'
+        )
+        story.append(Paragraph(period_label, date_style))
         story.append(Paragraph(f"Generated on: {datetime.now().strftime('%d %B %Y at %H:%M')}", date_style))
-        
-        if expiry_from and expiry_to:
-            story.append(Paragraph(f"Entry Date Filter: {expiry_from} to {expiry_to}", date_style))
-        elif expiry_from:
-            story.append(Paragraph(f"Entry Date From: {expiry_from}", date_style))
-        elif expiry_to:
-            story.append(Paragraph(f"Entry Date To: {expiry_to}", date_style))
         
         if search_query:
             story.append(Paragraph(f"Search Filter: {search_query}", date_style))
@@ -857,7 +846,7 @@ def export_dateexpiry_inventory_pdf(request):
         total_products = sum(len(group['products']) for group in expiry_data)
         
         summary_data = [
-            ['Total Products', 'Total Inventory Value', 'Expiry Groups'],
+            ['Products', 'Net Movement Value', 'Expiry Groups'],
             [str(total_products), f"₹{total_value:,.2f}", str(len(expiry_data))]
         ]
         
@@ -900,7 +889,7 @@ def export_dateexpiry_inventory_pdf(request):
                         days_info = f" ({days} days remaining)"
                 
                 # Products table for this group - 4 columns matching HTML template
-                table_data = [['Product Name', 'Purchase Rate', 'MRP', 'Stock Value']]
+                table_data = [['Product Name', 'Purchase Rate', 'MRP', 'Net Movement Value']]
                 
                 for product in expiry_group['products']:
                     table_data.append([
@@ -968,32 +957,19 @@ def export_dateexpiry_inventory_excel(request):
     """Export date-wise inventory report as Excel (Ctrl+E)"""
     try:
         from .fast_inventory import FastInventory
+        from .inventory_date_filters import get_inventory_date_range
         # Get search query and filters
         search_query = request.GET.get('search', '')
-        expiry_from = request.GET.get('expiry_from', '')
-        expiry_to = request.GET.get('expiry_to', '')
-        selected_year = request.session.get('selected_year', get_current_financial_year())
-        fy_start, fy_end = get_financial_year_dates(selected_year)
-        
-        # Get inventory data with date filter
-        from datetime import date as date_type
-        start_date = None
-        end_date = None
-        try:
-            if expiry_from:
-                start_date = date_type.fromisoformat(expiry_from)
-            if expiry_to:
-                end_date = date_type.fromisoformat(expiry_to)
-        except ValueError:
-            pass
-        start_date = max(start_date, fy_start) if start_date else fy_start
-        end_date = min(end_date, fy_end) if end_date else fy_end
-        if start_date > end_date:
-            expiry_data, total_value = [], 0
-        else:
-            expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(
-                search_query, start_date=start_date, end_date=end_date
-            )
+        start_date, end_date, valid_range = get_inventory_date_range(
+            request,
+            legacy_start=('expiry_from',),
+            legacy_end=('expiry_to',),
+        )
+        if not valid_range:
+            return HttpResponse('Invalid date range.', status=400)
+        expiry_data, total_value = FastInventory.get_dateexpiry_inventory_data(
+            search_query, start_date=start_date, end_date=end_date
+        )
         
         # Create workbook
         wb = Workbook()
@@ -1070,7 +1046,10 @@ def export_dateexpiry_inventory_excel(request):
         current_row += 1
 
         ws.merge_cells(f'A{current_row}:D{current_row}')
-        ws[f'A{current_row}'] = f"Financial Year: {selected_year}-{str(selected_year + 1)[2:]}"
+        ws[f'A{current_row}'] = (
+            f"Period: {start_date or 'No lower bound'} to {end_date or 'No upper bound'}"
+            if start_date or end_date else 'All available transaction dates'
+        )
         ws[f'A{current_row}'].font = info_font
         ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
         current_row += 1
@@ -1080,25 +1059,6 @@ def export_dateexpiry_inventory_excel(request):
         ws[f'A{current_row}'].font = info_font
         ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
         current_row += 1
-        
-        if expiry_from and expiry_to:
-            ws.merge_cells(f'A{current_row}:D{current_row}')
-            ws[f'A{current_row}'] = f"Entry Date Filter: {expiry_from} to {expiry_to}"
-            ws[f'A{current_row}'].font = info_font
-            ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
-            current_row += 1
-        elif expiry_from:
-            ws.merge_cells(f'A{current_row}:D{current_row}')
-            ws[f'A{current_row}'] = f"Entry Date From: {expiry_from}"
-            ws[f'A{current_row}'].font = info_font
-            ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
-            current_row += 1
-        elif expiry_to:
-            ws.merge_cells(f'A{current_row}:D{current_row}')
-            ws[f'A{current_row}'] = f"Entry Date To: {expiry_to}"
-            ws[f'A{current_row}'].font = info_font
-            ws[f'A{current_row}'].alignment = Alignment(horizontal='center')
-            current_row += 1
         
         if search_query:
             ws.merge_cells(f'A{current_row}:D{current_row}')
@@ -1112,7 +1072,7 @@ def export_dateexpiry_inventory_excel(request):
         # Summary section
         total_products = sum(len(group['products']) for group in expiry_data)
         
-        summary_headers = ['Total Products', 'Total Inventory Value', 'Expiry Groups']
+        summary_headers = ['Products', 'Net Movement Value', 'Expiry Groups']
         summary_values = [total_products, f"₹{total_value:,.2f}", len(expiry_data)]
         
         # Summary headers
@@ -1134,7 +1094,7 @@ def export_dateexpiry_inventory_excel(request):
         current_row += 2  # Empty row
         
         # Data headers - 4 columns matching HTML template
-        headers = ['Product Name', 'Purchase Rate', 'MRP', 'Stock Value']
+        headers = ['Product Name', 'Purchase Rate', 'MRP', 'Net Movement Value']
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=current_row, column=col, value=header)
             cell.font = header_font
@@ -1560,8 +1520,5 @@ def export_all_product_inventory_excel(request):
         
     except Exception as e:
         return HttpResponse(f"Error generating Excel: {str(e)}", status=500)
-
-
-
 
 

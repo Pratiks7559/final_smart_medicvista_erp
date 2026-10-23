@@ -6,6 +6,7 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% load static %}{% static 'css/dateexpiry_inventory_report.css' %}">
 <link rel="stylesheet" href="{% load static %}{% static 'css/inventory_export.css' %}">
+<link rel="stylesheet" href="{% static 'css/inventory_product_autocomplete.css' %}">
 
 {% endblock %}
 
@@ -24,12 +25,12 @@
     
     <!-- Filter Info for Print -->
     <div class="filter-info" style="display: none;">
-        {% if expiry_from and expiry_to %}
-            <p>Entry Date Filter: {{ expiry_from }} to {{ expiry_to }}</p>
-        {% elif expiry_from %}
-            <p>Entry Date From: {{ expiry_from }}</p>
-        {% elif expiry_to %}
-            <p>Entry Date To: {{ expiry_to }}</p>
+        {% if date_from and date_to %}
+            <p>Net movement period: {{ date_from }} to {{ date_to }}</p>
+        {% elif date_from %}
+            <p>Net movement from: {{ date_from }}</p>
+        {% elif date_to %}
+            <p>Net movement through: {{ date_to }}</p>
         {% endif %}
         {% if search_query %}
             <p>Search Filter: {{ search_query }}</p>
@@ -48,10 +49,10 @@
                 <i class="fas fa-print fa-sm"></i> Print (Ctrl+P)
             </button> -->
 
-            <a href="{% url 'export_dateexpiry_inventory_pdf' %}{% if search_query or expiry_from or expiry_to %}?{% if search_query %}search={{ search_query }}{% endif %}{% if expiry_from %}{% if search_query %}&{% endif %}expiry_from={{ expiry_from }}{% endif %}{% if expiry_to %}{% if search_query or expiry_from %}&{% endif %}expiry_to={{ expiry_to }}{% endif %}{% endif %}" class="date-report-btn date-report-btn-success" id="export-pdf-btn">
+            <a href="{% url 'export_dateexpiry_inventory_pdf' %}?{% if search_query %}search={{ search_query|urlencode }}&{% endif %}{% if date_from %}date_from={{ date_from|date:'Y-m-d' }}&{% endif %}{% if date_to %}date_to={{ date_to|date:'Y-m-d' }}{% endif %}" class="date-report-btn date-report-btn-success" id="export-pdf-btn">
                 <i class="fas fa-file-pdf fa-sm"></i> Export PDF (Ctrl+Q)
             </a>
-            <a href="{% url 'export_dateexpiry_inventory_excel' %}{% if search_query or expiry_from or expiry_to %}?{% if search_query %}search={{ search_query }}{% endif %}{% if expiry_from %}{% if search_query %}&{% endif %}expiry_from={{ expiry_from }}{% endif %}{% if expiry_to %}{% if search_query or expiry_from %}&{% endif %}expiry_to={{ expiry_to }}{% endif %}{% endif %}" class="date-report-btn date-report-btn-info" id="export-excel-btn">
+            <a href="{% url 'export_dateexpiry_inventory_excel' %}?{% if search_query %}search={{ search_query|urlencode }}&{% endif %}{% if date_from %}date_from={{ date_from|date:'Y-m-d' }}&{% endif %}{% if date_to %}date_to={{ date_to|date:'Y-m-d' }}{% endif %}" class="date-report-btn date-report-btn-info" id="export-excel-btn">
                 <i class="fas fa-file-excel fa-sm"></i> Export Excel (Ctrl+E)
             </a>
         </div>
@@ -60,20 +61,20 @@
     <div class="date-report-card">
         <div class="date-report-card-header">
             <h6 class="date-report-card-title">Date-wise Inventory Report</h6>
-            <small class="date-report-card-subtitle">Financial Year: FY {{ fy_label }} · Date filters are limited to this year.</small>
+            <small class="date-report-card-subtitle">Shows net stock movement grouped by batch expiry for the selected transaction-date range. Financial-year filters do not apply.</small>
             <div class="no-print">
                 <form action="{% url 'dateexpiry_inventory_report' %}" method="GET" class="date-filter-form" id="dateFilterForm">
                     <div class="date-filter-group" style="position: relative;">
-                        <input type="text" name="search" id="dateSearchInput" value="{{ search_query }}" placeholder="Search..." aria-label="Search" class="date-filter-input" autocomplete="off">
-                        <div id="dateSearchSuggestions" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d3e2; border-top: none; max-height: 300px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+                        <input type="text" name="search" id="dateSearchInput" value="{{ search_query }}" placeholder="Search products..." aria-label="Search products" class="date-filter-input" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="dateSearchSuggestions" data-product-autocomplete data-suggestions-url="{% url 'inventory_search_suggestions' %}">
+                        <div id="dateSearchSuggestions" class="inventory-product-suggestions" role="listbox" data-product-suggestions hidden></div>
                     </div>
                     <div class="date-filter-group">
                         <label style="font-size: 0.85rem; margin-bottom: 2px; color: #6b7280;">From (Invoice/Challan Date):</label>
-                        <input type="date" name="expiry_from" value="{{ expiry_from|default:'' }}" placeholder="From Date" class="date-filter-input" title="Filter by Invoice Date or Challan Date">
+                        <input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" placeholder="From Date" class="date-filter-input" title="Filter movement by transaction date">
                     </div>
                     <div class="date-filter-group">
                         <label style="font-size: 0.85rem; margin-bottom: 2px; color: #6b7280;">To (Invoice/Challan Date):</label>
-                        <input type="date" name="expiry_to" value="{{ expiry_to|default:'' }}" placeholder="To Date" class="date-filter-input" title="Filter by Invoice Date or Challan Date">
+                        <input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" placeholder="To Date" class="date-filter-input" title="Filter movement by transaction date">
                     </div>
                     <div class="date-filter-actions">
                         <button type="submit" class="date-filter-btn date-filter-btn-primary">
@@ -88,7 +89,7 @@
             {% if expiry_data %}
             <div class="date-info-alert" role="alert">
                 <span><i class="fas fa-info-circle me-2"></i>
-                Filter: Invoice Date / Challan Date ke basis pe. Products expiry date ke order mein sorted hain.</span>
+                The selected dates filter net movement across purchases, sales, challans, returns, and stock issues. Batches are grouped by expiry date.</span>
                 <button type="button" class="date-alert-close" data-bs-dismiss="alert" aria-label="Close">&times;</button>
             </div>
             <div class="date-table-container">
@@ -98,10 +99,10 @@
                             <th>Product Name</th>
                             <th>Batch No</th>
                             <th>Expiry</th>
-                            <th>Qty</th>
+                            <th>Net Qty</th>
                             <th>Purchase Rate</th>
                             <th>MRP</th>
-                            <th>Stock Value</th>
+                            <th>Net Movement Value</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -121,7 +122,7 @@
                     </tbody>
                     <tfoot class="date-table-footer">
                         <tr>
-                            <td colspan="6" class="date-total-label">Total Inventory Value:</td>
+                            <td colspan="6" class="date-total-label">Net Movement Value:</td>
                             <td>₹{{ total_value|floatformat:2 }}</td>
                         </tr>
                     </tfoot>
@@ -135,12 +136,12 @@
                     <ul class="pagination" style="margin: 0;">
                         {% if expiry_data.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if expiry_from %}&expiry_from={{ expiry_from }}{% endif %}{% if expiry_to %}&expiry_to={{ expiry_to }}{% endif %}" aria-label="First">
+                            <a class="page-link" href="?{% if query_without_page %}{{ query_without_page }}&{% endif %}page=1" aria-label="First">
                                 <span aria-hidden="true">&laquo;&laquo;</span>
                             </a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ expiry_data.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if expiry_from %}&expiry_from={{ expiry_from }}{% endif %}{% if expiry_to %}&expiry_to={{ expiry_to }}{% endif %}" aria-label="Previous">
+                            <a class="page-link" href="?{% if query_without_page %}{{ query_without_page }}&{% endif %}page={{ expiry_data.previous_page_number }}" aria-label="Previous">
                                 <span aria-hidden="true">&laquo;</span>
                             </a>
                         </li>
@@ -154,12 +155,12 @@
                         
                         {% if expiry_data.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ expiry_data.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if expiry_from %}&expiry_from={{ expiry_from }}{% endif %}{% if expiry_to %}&expiry_to={{ expiry_to }}{% endif %}" aria-label="Next">
+                            <a class="page-link" href="?{% if query_without_page %}{{ query_without_page }}&{% endif %}page={{ expiry_data.next_page_number }}" aria-label="Next">
                                 <span aria-hidden="true">&raquo;</span>
                             </a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ expiry_data.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if expiry_from %}&expiry_from={{ expiry_from }}{% endif %}{% if expiry_to %}&expiry_to={{ expiry_to }}{% endif %}" aria-label="Last">
+                            <a class="page-link" href="?{% if query_without_page %}{{ query_without_page }}&{% endif %}page={{ expiry_data.paginator.num_pages }}" aria-label="Last">
                                 <span aria-hidden="true">&raquo;&raquo;</span>
                             </a>
                         </li>
@@ -171,7 +172,7 @@
             {% else %}
             <div class="date-empty-state">
                 <i class="fas fa-info-circle me-2"></i>
-                {% if expiry_from or expiry_to or search_query %}
+                {% if date_from or date_to or search_query %}
                 No inventory data found with the current filters.
                 <a href="{% url 'dateexpiry_inventory_report' %}" class="date-empty-link">Clear filters</a> to see all inventory.
                 {% else %}
@@ -186,6 +187,7 @@
 
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'js/inventory_product_autocomplete.js' %}" defer></script>
 <script>
     $(document).ready(function() {
         // PDF download and auto-open function
@@ -200,89 +202,6 @@
             }, 1500);
         }
         
-        // This code moved to DOMContentLoaded below
-        
-        // Autocomplete search suggestions
-        let searchTimeout, selectedIndex = -1;
-        
-        $('#dateSearchInput').on('input', function() {
-            const query = $(this).val().trim();
-            clearTimeout(searchTimeout);
-            selectedIndex = -1;
-            
-            if (query.length < 2) {
-                $('#dateSearchSuggestions').hide().empty();
-                return;
-            }
-            
-            searchTimeout = setTimeout(function() {
-                $.ajax({
-                    url: '{% url "inventory_search_suggestions" %}',
-                    data: { q: query },
-                    success: function(data) {
-                        const suggestions = data.suggestions;
-                        if (suggestions.length > 0) {
-                            let html = '';
-                            suggestions.forEach(function(item, idx) {
-                                html += `<div class="suggestion-item" data-index="${idx}" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;">${item}</div>`;
-                            });
-                            $('#dateSearchSuggestions').html(html).show();
-                            
-                            $('.suggestion-item').on('click', function() {
-                                const text = $(this).text().split(' - ')[0];
-                                $('#dateSearchInput').val(text);
-                                $('#dateSearchSuggestions').hide();
-                                $('#dateFilterForm').submit();
-                            }).on('mouseenter', function() {
-                                $('.suggestion-item').css('background', 'white');
-                                $(this).css('background', '#f0f0f0');
-                                selectedIndex = $(this).data('index');
-                            });
-                        } else {
-                            $('#dateSearchSuggestions').hide();
-                        }
-                    }
-                });
-            }, 300);
-        });
-        
-        // Keyboard navigation
-        $('#dateSearchInput').on('keydown', function(e) {
-            const items = $('.suggestion-item');
-            if (!items.length) return;
-            
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                selectedIndex = (selectedIndex + 1) % items.length;
-                updateSelection(items);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                selectedIndex = selectedIndex <= 0 ? items.length - 1 : selectedIndex - 1;
-                updateSelection(items);
-            } else if (e.key === 'Enter' && selectedIndex >= 0) {
-                e.preventDefault();
-                const text = items.eq(selectedIndex).text().split(' - ')[0];
-                $('#dateSearchInput').val(text);
-                $('#dateSearchSuggestions').hide();
-                $('#dateFilterForm').submit();
-            } else if (e.key === 'Escape') {
-                $('#dateSearchSuggestions').hide();
-            }
-        });
-        
-        function updateSelection(items) {
-            items.css('background', 'white');
-            if (selectedIndex >= 0) {
-                items.eq(selectedIndex).css('background', '#e3f2fd');
-                items.eq(selectedIndex)[0].scrollIntoView({ block: 'nearest' });
-            }
-        }
-        
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('.date-filter-group').length) {
-                $('#dateSearchSuggestions').hide();
-            }
-        });
     });
     
     // Enhanced keyboard shortcuts for export with feedback
@@ -494,10 +413,4 @@
     });
 </script>
 {% endblock %}
-
-
-
-
-
-
 

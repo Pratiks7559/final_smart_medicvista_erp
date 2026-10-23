@@ -234,6 +234,8 @@ def add_invoice_with_products(request):
                 logger.info(f"Invoice created with ID: {invoice.invoiceid}")
                 
                 total_amount = 0
+                total_cgst_amount = 0
+                total_sgst_amount = 0
                 products_added = 0
                 errors = []
                 
@@ -341,6 +343,8 @@ def add_invoice_with_products(request):
                         purchase.product_transportation_charges = 0
                         
                         total_amount += purchase.total_amount
+                        total_cgst_amount += cgst_amount
+                        total_sgst_amount += sgst_amount
                         logger.info(f"Product {product.product_name}: Base={base_amount}, CGST={cgst_amount}, SGST={sgst_amount}, Total={purchase.total_amount}")
                         purchase.save()
                         products_added += 1
@@ -395,6 +399,17 @@ def add_invoice_with_products(request):
 
                 # Save whole_discount_amount on invoice for reference/audit
                 invoice.whole_discount_amount = whole_discount
+                total_tax = invoice_form.cleaned_data.get('total_tax')
+                if total_tax is not None:
+                    invoice.total_tax = total_tax
+                    product_amount_before_tax = total_amount - total_cgst_amount - total_sgst_amount
+                    invoice.invoice_total = round(
+                        product_amount_before_tax
+                        + total_tax
+                        + float(invoice.transport_charges or 0)
+                        - whole_discount,
+                        2,
+                    )
                 invoice.save()
 
                 # Save round-off info if fields exist
@@ -1012,8 +1027,8 @@ def get_challan_products(request):
                 'discount': round(discount_percentage, 4),
                 'discount_percentage': round(discount_percentage, 4),
                 'calculation_mode': 'percentage',
-                'cgst': float(product.cgst) if product.cgst else 2.5,
-                'sgst': float(product.sgst) if product.sgst else 2.5,
+                'cgst': float(product.cgst) if product.cgst is not None else 2.5,
+                'sgst': float(product.sgst) if product.sgst is not None else 2.5,
                 'rate_a': rate_a,
                 'rate_b': rate_b,
                 'rate_c': rate_c,
@@ -1021,20 +1036,32 @@ def get_challan_products(request):
                 'challan_date': challan_date_str
             })
         
-        # Sum whole_discount_amount from all selected challans
+        # Preserve challan-level totals when challans are pulled into an invoice.
         total_whole_discount = 0.0
         total_transport_charges = 0.0
-        try:
-            from core.models import Challan1 as _C1
-            for _c in _C1.objects.filter(challan_id__in=challan_ids):
-                total_whole_discount += float(_c.whole_discount_amount or 0)
-                total_transport_charges += float(_c.transport_charges or 0)
-        except Exception:
-            pass
+        total_tax = 0.0
+        selected_challans = Challan1.objects.filter(challan_id__in=challan_ids)
+        for challan in selected_challans:
+            total_whole_discount += float(challan.whole_discount_amount or 0)
+            total_transport_charges += float(challan.transport_charges or 0)
+            if challan.total_tax is not None:
+                total_tax += float(challan.total_tax)
+            else:
+                legacy_items = SupplierChallanMaster.objects.filter(
+                    product_challan_id=challan
+                )
+                total_tax += sum(
+                    (
+                        (item.product_purchase_rate * item.product_quantity - item.product_discount)
+                        * (item.cgst + item.sgst) / 100
+                    )
+                    for item in legacy_items
+                )
 
         return JsonResponse({
             'success': True,
             'products': products_data,
+            'total_tax': total_tax,
             'whole_discount_amount': total_whole_discount,
             'transport_charges': total_transport_charges
         })

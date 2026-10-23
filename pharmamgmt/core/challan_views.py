@@ -76,6 +76,7 @@ def add_supplier_challan(request):
                 supplier_id = request.POST.get('supplierid')
                 transport_charges = Decimal(request.POST.get('transport_charges', 0))
                 challan_total = Decimal(request.POST.get('challan_total', 0))
+                submitted_total_tax = request.POST.get('total_tax')
                 whole_discount_amount = Decimal(request.POST.get('whole_discount_amount', 0))
                 whole_discount_type = request.POST.get('whole_discount_type', 'flat')
                 discount_mode = request.POST.get('discount_mode', 'whole')
@@ -88,7 +89,8 @@ def add_supplier_challan(request):
                 supplier = SupplierMaster.objects.get(supplierid=supplier_id)
 
                 # Recalculate products total from products_data
-                products_total = Decimal('0')
+                taxable_products_total = Decimal('0')
+                calculated_tax_total = Decimal('0')
                 for p in products_data:
                     r = Decimal(str(p.get('challan_rate', 0)))
                     q = Decimal(str(p.get('quantity', 0)))
@@ -99,7 +101,18 @@ def add_supplier_challan(request):
                     sub = r * q
                     disc_amt = (sub * d / 100) if mode == 'percentage' else d
                     after = sub - disc_amt
-                    products_total += after + (after * (cg + sg) / 100)
+                    taxable_products_total += after
+                    calculated_tax_total += after * (cg + sg) / 100
+
+                total_tax = (
+                    Decimal(submitted_total_tax)
+                    if submitted_total_tax not in (None, '')
+                    else calculated_tax_total
+                )
+                if total_tax < 0:
+                    messages.error(request, 'Total tax cannot be negative.')
+                    return redirect('add_supplier_challan')
+                products_total = taxable_products_total + total_tax
 
                 # Apply whole discount if selected
                 if discount_mode == 'whole':
@@ -116,6 +129,7 @@ def add_supplier_challan(request):
                     challan_date=challan_date,
                     supplier=supplier,
                     challan_total=float(final_total),
+                    total_tax=float(total_tax),
                     transport_charges=float(transport_charges),
                     whole_discount_amount=float(whole_discount_amount),
                     challan_paid=0.0
@@ -234,6 +248,7 @@ def view_supplier_challan(request, challan_id):
                 challan_date = request.POST.get('challan_date')
                 supplier_id = request.POST.get('supplier')
                 transport_charges = Decimal(request.POST.get('transport_charges', 0))
+                submitted_total_tax = request.POST.get('total_tax')
                 whole_discount_amount = Decimal(request.POST.get('whole_discount_amount', 0))
                 discount_mode = 'whole'
                 products_data = json.loads(request.POST.get('products_data', '[]'))
@@ -248,7 +263,8 @@ def view_supplier_challan(request, challan_id):
                 challan.transport_charges = float(transport_charges)
                 
                 # Calculate new total respecting each product's calculation_mode
-                products_total = Decimal('0')
+                taxable_products_total = Decimal('0')
+                calculated_tax_total = Decimal('0')
                 for p in products_data:
                     r = Decimal(str(p.get('purchase_rate', 0)))
                     q = Decimal(str(p.get('quantity', 0)))
@@ -257,7 +273,17 @@ def view_supplier_challan(request, challan_id):
                     sg = Decimal(str(p.get('sgst', 0)))
                     sub = r * q
                     after = sub - (sub * d / 100)
-                    products_total += after + (after * cg / 100) + (after * sg / 100)
+                    taxable_products_total += after
+                    calculated_tax_total += after * (cg + sg) / 100
+
+                total_tax = (
+                    Decimal(submitted_total_tax)
+                    if submitted_total_tax not in (None, '')
+                    else calculated_tax_total
+                )
+                if total_tax < 0:
+                    return JsonResponse({'success': False, 'error': 'Total tax cannot be negative'})
+                products_total = taxable_products_total + total_tax
 
                 if discount_mode == 'whole':
                     final_total = products_total + transport_charges - whole_discount_amount
@@ -266,6 +292,7 @@ def view_supplier_challan(request, challan_id):
                     final_total = products_total + transport_charges
 
                 challan.whole_discount_amount = float(whole_discount_amount)
+                challan.total_tax = float(total_tax)
                 challan.challan_total = float(final_total)
                 challan.save()
                 
@@ -336,6 +363,10 @@ def view_supplier_challan(request, challan_id):
         (item.product_purchase_rate * item.product_quantity - item.product_discount) * (item.cgst + item.sgst) / 100
         for item in challan_items
     )
+    edit_total_tax = challan.total_tax if challan.total_tax is not None else total_gst
+    edit_total_tax_is_manual = (
+        challan.total_tax is not None and abs(challan.total_tax - total_gst) > 0.005
+    )
     
     # Get suppliers and products for edit modal
     suppliers = SupplierMaster.objects.all().order_by('supplier_name')
@@ -349,6 +380,8 @@ def view_supplier_challan(request, challan_id):
         'total_discount': total_discount,
         'discount_pct': discount_pct,
         'total_gst': total_gst,
+        'edit_total_tax': edit_total_tax,
+        'edit_total_tax_is_manual': edit_total_tax_is_manual,
         'suppliers': suppliers,
         'products': products,
         'title': f'Challan {challan.challan_no}'
@@ -1103,7 +1136,6 @@ def create_customer_invoice_from_challans(request):
             
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
-
 
 
 

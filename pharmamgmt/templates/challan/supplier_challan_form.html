@@ -137,6 +137,15 @@
                                         <td style="padding:4px 12px; text-align:right;">GST Total (CGST + SGST):</td>
                                         <td style="padding:4px 12px; text-align:right;">₹<span id="challanGstTotal">0.00</span></td>
                                     </tr>
+                                    <tr>
+                                        <td style="padding:4px 12px; text-align:right;">Total Tax:</td>
+                                        <td style="padding:4px 12px; text-align:right;">
+                                            ₹ <input type="number" name="total_tax" id="challanTotalTax"
+                                                     value="0.00" min="0" step="0.01" required
+                                                     data-user-edited="false"
+                                                     style="width:125px;padding:4px 7px;border:1px solid #cbd5e1;border-radius:5px;text-align:right;">
+                                        </td>
+                                    </tr>
                                     <tr id="challanWholeDiscRow">
                                         <td style="padding:4px 12px; text-align:right; color:#c62828;">
                                             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
@@ -578,7 +587,12 @@ function calculatechallanTotal() {
     });
 
     const discountPct = subtotal > 0 ? (totalDiscount / subtotal * 100) : 0;
-    const productsTotal = subtotal - totalDiscount + totalGst;
+    const totalTaxInput = document.getElementById('challanTotalTax');
+    if (totalTaxInput && totalTaxInput.dataset.userEdited !== 'true') {
+        totalTaxInput.value = totalGst.toFixed(2);
+    }
+    const totalTax = totalTaxInput ? (parseFloat(totalTaxInput.value) || 0) : totalGst;
+    const productsTotal = subtotal - totalDiscount + totalTax;
     const transportCharges = parseFloat(document.getElementById('transport_charges').value) || 0;
 
     // Whole discount - always active
@@ -614,6 +628,13 @@ function calculatechallanTotal() {
 
 // Add event listener for transport charges
 document.addEventListener('DOMContentLoaded', function() {
+    const totalTaxInput = document.getElementById('challanTotalTax');
+    if (totalTaxInput) {
+        totalTaxInput.addEventListener('input', function() {
+            totalTaxInput.dataset.userEdited = 'true';
+            calculatechallanTotal();
+        });
+    }
     const transportInput = document.getElementById('transport_charges');
     if (transportInput) {
         transportInput.addEventListener('input', calculatechallanTotal);
@@ -1804,4 +1825,3 @@ setInterval(function() {
 </div>
 
 {% endblock %}
-
