@@ -192,15 +192,36 @@ class SalesInvoiceMaster(models.Model):
     sales_transport_charges=models.FloatField(default=0)
     sales_invoice_paid=models.FloatField(null=False, blank=False, default=0)
     whole_discount_amount=models.FloatField(default=0)
+    total_tax=models.FloatField(null=True, blank=True, default=None)
     
     def __str__(self):
         return f"Sales Invoice #{self.sales_invoice_no} - {self.customerid.customer_name}"
     
     @property
     def sales_invoice_total(self):
-        """Calculate total: products sum + transport - whole discount, rounded"""
+        """Calculate the invoice total using its selected tax, charges, and discount."""
         from django.db.models import Sum
-        products_sum = SalesMaster.objects.filter(sales_invoice_no=self.sales_invoice_no).aggregate(Sum('sale_total_amount'))['sale_total_amount__sum'] or 0
+        sales = SalesMaster.objects.filter(sales_invoice_no=self.sales_invoice_no)
+        products_sum = sales.aggregate(Sum('sale_total_amount'))['sale_total_amount__sum'] or 0
+        if self.total_tax is not None:
+            calculated_tax = 0
+            for sale in sales.only(
+                'sale_rate',
+                'sale_quantity',
+                'sale_discount',
+                'sale_calculation_mode',
+                'sale_cgst',
+                'sale_sgst',
+            ):
+                base = sale.sale_rate * sale.sale_quantity
+                discount = (
+                    base * sale.sale_discount / 100
+                    if sale.sale_calculation_mode == 'percentage'
+                    else sale.sale_discount
+                )
+                taxable_amount = base - discount
+                calculated_tax += taxable_amount * (sale.sale_cgst + sale.sale_sgst) / 100
+            products_sum += self.total_tax - calculated_tax
         raw = products_sum + (self.sales_transport_charges or 0) - (self.whole_discount_amount or 0)
         return round(raw)
 
@@ -594,6 +615,7 @@ class CustomerChallan(models.Model):
     challan_series = models.ForeignKey('ChallanSeries', on_delete=models.SET_NULL, null=True, blank=True)
     customer_transport_charges = models.FloatField(default=0.0)
     challan_total = models.FloatField(default=0.0)
+    total_tax = models.FloatField(null=True, blank=True, default=None)
     whole_discount_amount = models.FloatField(default=0.0)
     challan_invoice_paid = models.FloatField(default=0.0)
     is_invoiced = models.BooleanField(default=False)

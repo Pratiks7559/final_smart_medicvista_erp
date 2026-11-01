@@ -256,6 +256,11 @@
                                 <td style="font-weight:600;">₹{{ bill_sgst|floatformat:2 }}</td>
                                 <td></td>
                             </tr>
+                            <tr>
+                                <td colspan="10" style="text-align:right;font-weight:600;">Total Tax:</td>
+                                <td style="font-weight:600;">₹{{ selected_total_tax|floatformat:2 }}</td>
+                                <td></td>
+                            </tr>
                             <tr style="border-top:2px solid #27ae60;background:#f0fdf4;">
                                 <td colspan="10" style="text-align:right;font-weight:600;">Products Total:</td>
                                 <td style="font-weight:600;">{{ products_total|currency }}</td>
@@ -393,7 +398,14 @@
                             <label class="form-label">Transport Charges</label>
                             <input type="number" class="form-control" name="sales_transport_charges" id="edit_transport_charges" value="{{ invoice.sales_transport_charges|default:0 }}" step="0.01" min="0">
                         </div>
-                        <div class="col-md-9">
+                        <div class="col-md-3">
+                            <label for="edit_initial_payment_mode" class="form-label">Initial Payment Mode</label>
+                            <select class="form-select" id="edit_initial_payment_mode" name="initial_payment_mode" required>
+                                <option value="cash" {% if invoice.sales_invoice_paid > 0 or invoice.payment_status == 'paid' %}selected{% endif %}>Cash</option>
+                                <option value="credit" {% if invoice.sales_invoice_paid <= 0 and invoice.payment_status != 'paid' %}selected{% endif %}>Credit</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
                             <!-- Whole Discount Section -->
                             <div style="background:linear-gradient(135deg,#fffbeb,#ecfdf5);border:2px solid #d97706;border-radius:10px;padding:12px 16px;">
                                 <div style="font-weight:700;color:#374151;margin-bottom:10px;font-size:0.85rem;text-transform:uppercase;letter-spacing:.3px;"><i class="fas fa-tag" style="color:#d97706;"></i> Whole Invoice Discount</div>
@@ -510,8 +522,11 @@
                                 <div style="font-size:1rem;font-weight:700;color:#dc2626;">- ₹<span id="editSummaryProdDisc">0.00</span></div>
                             </div>
                             <div style="background:#fff;border-radius:8px;padding:8px 12px;border-left:3px solid #60a5fa;">
-                                <div style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;">Tax (CGST+SGST)</div>
-                                <div style="font-size:1rem;font-weight:700;color:#2563eb;">₹<span id="editSummaryTax">0.00</span></div>
+                                <label for="editTotalTax" style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;">Total Tax</label>
+                                <div style="font-size:1rem;font-weight:700;color:#2563eb;">₹<input type="number" id="editTotalTax" name="total_tax" min="0" step="0.01"
+                                    value="{{ invoice.total_tax|default_if_none:'0' }}" data-user-edited="{{ edit_total_tax_is_manual|yesno:'true,false' }}"
+                                    oninput="this.dataset.userEdited='true'; updateEditWholeDisc()"
+                                    style="width:110px;border:1px solid #93c5fd;border-radius:5px;padding:2px 5px;font-weight:700;color:#2563eb;"></div>
                             </div>
                             <div style="background:#fff;border-radius:8px;padding:8px 12px;border-left:3px solid #a78bfa;">
                                 <div style="font-size:0.72rem;color:#64748b;font-weight:600;text-transform:uppercase;">Products Total</div>
@@ -736,6 +751,15 @@ function updateEditWholeDisc() {
         totalTax += tax;
         productsTotal += after + tax;
     });
+    const totalTaxInput = document.getElementById('editTotalTax');
+    if (totalTaxInput && totalTaxInput.dataset.userEdited !== 'true') {
+        totalTaxInput.value = totalTax.toFixed(2);
+    }
+    totalTax = totalTaxInput
+        ? Math.max(0, parseFloat(totalTaxInput.value) || 0)
+        : totalTax;
+    productsTotal = taxable + totalTax;
+
     const transport = parseFloat(document.getElementById('edit_transport_charges')?.value) || 0;
 
     let discAmt = discType === 'percentage'
@@ -754,7 +778,6 @@ function updateEditWholeDisc() {
     const s = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
     s('editSummarySubtotal', subtotal.toFixed(2));
     s('editSummaryProdDisc', prodDisc.toFixed(2));
-    s('editSummaryTax', totalTax.toFixed(2));
     s('editSummaryProdTotal', productsTotal.toFixed(2));
     s('editSummaryTransport', transport.toFixed(2));
     s('editSummaryWholeDisc', discAmt.toFixed(2));
@@ -1211,6 +1234,9 @@ document.getElementById('saveEditSalesInvoice').addEventListener('click', functi
     updateEditWholeDisc();
     formData.set('whole_discount_amount', document.getElementById('editWholeDiscAmountHidden').value);
     formData.set('whole_discount_type', document.getElementById('editWholeDiscTypeHidden').value);
+    const totalTaxInput = document.getElementById('editTotalTax');
+    formData.set('total_tax', totalTaxInput.value);
+    formData.set('total_tax_is_manual', totalTaxInput.dataset.userEdited === 'true' ? 'true' : 'false');
     
     // Show loading state
     const saveBtn = this;

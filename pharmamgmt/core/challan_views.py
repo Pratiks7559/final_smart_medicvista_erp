@@ -505,7 +505,7 @@ def add_customer_challan(request):
     from django.shortcuts import redirect
     from django.db import transaction
     import json
-    from decimal import Decimal
+    from decimal import Decimal, InvalidOperation
     
     if request.method == 'POST':
         try:
@@ -580,8 +580,9 @@ def add_customer_challan(request):
                         next_num += 1
                         challan_no = f'{prefix}{next_num:06d}'
                 
-                # Calculate products total (respecting calculation_mode)
-                products_total = Decimal('0')
+                # Replace calculated row tax with the selected invoice-level tax.
+                taxable_products_total = Decimal('0')
+                calculated_tax_total = Decimal('0')
                 for p in products_data:
                     r = Decimal(str(p.get('sale_rate', 0)))
                     q = Decimal(str(p.get('quantity', 0)))
@@ -592,7 +593,22 @@ def add_customer_challan(request):
                     sub = r * q
                     disc_amt = (sub * d / 100) if mode == 'percentage' else d
                     after = sub - disc_amt
-                    products_total += after + (after * (cg + sg) / 100)
+                    taxable_products_total += after
+                    calculated_tax_total += after * (cg + sg) / 100
+
+                submitted_total_tax = request.POST.get('total_tax')
+                if submitted_total_tax not in (None, ''):
+                    try:
+                        total_tax = Decimal(submitted_total_tax)
+                    except InvalidOperation:
+                        messages.error(request, 'Total tax must be a valid amount.')
+                        return redirect('add_customer_challan')
+                else:
+                    total_tax = calculated_tax_total
+                if not total_tax.is_finite() or total_tax < 0:
+                    messages.error(request, 'Total tax must be a valid non-negative amount.')
+                    return redirect('add_customer_challan')
+                products_total = taxable_products_total + total_tax
 
                 if discount_mode == 'whole':
                     final_total = products_total + transport_charges - whole_discount_amount
@@ -607,6 +623,7 @@ def add_customer_challan(request):
                     challan_series=series,
                     customer_transport_charges=float(transport_charges),
                     challan_total=float(final_total),
+                    total_tax=float(total_tax),
                     whole_discount_amount=float(whole_discount_amount),
                     challan_invoice_paid=0.0
                 )
@@ -695,7 +712,7 @@ def view_customer_challan(request, challan_id):
     from itertools import chain
     from django.db import transaction
     import json
-    from decimal import Decimal
+    from decimal import Decimal, InvalidOperation
     
     challan = get_object_or_404(CustomerChallan, customer_challan_id=challan_id)
     
@@ -707,6 +724,7 @@ def view_customer_challan(request, challan_id):
                 customer_id = request.POST.get('customer_name')
                 transport_charges = Decimal(request.POST.get('transport_charges', 0))
                 whole_discount_amount = Decimal(request.POST.get('whole_discount_amount', 0))
+                submitted_total_tax = request.POST.get('total_tax')
                 discount_mode = request.POST.get('discount_mode', 'product_wise')
                 new_challan_no = request.POST.get('challan_no', '').strip()
                 new_series_id = request.POST.get('challan_series_id', '').strip()
@@ -737,8 +755,9 @@ def view_customer_challan(request, challan_id):
                 challan.customer_name = customer
                 challan.customer_transport_charges = float(transport_charges)
                 
-                # Recalculate total (respecting calculation_mode)
-                products_total = Decimal('0')
+                # Replace calculated row tax with the selected challan-level tax.
+                taxable_products_total = Decimal('0')
+                calculated_tax_total = Decimal('0')
                 for p in products_data:
                     r = Decimal(str(p.get('rate', 0)))
                     q = Decimal(str(p.get('quantity', 0)))
@@ -748,7 +767,19 @@ def view_customer_challan(request, challan_id):
                     sub = r * q
                     disc_amt = sub * d / 100
                     after = sub - disc_amt
-                    products_total += after + (after * (cg + sg) / 100)
+                    taxable_products_total += after
+                    calculated_tax_total += after * (cg + sg) / 100
+
+                if submitted_total_tax not in (None, ''):
+                    try:
+                        total_tax = Decimal(submitted_total_tax)
+                    except InvalidOperation:
+                        return JsonResponse({'success': False, 'error': 'Total tax must be a valid amount'})
+                else:
+                    total_tax = calculated_tax_total
+                if not total_tax.is_finite() or total_tax < 0:
+                    return JsonResponse({'success': False, 'error': 'Total tax must be a valid non-negative amount'})
+                products_total = taxable_products_total + total_tax
 
                 if discount_mode == 'whole':
                     final_total = products_total + transport_charges - whole_discount_amount
@@ -756,6 +787,7 @@ def view_customer_challan(request, challan_id):
                     final_total = products_total + transport_charges - whole_discount_amount
 
                 challan.whole_discount_amount = float(whole_discount_amount)
+                challan.total_tax = float(total_tax)
                 challan.challan_total = float(final_total)
                 challan.save()
                 
@@ -824,6 +856,11 @@ def view_customer_challan(request, challan_id):
         (item.sale_rate * item.sale_quantity - item.sale_discount) * (item.sale_cgst + item.sale_sgst) / 100
         for item in challan_items
     )
+    selected_total_tax = (
+        challan.total_tax
+        if challan.total_tax is not None
+        else total_gst
+    )
     
     customers = CustomerMaster.objects.all().order_by('customer_name')
     products = ProductMaster.objects.all().order_by('product_name')
@@ -838,6 +875,11 @@ def view_customer_challan(request, challan_id):
         'total_discount': total_discount,
         'discount_pct': discount_pct,
         'total_gst': total_gst,
+        'selected_total_tax': selected_total_tax,
+        'edit_total_tax_is_manual': (
+            challan.total_tax is not None
+            and abs(challan.total_tax - total_gst) > 0.005
+        ),
         'customers': customers,
         'products': products,
         'challan_series': challan_series,
@@ -1033,22 +1075,40 @@ def get_challan_products_api(request):
                 'challan_date': item.customer_challan_id.customer_challan_date.strftime('%Y-%m-%d')
             })
         
-        # Sum whole_discount_amount from all selected challans
+        # Preserve each challan's selected tax when its products are invoiced together.
         total_whole_discount = 0.0
         total_transport_charges = 0.0
-        try:
-            from core.models import CustomerChallan as _CC
-            for _c in _CC.objects.filter(customer_challan_id__in=challan_ids):
-                total_whole_discount += float(_c.whole_discount_amount or 0)
-                total_transport_charges += float(_c.customer_transport_charges or 0)
-        except Exception:
-            pass
+        total_challan_tax = 0.0
+        from core.models import CustomerChallan
+        selected_challans = CustomerChallan.objects.filter(
+            customer_challan_id__in=challan_ids
+        )
+        for challan in selected_challans:
+            total_whole_discount += float(challan.whole_discount_amount or 0)
+            total_transport_charges += float(challan.customer_transport_charges or 0)
+            if challan.total_tax is not None:
+                total_challan_tax += float(challan.total_tax)
+            else:
+                challan_items = CustomerChallanMaster.objects.filter(
+                    customer_challan_id=challan
+                )
+                for item in challan_items:
+                    taxable_amount = (
+                        float(item.sale_rate or 0) * float(item.sale_quantity or 0)
+                        - float(item.sale_discount or 0)
+                    )
+                    total_challan_tax += (
+                        taxable_amount
+                        * (float(item.sale_cgst or 0) + float(item.sale_sgst or 0))
+                        / 100
+                    )
 
         return JsonResponse({
             'success': True,
             'products': products,
             'whole_discount_amount': total_whole_discount,
-            'transport_charges': total_transport_charges
+            'transport_charges': total_transport_charges,
+            'total_tax': total_challan_tax
         })
 
     except Exception as e:
@@ -1136,15 +1196,6 @@ def create_customer_invoice_from_challans(request):
             
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
-
-
-
-
-
-
-
-
-
 
 
 

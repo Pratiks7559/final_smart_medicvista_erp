@@ -148,6 +148,11 @@
                                                 <td>Total SGST:</td>
                                                 <td>₹<span id="salesTotalSGST">0.00</span></td>
                                             </tr>
+                                            <tr class="totals-row-tax">
+                                                <td><label for="salesTotalTax">Total Tax:</label></td>
+                                                <td>₹<input type="number" name="total_tax" id="salesTotalTax" min="0" step="0.01" value="0.00" data-user-edited="false" required style="width:110px;padding:4px;border:1px solid #ced4da;border-radius:4px;"
+                                                            oninput="this.dataset.userEdited='true'; calculateGrandTotal()"></td>
+                                            </tr>
                                             <tr class="totals-row-roundoff" id="roundoffRow" style="display:none;">
                                                 <td>Round Off:</td>
                                                 <td><span id="roundoffDisplay"></span></td>
@@ -200,6 +205,7 @@
 
                         <!-- Hidden field for products data -->
                         <input type="hidden" name="products_data" id="productsData">
+                        <input type="hidden" name="total_tax_is_manual" id="salesTotalTaxIsManual" value="false">
                         <input type="hidden" name="fy_year" id="fyYearHidden" value="{{ current_fy }}">
 
                         <!-- Submit Button -->
@@ -1377,6 +1383,16 @@ function calculateGrandTotal() {
     setVal('salesSubtotal', subtotal); setVal('salesTotalDiscount', totalDiscount);
     setVal('salesTotalTaxable', taxableAmount); setVal('salesTotalCGST', totalCGST); setVal('salesTotalSGST', totalSGST);
 
+    const totalTaxInput = document.getElementById('salesTotalTax');
+    const calculatedTax = totalCGST + totalSGST;
+    if (totalTaxInput && totalTaxInput.dataset.userEdited !== 'true') {
+        totalTaxInput.value = calculatedTax.toFixed(2);
+    }
+    const selectedTax = totalTaxInput
+        ? Math.max(0, parseFloat(totalTaxInput.value) || 0)
+        : calculatedTax;
+    productsTotal = taxableAmount + selectedTax;
+
     const transportCharges = parseFloat(document.querySelector('[name="sales_transport_charges"]')?.value) || 0;
 
     // Whole discount - always active based on input value
@@ -1587,6 +1603,8 @@ document.getElementById('combinedSalesInvoiceForm').addEventListener('submit', f
     }
     
     document.getElementById('productsData').value = JSON.stringify(productsData);
+    document.getElementById('salesTotalTaxIsManual').value =
+        document.getElementById('salesTotalTax').dataset.userEdited === 'true' ? 'true' : 'false';
     
     // Show loading state
     const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -3008,6 +3026,12 @@ function pullSelectedChallans() {
     .then(data => {
         if (data.success) {
             fillChallanProducts(data.products);
+            const totalTaxInput = document.getElementById('salesTotalTax');
+            if (totalTaxInput && data.total_tax !== undefined) {
+                totalTaxInput.value = Math.max(0, parseFloat(data.total_tax) || 0).toFixed(2);
+                totalTaxInput.dataset.userEdited = 'true';
+                calculateGrandTotal();
+            }
             // Apply whole discount from challan if present
             if (data.whole_discount_amount && data.whole_discount_amount > 0) {
                 const wholeRadio = document.querySelector('input[name="discount_mode"][value="whole"]');

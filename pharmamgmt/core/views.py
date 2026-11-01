@@ -1494,6 +1494,23 @@ def edit_invoice(request, pk):
                     total_decimal = products_decimal + transport_decimal - whole_disc_amt
                     invoice.invoice_total = float(total_decimal.quantize(Decimal('1'), rounding=ROUND_HALF_UP))
                     invoice.whole_discount_amount = float(whole_disc_amt)
+
+                    initial_payment_mode = (request.POST.get('initial_payment_mode') or '').strip().lower()
+                    if initial_payment_mode == 'credit':
+                        invoice.invoice_paid = 0
+                        InvoicePaid.objects.filter(ip_invoiceid=invoice, payment_ref_no='', payment_mode__iexact='Cash').delete()
+                    elif initial_payment_mode == 'cash':
+                        invoice.invoice_paid = float(invoice.invoice_total or 0)
+                        if not InvoicePaid.objects.filter(ip_invoiceid=invoice, payment_ref_no='', payment_mode__iexact='Cash').exists():
+                            InvoicePaid.objects.create(
+                                ip_invoiceid=invoice,
+                                payment_date=invoice.invoice_date,
+                                payment_amount=float(invoice.invoice_total or 0),
+                                payment_mode='Cash',
+                                payment_ref_no='',
+                            )
+                    elif invoice.invoice_paid is None:
+                        invoice.invoice_paid = 0
                     
                 except (json.JSONDecodeError, InvalidOperation, TypeError) as exc:
                     raise ValueError(f'Invalid invoice product or tax data: {exc}') from exc
@@ -2471,22 +2488,36 @@ def sales_invoice_detail(request, pk):
     bill_taxable = 0
     bill_cgst = 0
     bill_sgst = 0
+    calculated_total_tax = 0
     for sale in sales:
         base = float(sale.sale_rate) * float(sale.sale_quantity)
         raw_discount = float(sale.sale_discount)
         mode = getattr(sale, 'sale_calculation_mode', 'flat') or 'flat'
         if mode == 'percentage':
             discount_amt = round(base * raw_discount / 100, 2)
+            tax_discount_amt = base * raw_discount / 100
         else:
             discount_amt = raw_discount
+            tax_discount_amt = raw_discount
         # Attach computed discount amount to sale object for template use
         sale.discount_amt = discount_amt
         after_discount = base - discount_amt
+        tax_after_discount = base - tax_discount_amt
         bill_subtotal += base
         bill_discount += discount_amt
         bill_taxable += after_discount
         bill_cgst += (after_discount * float(sale.sale_cgst)) / 100
         bill_sgst += (after_discount * float(sale.sale_sgst)) / 100
+        calculated_total_tax += (
+            tax_after_discount * (float(sale.sale_cgst) + float(sale.sale_sgst)) / 100
+        )
+    selected_total_tax = (
+        invoice.total_tax
+        if invoice.total_tax is not None
+        else calculated_total_tax
+    )
+    if invoice.total_tax is not None:
+        products_total += invoice.total_tax - calculated_total_tax
     
     # Get all payments for this invoice
     payments = SalesInvoicePaid.objects.filter(sales_ip_invoice_no=pk).order_by('-sales_payment_date')
@@ -2507,6 +2538,11 @@ def sales_invoice_detail(request, pk):
         'bill_taxable': round(bill_taxable, 2),
         'bill_cgst': round(bill_cgst, 2),
         'bill_sgst': round(bill_sgst, 2),
+        'selected_total_tax': selected_total_tax,
+        'edit_total_tax_is_manual': (
+            invoice.total_tax is not None
+            and abs(invoice.total_tax - calculated_total_tax) > 0.005
+        ),
         'payments': payments,
         'customers': customers,
         'products': products,
@@ -2805,12 +2841,30 @@ def edit_sales_invoice(request, pk):
     invoice = get_object_or_404(SalesInvoiceMaster, sales_invoice_no=pk)
     
     try:
+        from decimal import Decimal, InvalidOperation
+
         new_invoice_no = request.POST.get('sales_invoice_no', pk).strip()
         new_date = request.POST.get('sales_invoice_date')
         new_customer_id = request.POST.get('customerid')
         new_series_id = request.POST.get('invoice_series_id')
         new_transport = float(request.POST.get('sales_transport_charges', 0) or 0)
         new_whole_discount = float(request.POST.get('whole_discount_amount', 0) or 0)
+        submitted_total_tax = request.POST.get('total_tax')
+        total_tax_is_manual = request.POST.get('total_tax_is_manual')
+        if total_tax_is_manual == 'false':
+            total_tax = None
+        elif submitted_total_tax not in (None, ''):
+            try:
+                total_tax = Decimal(submitted_total_tax)
+            except InvalidOperation:
+                return JsonResponse({'success': False, 'error': 'Total tax must be a valid amount'})
+            if not total_tax.is_finite() or total_tax < 0:
+                return JsonResponse({'success': False, 'error': 'Total tax must be a valid non-negative amount'})
+            total_tax = float(total_tax)
+        elif total_tax_is_manual == 'true':
+            return JsonResponse({'success': False, 'error': 'Enter a total tax amount'})
+        else:
+            total_tax = invoice.total_tax
 
         # Handle invoice number change
         if new_invoice_no and new_invoice_no != pk:
@@ -2833,6 +2887,7 @@ def edit_sales_invoice(request, pk):
                     sales_transport_charges=new_transport,
                     sales_invoice_paid=invoice.sales_invoice_paid,
                     whole_discount_amount=new_whole_discount,
+                    total_tax=total_tax,
                 )
                 
                 # Move all sales items
@@ -2900,6 +2955,7 @@ def edit_sales_invoice(request, pk):
                 invoice.invoice_series_id = new_series_id
             invoice.sales_transport_charges = new_transport
             invoice.whole_discount_amount = new_whole_discount
+            invoice.total_tax = total_tax
             
             products_data = request.POST.get('products_data')
             if products_data:
@@ -2947,6 +3003,24 @@ def edit_sales_invoice(request, pk):
                     pass
             
             invoice.save()
+
+            initial_payment_mode = (request.POST.get('initial_payment_mode') or '').strip().lower()
+            if initial_payment_mode == 'credit':
+                invoice.sales_invoice_paid = 0
+                SalesInvoicePaid.objects.filter(sales_ip_invoice_no=invoice, sales_payment_ref_no='', sales_payment_mode__iexact='Cash').delete()
+            elif initial_payment_mode == 'cash':
+                invoice.sales_invoice_paid = float(invoice.sales_invoice_total or 0)
+                if not SalesInvoicePaid.objects.filter(sales_ip_invoice_no=invoice, sales_payment_ref_no='', sales_payment_mode__iexact='Cash').exists():
+                    SalesInvoicePaid.objects.create(
+                        sales_ip_invoice_no=invoice,
+                        sales_payment_date=invoice.sales_invoice_date,
+                        sales_payment_amount=float(invoice.sales_invoice_total or 0),
+                        sales_payment_mode='Cash',
+                        sales_payment_ref_no='',
+                    )
+            elif invoice.sales_invoice_paid is None:
+                invoice.sales_invoice_paid = 0
+            invoice.save(update_fields=['sales_invoice_paid'])
         
         return JsonResponse({'success': True, 'message': f'Sales Invoice #{pk} updated successfully!'})
     except Exception as e:
@@ -3186,6 +3260,23 @@ def add_sales_invoice_with_products(request):
                     messages.error(request, 'Select Cash or Credit as the payment mode.')
                     return redirect('add_sales_invoice_with_products')
 
+                submitted_total_tax = request.POST.get('total_tax')
+                total_tax_is_manual = request.POST.get('total_tax_is_manual') == 'true'
+                if total_tax_is_manual and submitted_total_tax in (None, ''):
+                    messages.error(request, 'Enter a total tax amount.')
+                    return redirect('add_sales_invoice_with_products')
+                if total_tax_is_manual:
+                    try:
+                        total_tax = Decimal(submitted_total_tax)
+                    except InvalidOperation:
+                        messages.error(request, 'Total tax must be a valid amount.')
+                        return redirect('add_sales_invoice_with_products')
+                    if not total_tax.is_finite() or total_tax < 0:
+                        messages.error(request, 'Total tax must be a valid non-negative amount.')
+                        return redirect('add_sales_invoice_with_products')
+                else:
+                    total_tax = None
+
                 # Create sales invoice
                 invoice = invoice_form.save(commit=False)
                 # Get series from form data
@@ -3201,6 +3292,7 @@ def add_sales_invoice_with_products(request):
                     except InvoiceSeries.DoesNotExist:
                         pass
                 invoice.sales_invoice_paid = 0
+                invoice.total_tax = float(total_tax) if total_tax is not None else None
                 
                 # Convert date format if needed
                 if hasattr(invoice, 'sales_invoice_date'):

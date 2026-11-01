@@ -117,6 +117,10 @@
                                 <td colspan="12" style="text-align:right; font-weight:600;">GST Total (CGST + SGST):</td>
                                 <td style="font-weight:600;">₹{{ total_gst|floatformat:2 }}</td>
                             </tr>
+                            <tr>
+                                <td colspan="12" style="text-align:right; font-weight:600;">Total Tax:</td>
+                                <td style="font-weight:600;">₹{{ selected_total_tax|floatformat:2 }}</td>
+                            </tr>
                             {% if challan.customer_transport_charges > 0 %}
                             <tr class="transport-row">
                                 <td colspan="12" class="transport-label">Transport Charges:</td>
@@ -205,6 +209,13 @@
                         <label for="transport_charges">Transport Charges</label>
                         <input type="number" id="transport_charges" name="transport_charges" value="{{ challan.customer_transport_charges }}" step="0.01" min="0">
                     </div>
+                    <div class="form-group">
+                        <label for="editCustomerChallanTotalTax">Total Tax</label>
+                        <input type="number" id="editCustomerChallanTotalTax" name="total_tax" min="0" step="0.01"
+                               value="{{ challan.total_tax|default_if_none:'0' }}"
+                               data-user-edited="{{ edit_total_tax_is_manual|yesno:'true,false' }}"
+                               oninput="this.dataset.userEdited='true'; updateEditWholeDisc()">
+                    </div>
                 </div>
 
                 <!-- Discount Mode -->
@@ -227,6 +238,10 @@
                     </div>
                     <input type="hidden" name="whole_discount_amount" id="editWholeDiscAmountHidden" value="{{ challan.whole_discount_amount|default:0 }}">
                     <input type="hidden" name="discount_mode" id="editDiscountModeHidden" value="whole">
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:18px;flex-wrap:wrap;margin-bottom:1rem;font-weight:600;">
+                    <span>Products Total: ₹<span id="editChallanProductsTotal">0.00</span></span>
+                    <span>Updated Challan Total: ₹<span id="editChallanGrandTotal">0.00</span></span>
                 </div>
 
                 <h4>Products</h4>
@@ -332,27 +347,38 @@ function onEditDiscountModeChange() {
 function updateEditWholeDisc() {
     const val = parseFloat(document.getElementById('editWholeDiscInput').value) || 0;
     const type = document.querySelector('input[name="edit_whole_disc_type"]:checked')?.value || 'flat';
+    let taxableTotal = 0;
+    let calculatedTax = 0;
+    document.querySelectorAll('#productsContainer .product-row').forEach(row => {
+        const rate = parseFloat(row.querySelector('input[name*="[rate]"]')?.value) || 0;
+        const qty = parseFloat(row.querySelector('input[name*="[quantity]"]')?.value) || 0;
+        const disc = parseFloat(row.querySelector('input[name*="[discount]"]')?.value) || 0;
+        const cgst = parseFloat(row.querySelector('input[name*="[cgst]"]')?.value) || 0;
+        const sgst = parseFloat(row.querySelector('input[name*="[sgst]"]')?.value) || 0;
+        const base = rate * qty;
+        const after = base - (base * disc / 100);
+        taxableTotal += after;
+        calculatedTax += after * (cgst + sgst) / 100;
+    });
+    const totalTaxInput = document.getElementById('editCustomerChallanTotalTax');
+    if (totalTaxInput && totalTaxInput.dataset.userEdited !== 'true') {
+        totalTaxInput.value = calculatedTax.toFixed(2);
+    }
+    const selectedTax = totalTaxInput
+        ? Math.max(0, parseFloat(totalTaxInput.value) || 0)
+        : calculatedTax;
+    const transport = parseFloat(document.getElementById('transport_charges')?.value) || 0;
+    const productsTotal = taxableTotal + selectedTax;
     let flatAmt = val;
     if (type === 'percentage') {
-        // Compute products total from current product rows
-        let pTotal = 0;
-        document.querySelectorAll('.product-row').forEach(row => {
-            const rate = parseFloat(row.querySelector('input[name*="[rate]"]')?.value) || 0;
-            const qty = parseFloat(row.querySelector('input[name*="[quantity]"]')?.value) || 0;
-            const disc = parseFloat(row.querySelector('input[name*="[discount]"]')?.value) || 0;
-            const cgst = parseFloat(row.querySelector('input[name*="[cgst]"]')?.value) || 0;
-            const sgst = parseFloat(row.querySelector('input[name*="[sgst]"]')?.value) || 0;
-            const base = rate * qty;
-            const discAmt = base * disc / 100;
-            const after = base - discAmt;
-            pTotal += after + (after * (cgst + sgst) / 100);
-        });
-        const transport = parseFloat(document.getElementById('transport_charges')?.value) || 0;
-        flatAmt = (pTotal + transport) * val / 100;
+        flatAmt = (productsTotal + transport) * val / 100;
     }
+    const grandTotal = productsTotal + transport - flatAmt;
     document.getElementById('editWholeDiscAmountHidden').value = flatAmt.toFixed(2);
     const display = document.getElementById('editWholeDiscDisplay');
     if (display) display.textContent = '\u20b9' + flatAmt.toFixed(2);
+    document.getElementById('editChallanProductsTotal').textContent = productsTotal.toFixed(2);
+    document.getElementById('editChallanGrandTotal').textContent = grandTotal.toFixed(2);
 }
 
 function onChallanDiscModeChange(productId) {
@@ -418,6 +444,13 @@ document.addEventListener('DOMContentLoaded', function() {
             fetchCustomerRateType();
         });
     }
+    const productsContainer = document.getElementById('productsContainer');
+    if (productsContainer) {
+        productsContainer.addEventListener('input', updateEditWholeDisc);
+        productsContainer.addEventListener('change', updateEditWholeDisc);
+    }
+    const transportInput = document.getElementById('transport_charges');
+    if (transportInput) transportInput.addEventListener('input', updateEditWholeDisc);
 });
 
 function closeEditChallanModal() {
@@ -444,6 +477,7 @@ function loadExistingProducts() {
         sale_calculation_mode: '{{ item.sale_calculation_mode|default:"flat" }}'
     });
     {% endfor %}
+    updateEditWholeDisc();
 }
 
 function addNewProduct() {
@@ -533,7 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (editForm) {
         editForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            
+        updateEditWholeDisc();
             const formData = new FormData(this);
             const products = [];
             const productRows = document.querySelectorAll('.product-row');
@@ -568,6 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             formData.append('products_data', JSON.stringify(products));
+            formData.set('total_tax', document.getElementById('editCustomerChallanTotalTax').value);
             
             fetch(window.location.href, {
                 method: 'POST',
@@ -1306,6 +1341,128 @@ function closeBatchModal() {
     padding: 0.75rem;
     text-align: center;
     border-top: 1px solid #eee;
+}
+
+#editChallanModal {
+    z-index: 1100;
+    overflow-y: auto;
+    padding: 3vh 12px;
+    background: rgba(15, 23, 42, 0.58);
+    backdrop-filter: blur(4px);
+}
+
+#editChallanModal .modal-content {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 960px);
+    max-width: 960px;
+    max-height: 86vh;
+    margin: 0 auto;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+#editChallanModal .modal-header {
+    flex: 0 0 auto;
+    padding: 12px 18px;
+    background: linear-gradient(120deg, #1e3a8a, #2563eb);
+}
+
+#editChallanModal .modal-header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+#editChallanModal .modal-body {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14px 18px;
+}
+
+#editChallanModal .form-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+#editChallanModal .form-group label {
+    margin-bottom: 4px;
+    font-size: 0.76rem;
+}
+
+#editChallanModal .form-group input,
+#editChallanModal .form-group select {
+    min-height: 36px;
+    padding: 6px 9px;
+    border-color: #cbd5e1;
+    border-radius: 7px;
+    font-size: 0.82rem;
+}
+
+#editChallanModal #editCustomerChallanTotalTax,
+#editChallanModal #editWholeDiscInput {
+    width: 112px !important;
+    min-height: 34px;
+    padding: 5px 8px !important;
+}
+
+#editChallanModal #editChallanSeriesDisplay {
+    min-height: 36px;
+    padding: 6px 9px !important;
+    border-color: #cbd5e1 !important;
+    border-radius: 7px !important;
+    font-size: 0.82rem !important;
+}
+
+#editChallanModal .product-row {
+    padding: 10px;
+    margin-bottom: 8px;
+    border-color: #dbe3ef;
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+#editChallanModal .product-grid {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+}
+
+#editChallanModal .modal-footer {
+    flex: 0 0 auto;
+    margin-top: 12px;
+    padding-top: 10px;
+    gap: 8px;
+}
+
+#editChallanModal .modal-footer .btn,
+#editChallanModal #editChallanForm > .btn {
+    min-height: 36px;
+    padding: 7px 12px;
+    border-radius: 7px;
+    font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+    #editChallanModal {
+        padding: 8px;
+    }
+
+    #editChallanModal .modal-content {
+        max-height: 96vh;
+    }
+
+    #editChallanModal .modal-body {
+        padding: 12px;
+    }
+
+    #editChallanModal .form-grid,
+    #editChallanModal .product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 </style>
 {% endblock %}

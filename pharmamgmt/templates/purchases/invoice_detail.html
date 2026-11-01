@@ -344,6 +344,13 @@
                         <label for="transport_charges">Transport Charges:</label>
                         <input type="number" id="transport_charges" name="transport_charges" value="{{ invoice.transport_charges }}" step="0.01">
                     </div>
+                    <div class="form-group">
+                        <label for="initial_payment_mode">Initial Payment Mode:</label>
+                        <select id="initial_payment_mode" name="initial_payment_mode" required>
+                            <option value="cash" {% if invoice.invoice_paid > 0 or invoice.payment_status == 'paid' %}selected{% endif %}>Cash</option>
+                            <option value="credit" {% if invoice.invoice_paid <= 0 and invoice.payment_status != 'paid' %}selected{% endif %}>Credit</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="edit-products-heading">
@@ -766,10 +773,7 @@ function addProductRow(data = {}, targetContainer = document.getElementById('pro
                 <label>Free Qty:</label>
                 <input type="number" name="products[${productId}][free_qty]" value="${data.product_free_qty || '0'}" step="0.01">
             </div>
-            <div class="form-group">
-                <label>Scheme:</label>
-                <input type="number" name="products[${productId}][scheme]" value="${data.product_scheme !== undefined ? data.product_scheme : '0'}" step="0.01">
-            </div>
+            <input type="hidden" name="products[${productId}][scheme]" value="${data.product_scheme !== undefined ? data.product_scheme : '0'}">
             <input type="hidden" name="products[${productId}][source_challan_no]" value="${escapeHtml(data.source_challan_no || '')}">
             <input type="hidden" name="products[${productId}][source_challan_date]" value="${escapeHtml(data.source_challan_date || '')}">
             <div class="form-group">

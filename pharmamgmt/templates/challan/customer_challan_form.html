@@ -114,6 +114,11 @@
                                         <td style="padding:4px 12px; text-align:right; color:#111827;">GST Total (CGST + SGST):</td>
                                         <td style="padding:4px 12px; text-align:right; color:#111827;">₹<span id="challanGstTotal" style="color:#111827;">0.00</span></td>
                                     </tr>
+                                    <tr>
+                                        <td style="padding:4px 12px; text-align:right; color:#111827;"><label for="customerChallanTotalTax">Total Tax:</label></td>
+                                        <td style="padding:4px 12px; text-align:right; color:#111827;">₹<input type="number" name="total_tax" id="customerChallanTotalTax" min="0" step="0.01" value="0.00" data-user-edited="false" required style="width:110px;padding:4px;border:1px solid #ced4da;border-radius:4px;"
+                                                                                                                     oninput="this.dataset.userEdited='true'; calculateGrandTotal()"></td>
+                                    </tr>
                                     <tr id="custTransportRow" style="display:none;">
                                         <td style="padding:4px 12px; text-align:right; color:#111827;">Transport Charges:</td>
                                         <td style="padding:4px 12px; text-align:right; color:#ea580c; font-weight:600;">+ ₹<span id="challanTransportDisplay">0.00</span></td>
@@ -377,7 +382,14 @@ function calculateGrandTotal() {
     });
 
     const discountPct = subtotal > 0 ? (totalDiscount / subtotal * 100) : 0;
-    const productsTotal = subtotal - totalDiscount + totalGst;
+    const totalTaxInput = document.getElementById('customerChallanTotalTax');
+    if (totalTaxInput && totalTaxInput.dataset.userEdited !== 'true') {
+        totalTaxInput.value = totalGst.toFixed(2);
+    }
+    const selectedTax = totalTaxInput
+        ? Math.max(0, parseFloat(totalTaxInput.value) || 0)
+        : totalGst;
+    const productsTotal = subtotal - totalDiscount + selectedTax;
     const transportCharges = parseFloat(document.getElementById('transport_charges').value) || 0;
 
     // Whole discount - always active
